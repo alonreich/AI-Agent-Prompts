@@ -416,6 +416,20 @@
             border: none;
             transition: none;
         }
+        
+        /* High-contrast highlight color for search matches */
+        ::highlight(search-match) {
+            background-color: rgba(255, 195, 40, 0.4);
+            color: #fff;
+        }
+        ::highlight(search-current) {
+            background-color: #ffc328;
+            color: #000;
+        }
+        #prompt-box::selection, #prompt-box *::selection {
+            background: #ffeb3b;
+            color: #000;
+        }
 
         .header { display: flex; justify-content: center; margin-bottom: 14px; gap: 12px; }
         
@@ -828,14 +842,14 @@
             <div id="search-overlay">
                 <button class="search-close" onclick="closeSearch()" aria-label="Close search">×</button>
                 <div class="search-row">
-                    <input type="text" id="search-find" placeholder="Find..." oninput="updateSearchStats()" onkeydown="handleSearchKey(event)">
+                    <input type="text" id="search-find" placeholder="Find..." oninput="updateSearchStats(true)" onkeydown="handleSearchKey(event)">
                 </div>
                 <div id="replace-row" class="search-row" style="display:none">
                     <input type="text" id="search-replace" placeholder="Replace with..." onkeydown="handleReplaceKey(event)">
                 </div>
                 <div class="search-options">
-                    <label class="search-opt"><input type="checkbox" id="search-case" onchange="updateSearchStats()"> Match Case</label>
-                    <label class="search-opt"><input type="checkbox" id="search-word" onchange="updateSearchStats()"> Whole Word</label>
+                    <label class="search-opt"><input type="checkbox" id="search-case" onchange="updateSearchStats(true)"> Match Case</label>
+                    <label class="search-opt"><input type="checkbox" id="search-word" onchange="updateSearchStats(true)"> Whole Word</label>
                 </div>
                 <div class="search-actions">
                     <span id="search-stats" class="search-stats">0 of 0</span>
@@ -2173,7 +2187,11 @@
         function updateSearchStats() {
             const term = document.getElementById('search-find').value;
             const stats = document.getElementById('search-stats');
-            if (!term) { searchMatches = []; currentSearchIdx = -1; stats.innerText = '0 of 0'; return; }
+            if (!term) { 
+                searchMatches = []; currentSearchIdx = -1; stats.innerText = '0 of 0'; 
+                if (window.CSS && CSS.highlights) CSS.highlights.clear();
+                return; 
+            }
             
             const regex = getSearchRegex(term);
             const text = box.innerText;
@@ -2192,46 +2210,82 @@
             } else {
                 currentSearchIdx = -1;
                 stats.innerText = '0 of 0';
-                window.getSelection().removeAllRanges();
+                if (window.CSS && CSS.highlights) CSS.highlights.clear();
             }
         }
 
-        function highlightCurrentMatch(scroll = true) {
-            if (currentSearchIdx === -1 || searchMatches.length === 0) return;
-            const match = searchMatches[currentSearchIdx];
+        let currentRangeRect = null;
+
+        function applyHighlights() {
+            if (!window.CSS || !CSS.highlights) return false;
             
-            const selection = window.getSelection();
-            const range = document.createRange();
+            CSS.highlights.clear();
+            currentRangeRect = null;
+            if (searchMatches.length === 0) return true;
 
-            let charCount = 0;
+            const allRanges = [];
+            let currentRange = null;
+
             const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null, false);
-            let node, foundStart = false;
-
-            while (node = walker.nextNode()) {
-                const nextCount = charCount + node.length;
-                if (!foundStart && nextCount > match.index) {
-                    range.setStart(node, match.index - charCount);
-                    foundStart = true;
+            let node = walker.nextNode();
+            let charCount = 0;
+            
+            for (let i = 0; i < searchMatches.length; i++) {
+                const m = searchMatches[i];
+                const mStart = m.index;
+                const mEnd = m.index + m.length;
+                
+                let startNode = null, startOffset = 0;
+                let endNode = null, endOffset = 0;
+                
+                while (node && charCount + node.length <= mStart) {
+                    charCount += node.length;
+                    node = walker.nextNode();
                 }
-                if (foundStart && nextCount >= match.index + match.length) {
-                    range.setEnd(node, (match.index + match.length) - charCount);
-                    break;
+                if (node) { startNode = node; startOffset = mStart - charCount; }
+                
+                while (node && charCount + node.length < mEnd) {
+                    charCount += node.length;
+                    node = walker.nextNode();
                 }
-                charCount = nextCount;
+                if (node) { endNode = node; endOffset = mEnd - charCount; }
+                
+                if (startNode && endNode) {
+                    const range = new Range();
+                    try {
+                        range.setStart(startNode, startOffset);
+                        range.setEnd(endNode, endOffset);
+                        if (i === currentSearchIdx) {
+                            currentRange = range;
+                            currentRangeRect = range.getBoundingClientRect();
+                        } else {
+                            allRanges.push(range);
+                        }
+                    } catch(e) {}
+                }
             }
             
-            if (foundStart) {
-                selection.removeAllRanges();
-                selection.addRange(range);
+            if (allRanges.length > 0) CSS.highlights.set("search-match", new Highlight(...allRanges));
+            if (currentRange) CSS.highlights.set("search-current", new Highlight(currentRange));
+            
+            return true;
+        }
 
-                if (scroll) {
-                    const rect = range.getBoundingClientRect();
-                    const boxRect = box.getBoundingClientRect();
+        function highlightCurrentMatch(scroll = true) {
+            if (currentSearchIdx === -1 || searchMatches.length === 0) {
+                if (window.CSS && CSS.highlights) CSS.highlights.clear();
+                return;
+            }
+            
+            applyHighlights();
 
-                    if (rect.top < boxRect.top || rect.bottom > boxRect.bottom) {
-                        const top = box.scrollTop + (rect.top - boxRect.top) - (boxRect.height / 2);
-                        box.scrollTo({ top, behavior: 'smooth' });
-                    }
+            if (scroll && currentRangeRect) {
+                const rect = currentRangeRect;
+                const boxRect = box.getBoundingClientRect();
+
+                if (rect.top < boxRect.top || rect.bottom > boxRect.bottom) {
+                    const top = box.scrollTop + (rect.top - boxRect.top) - (boxRect.height / 2);
+                    box.scrollTo({ top, behavior: 'smooth' });
                 }
             }
         }
@@ -2244,36 +2298,74 @@
         }
 
         function replaceCurrent() {
-            if (currentSearchIdx === -1) return;
+            if (currentSearchIdx === -1 || searchMatches.length === 0) return;
             if (!box.classList.contains('editing')) startEdit();
             
             const replacement = document.getElementById('search-replace').value;
-            const selection = window.getSelection();
+            const activeEl = document.activeElement;
             
-
-            if (selection.rangeCount > 0) {
-
-
+            // CSS Highlights don't create a real selection, so we must manually select the text
+            // in order for document.execCommand('insertText') to work.
+            const m = searchMatches[currentSearchIdx];
+            const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null, false);
+            let node = walker.nextNode();
+            let charCount = 0;
+            let startNode, endNode, startOffset, endOffset;
+            
+            while (node && charCount + node.length <= m.index) { charCount += node.length; node = walker.nextNode(); }
+            if (node) { startNode = node; startOffset = m.index - charCount; }
+            
+            while (node && charCount + node.length < m.index + m.length) { charCount += node.length; node = walker.nextNode(); }
+            if (node) { endNode = node; endOffset = (m.index + m.length) - charCount; }
+            
+            if (startNode && endNode) {
+                const range = document.createRange();
+                range.setStart(startNode, startOffset);
+                range.setEnd(endNode, endOffset);
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+                
                 document.execCommand('insertText', false, replacement);
                 updateSearchStats();
             }
+            
+            if (activeEl && typeof activeEl.focus === 'function') activeEl.focus();
         }
 
         function replaceAll() {
             if (searchMatches.length === 0) return;
             if (!box.classList.contains('editing')) startEdit();
             
-            const term = document.getElementById('search-find').value;
             const replacement = document.getElementById('search-replace').value;
-            const regex = getSearchRegex(term);
-            
-
             currentSearchIdx = 0;
+            
             while (searchMatches.length > 0) {
-                highlightCurrentMatch(false);
-                document.execCommand('insertText', false, replacement);
-                updateSearchStats();
-                if (searchMatches.length === 0) break;
+                const m = searchMatches[0];
+                const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null, false);
+                let node = walker.nextNode();
+                let charCount = 0;
+                let startNode, endNode, startOffset, endOffset;
+                
+                while (node && charCount + node.length <= m.index) { charCount += node.length; node = walker.nextNode(); }
+                if (node) { startNode = node; startOffset = m.index - charCount; }
+                
+                while (node && charCount + node.length < m.index + m.length) { charCount += node.length; node = walker.nextNode(); }
+                if (node) { endNode = node; endOffset = (m.index + m.length) - charCount; }
+                
+                if (startNode && endNode) {
+                    const range = document.createRange();
+                    range.setStart(startNode, startOffset);
+                    range.setEnd(endNode, endOffset);
+                    const sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                    
+                    document.execCommand('insertText', false, replacement);
+                    updateSearchStats();
+                } else {
+                    break; // Safety escape
+                }
             }
             
             closeSearch();
