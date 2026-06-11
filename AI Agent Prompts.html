@@ -1548,6 +1548,10 @@
                 container.appendChild(colorBar);
 
                 const header = document.createElement('div'); header.className = 'group-header';
+                header.style.backgroundColor = `hsla(${groupHue}, 50%, 55%, 0.1)`;
+                header.style.borderRadius = 'var(--radius-sm)';
+                header.style.padding = '6px';
+                header.style.marginBottom = '12px';
 
                 
                 const handle = document.createElement('div');
