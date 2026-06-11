@@ -1546,12 +1546,11 @@
                 const groupHue = getGroupHue(index);
                 colorBar.style.background = `hsl(${groupHue}, 50%, 55%)`;
                 container.appendChild(colorBar);
+                
+                // Paint entire box with a gentle hue overlay
+                container.style.backgroundImage = `linear-gradient(180deg, hsla(${groupHue}, 50%, 55%, 0.1), hsla(${groupHue}, 50%, 55%, 0.02)), linear-gradient(180deg, var(--group-bg-top), var(--group-bg-bottom))`;
 
                 const header = document.createElement('div'); header.className = 'group-header';
-                header.style.backgroundColor = `hsla(${groupHue}, 50%, 55%, 0.1)`;
-                header.style.borderRadius = 'var(--radius-sm)';
-                header.style.padding = '6px';
-                header.style.marginBottom = '12px';
 
                 
                 const handle = document.createElement('div');
