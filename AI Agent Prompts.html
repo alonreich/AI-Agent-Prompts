@@ -1,0 +1,2349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Agent Controller</title>
+    <style>
+        :root {
+            --bg: #151f35;             
+            --bg-light: #1a2d4a;
+            --card-bg: #1f3148; 
+            --border: #5a7395;           
+            --border-glow: rgba(88, 166, 255, 0.3);
+            --text: #cdd5de;
+            --text-dim: #a8b0ba;
+            --blue: #58a6ff;
+            --blue-hover: #4095ff;
+            --gold: rgb(255, 195, 40);
+            --gold-glow: rgba(255, 195, 40, 0.3);
+            --error: #ff8c89;            
+            --error-dark: #b91c1c;       
+            --success: #2ea043;
+            --info: #58a6ff;
+            --warning: #d29922;
+            --group-bg-top: #223656;     
+            --group-bg-bottom: #1a2c48;  
+
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 14px;
+            --radius-pill: 50px;
+
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.15);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.25);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.4);
+        }
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--blue); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--blue-hover); }
+
+        
+
+        #menu-container { display: flex; flex-direction: column; min-height: 100vh; padding: 18px 26px; box-sizing: border-box; align-items: center; position: relative; }
+
+        
+        .btn {
+            min-width: 120px; max-width: 135px; min-height: 34px; max-height: 38px;
+            height: 36px; cursor: pointer; padding: 0 10px; border-radius: var(--radius-sm);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 600; font-size: 12px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-sizing: border-box; white-space: nowrap; outline: none; border: 1px solid transparent;
+            text-decoration: none; user-select: none;
+        }
+
+        .btn-primary, .add-btn, .group-btn, .copy-btn, .wiz-save, .save-btn { 
+            background: #2C5380; color: #fff; 
+        }
+        .btn-primary:hover, .add-btn:hover, .group-btn:hover, .copy-btn:hover, .wiz-save:hover, .save-btn:hover { 
+            background: #3a6a9e; box-shadow: 0 0 10px var(--border-glow); 
+        }
+        
+        
+        .btn-secondary, .back-btn, .wiz-cancel, .cancel-btn, .cancel-del-btn, .title-cancel-btn { 
+            background: #3d4d63; color: #ffffff; border-color: #5a7395; 
+        }
+        .btn-secondary:hover, .back-btn:hover, .wiz-cancel:hover, .cancel-btn:hover, .cancel-del-btn:hover, .title-cancel-btn:hover { 
+            background: #4e627d; border-color: #8b949e; 
+        }
+
+        .btn-danger, .del-btn { 
+            background: rgba(255, 140, 137, 0.1); color: var(--error); border: 1px solid rgba(255, 140, 137, 0.4); 
+        }
+        .btn-danger:hover, .del-btn:hover { 
+            background: rgba(255, 140, 137, 0.2); border-color: var(--error); 
+        }
+
+        .btn-success, .title-save-btn { background: var(--success); color: #fff; }
+        .btn-success:hover, .title-save-btn:hover { background: #36b84a; }
+
+        .confirm-del-btn {
+            background: #da3633; color: #fff; border: none; display: none;
+            font-weight: 600; gap: 8px; box-shadow: var(--shadow-sm);
+        }
+        .confirm-del-btn:hover { background: #f85149; box-shadow: 0 0 10px rgba(248, 81, 73, 0.3); }
+        .confirm-del-btn.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+        
+        .del-badge {
+            background: #fff; color: var(--error-dark); border-radius: 50%; min-width: 18px; height: 18px;
+            font-size: 11px; display: inline-flex; align-items: center; justify-content: center;
+            font-weight: 700;
+        }
+
+        .control-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; width: 100%; gap: 10px; }
+        .control-left { flex: 1; display: flex; justify-content: flex-start; }
+        .control-center { flex: 0 1 500px; }
+        .control-right { flex: 1; display: flex; justify-content: flex-end; gap: 12px; }
+
+        .search-wrapper { position: relative; width: 100%; }
+        .search-wrapper svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; fill: var(--text-dim); pointer-events: none; }
+        #search-box { width: 100%; background: var(--bg-light); border: 1px solid var(--border); color: #fff; padding: 10px 16px 10px 40px; border-radius: var(--radius-sm); font-size: 14px; outline: none; transition: all 0.2s; box-sizing: border-box; }
+        #search-box:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15); }
+
+        
+        #main-menu { 
+            width: 100%; 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); 
+            gap: 20px; 
+            padding-top: 10px; 
+            align-items: flex-start; 
+        }
+        .group-container {
+            border: 1px solid var(--border);
+            background: linear-gradient(180deg, var(--group-bg-top), var(--group-bg-bottom));
+            border-radius: var(--radius-lg);
+            padding: 12px 15px 15px 15px;
+            min-height: 80px;
+            transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.3s, border-color 0.3s, opacity 0.3s;
+            position: relative;
+            cursor: default;
+            width: 100%;
+            box-sizing: border-box;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3), 0 0 0 1px rgba(88,166,255,0.08);
+            display: flex;
+            flex-direction: column;
+        }
+        .group-container:hover {
+            border-color: rgba(88, 166, 255, 0.25);
+            box-shadow: 0 6px 24px rgba(0,0,0,0.35), 0 0 20px rgba(88, 166, 255, 0.1);
+            transform: translateY(-2px);
+        }
+        .group-container.drag-over { 
+            border-color: var(--blue); 
+            background: rgba(88, 166, 255, 0.08);
+            box-shadow: 0 0 0 2px var(--blue), var(--shadow-lg);
+        }
+        .group-container.group-dragging { opacity: 0.1; transform: scale(0.95); }
+
+        .drag-ghost {
+            position: fixed;
+            pointer-events: none;
+            z-index: 10000;
+            opacity: 0.9;
+            box-shadow: 0 35px 70px rgba(0,0,0,0.7), 0 0 30px rgba(88, 166, 255, 0.3);
+            transform: scale(1.06);
+            backdrop-filter: blur(8px);
+            border: 2px solid var(--blue);
+            transition: none;
+        }
+
+        .group-placeholder {
+            background: rgba(88, 166, 255, 0.05);
+            border: 2px dashed var(--blue);
+            border-radius: var(--radius-lg);
+            transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+            height: 100%;
+            min-height: 150px;
+        }
+
+        .agent-placeholder {
+            width: 150px;
+            height: 35px;
+            background: rgba(88, 166, 255, 0.1);
+            border: 1px dashed var(--blue);
+            border-radius: var(--radius-sm);
+            margin: 0;
+            transition: all 0.2s ease;
+        }
+
+        #main-menu > * {
+            transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1), opacity 0.3s;
+        }
+
+        
+        .group-drag-handle { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; cursor: grab; opacity: 0.25; transition: 0.2s; touch-action: none; flex-shrink: 0; background: none; border: none; padding: 0; }
+        .group-drag-handle:hover { opacity: 0.8; }
+        .group-header:hover .group-drag-handle { opacity: 0.6; }
+        .group-drag-handle svg { width: 18px; height: 18px; fill: #fff; }
+
+        
+        .group-header { display: flex; align-items: center; justify-content: center; margin-bottom: 7px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 5px; padding-top: 2px; position: relative; gap: 6px; }
+        .group-title { font-size: 14px; font-weight: 600; color: var(--gold); text-transform: uppercase; letter-spacing: 1.5px; margin: 0; outline: none; text-align: center; padding: 4px 15px; border-radius: var(--radius-sm); transition: 0.2s; cursor: grab; user-select: none; }
+        .group-title.editing { cursor: text; user-select: text; }
+
+        .group-title.editing {
+            background: var(--bg-light);
+            border: 1px solid var(--blue);
+            min-width: 200px;
+            text-transform: none;
+            letter-spacing: 0;
+            color: #fff;
+        }
+
+        
+        .edit-group-icon, .delete-group-icon {
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; opacity: 0; transition: opacity 0.2s; padding: 4px;
+            flex-shrink: 0; width: 26px; height: 26px;
+            background: none; border: none; color: inherit;
+        }
+        
+        .group-header:hover .edit-group-icon,
+        .group-header:hover .delete-group-icon { opacity: 0.6; }
+
+        .edit-group-icon:hover { opacity: 1 !important; color: var(--blue); }
+        .delete-group-icon:hover { opacity: 1 !important; color: var(--error); }
+
+        .edit-group-icon svg, .delete-group-icon svg { width: 16px; height: 16px; fill: currentColor; }
+
+        .group-rename-btn { border: none; cursor: pointer; padding: 3px 10px; border-radius: 3px; font-weight: 700; font-size: 14px; display: none; align-items: center; transition: 0.2s; line-height: 1; }
+        .group-rename-save { background: var(--success); color: #fff; }
+        .group-rename-cancel { background: var(--border); color: #fff; }
+        .group-rename-save:hover { background: #36b84a; }
+        .group-rename-cancel:hover { background: #3d444d; }
+
+        #global-trash-zone {
+            position: fixed; bottom: 40px; right: 40px; width: 140px; height: 140px;
+            background: rgba(255, 140, 137, 0.1); border: 2px dashed var(--error);
+            border-radius: var(--radius-lg); display: none; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 1000;
+            color: var(--error); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow-lg);
+        }
+        #global-trash-zone.active { display: flex; animation: slideInUp 0.3s ease-out; }
+        @keyframes slideInUp { from { transform: translateY(100px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        #global-trash-zone.drag-over { background: rgba(255, 140, 137, 0.2); transform: scale(1.1); border-style: solid; }
+        #global-trash-zone svg { width: 40px; height: 40px; fill: currentColor; margin-bottom: 8px; pointer-events: none; }
+        #global-trash-zone span { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; pointer-events: none; }
+
+        
+        .group-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        
+        .add-agent-card {
+            width: 240px; height: 35px; border: 1px dashed var(--text-dim);
+            background: transparent; color: var(--text-dim); display: flex;
+            align-items: center; justify-content: center; cursor: pointer;
+            transition: all 0.2s; box-sizing: border-box; font-size: 12px;
+            font-weight: 500; border-radius: var(--radius-sm); gap: 6px;
+            background: none; margin: 10px auto 0 auto;
+        }
+        .add-agent-card:hover { border-color: var(--blue); color: var(--blue); background: rgba(88, 166, 255, 0.05); }
+        .add-agent-card svg { width: 16px; height: 16px; fill: currentColor; }
+
+        .empty-group-msg { width: 100%; color: var(--text-dim); font-size: 12px; font-style: italic; padding: 12px; text-align: center; }
+
+        
+        .agent-card {
+            width: fit-content;
+            min-width: 150px;
+            max-width: 360px;
+            height: auto;
+            min-height: 38px;
+            border: 1px solid var(--border);
+            background: var(--card-bg);
+            color: var(--gold);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 36px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-sizing: border-box;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+            overflow: hidden;
+            line-height: 1.1;
+            position: relative;
+            border-radius: var(--radius-sm);
+            user-select: none;
+            box-shadow: var(--shadow-sm);
+            outline: none;
+        }
+        .card-label {
+            pointer-events: none;
+            max-width: 100%;
+            white-space: normal;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+        
+        .agent-card:hover { border-color: var(--gold-glow); background: #262c36; box-shadow: 0 0 10px var(--gold-glow); transform: translateY(-1px); }
+        .agent-card.dragging { opacity: 0.4; border: 1px dashed var(--blue); }
+
+        .agent-checkbox { position: absolute; top: 50%; left: 5px; transform: translateY(-50%); width: 18px; height: 18px; cursor: pointer; z-index: 10; display: none; }
+        #main-menu.delete-mode .agent-checkbox { display: block; }
+
+        .quick-copy-btn { position: absolute; top: 50%; transform: translateY(-50%); right: 8px; width: 24px; height: 24px; opacity: 0.35; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; z-index: 5; background: none; border: none; color: inherit; padding: 0; }
+        .quick-copy-btn:hover { opacity: 1; color: var(--blue); }
+        .quick-copy-btn svg { width: 16px; height: 16px; fill: currentColor; }
+
+        #prompt-view { display: none; height: 100vh; flex-direction: column; padding: 14px 24px; box-sizing: border-box; position: relative; animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .nav-bar { display: flex; align-items: center; margin-bottom: 14px; gap: 10px; }
+        .nav-bar h2 { margin: 0; font-size: 1.4rem; font-weight: 600; color: var(--blue); flex: 1; text-align: left; outline: none; }
+        .nav-bar h2[contenteditable="true"] { border-bottom: 2px solid var(--blue); background: var(--bg-light); padding: 5px; border-radius: var(--radius-sm); }
+
+        .nav-arrow { background: var(--card-bg); color: var(--text); border: 1px solid var(--border); width: 36px; height: 36px; border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; font-size: 20px; font-weight: 500; }
+        .nav-arrow:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
+        .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
+
+        .breadcrumb { font-size: 12px; color: var(--text-dim); margin-left: 12px; white-space: nowrap; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .nav-cross-hint { font-size: 11px; color: var(--text-dim); opacity: 0; transition: 0.2s; white-space: nowrap; }
+        .nav-arrow:hover + .nav-cross-hint { opacity: 0.8; }
+
+        .back-btn { background: var(--border); color: var(--text); border: 1px solid transparent; border-radius: var(--radius-sm); cursor: pointer; font-weight: 500; font-size: 12px; transition: 0.2s; }
+        .back-btn:hover { background: #3d444d; border-color: #8b949e; }
+
+        .title-save-btn, .title-cancel-btn { background: var(--success); color: #fff; border: none; padding: 6px 16px; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600; font-size: 12px; display: none; align-items: center; transition: 0.2s; }
+        .title-cancel-btn { background: var(--border); }
+        .title-save-btn:hover { background: #36b84a; }
+        .title-cancel-btn:hover { background: #3d444d; }
+
+        .edit-title-btn, .delete-agent-btn { 
+            background: none !important; border: none !important; cursor: pointer; 
+            padding: 0 !important; margin: 0 0 0 12px !important;
+            opacity: 0; transition: opacity 0.2s, color 0.2s; 
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; width: 36px !important; height: 36px !important;
+            color: inherit;
+        }
+        .agent-title-wrap:hover .edit-title-btn,
+        .agent-title-wrap:hover .delete-agent-btn { opacity: 0.6; }
+
+        .edit-title-btn:hover { opacity: 1 !important; color: var(--blue); }
+        .delete-agent-btn:hover { opacity: 1 !important; color: var(--error); }
+
+        .edit-title-btn svg, .delete-agent-btn svg { width: 22px !important; height: 22px !important; fill: currentColor; }
+
+        #prompt-box-wrap { 
+            flex: 1; 
+            position: relative; 
+            display: flex; 
+            flex-direction: row; 
+            background: var(--bg-light); 
+            border: 1px solid var(--border); 
+            border-radius: var(--radius-md); 
+            overflow: hidden;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        #prompt-box-wrap:hover:not(.editing-state) { border-color: var(--border-glow); }
+        #prompt-box-wrap.editing-state { border-color: var(--blue); box-shadow: 0 0 15px rgba(88, 166, 255, 0.1); }
+
+        
+        #search-overlay {
+            position: absolute; top: 15px; right: 80px; width: 320px;
+            background: var(--bg); border: 1px solid var(--border);
+            border-radius: var(--radius-md); padding: 15px; z-index: 1000;
+            box-shadow: var(--shadow-lg); opacity: 0.9;
+            display: none; flex-direction: column; gap: 10px;
+            backdrop-filter: blur(4px);
+        }
+        #search-overlay.visible { display: flex; animation: fadeIn 0.2s ease-out; }
+        .search-row { display: flex; align-items: center; gap: 8px; }
+        .search-row input { flex: 1; background: var(--bg-light); border: 1px solid var(--border); color: #fff; padding: 6px 10px; border-radius: var(--radius-sm); font-size: 13px; outline: none; }
+        .search-row input:focus { border-color: var(--blue); }
+        .search-options { display: flex; gap: 12px; margin: 4px 0; padding-left: 2px; }
+        .search-opt { font-size: 11px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; cursor: pointer; }
+        .search-opt input { margin: 0; cursor: pointer; }
+        .search-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 5px; }
+        .search-btn { background: var(--bg-light); color: var(--text); border: 1px solid var(--border); padding: 4px 10px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .search-btn:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
+        .search-btn.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+        .search-close { position: absolute; top: 5px; right: 5px; background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 4px; }
+        .search-close:hover { color: #fff; }
+        .search-stats { font-size: 11px; color: var(--text-dim); margin-right: auto; }
+
+        #line-gutter {
+            background: rgba(0, 0, 0, 0.2);
+            color: #607d8b;
+            padding: 30px 0;
+            text-align: right;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 14px;
+            user-select: none;
+            border-right: 1px solid var(--border);
+            min-width: 50px;
+            width: 50px;
+            overflow: hidden;
+            pointer-events: none;
+            box-sizing: border-box;
+        }
+
+        #line-gutter div {
+            padding-right: 12px;
+            height: 24px; 
+            line-height: 24px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        #prompt-box { 
+            color: var(--gold); 
+            padding: 30px; 
+            flex: 1; 
+            overflow: auto; 
+            white-space: pre; 
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; 
+            font-size: 14px; 
+            line-height: 24px; 
+            outline: none; 
+            background: transparent;
+            border: none;
+            transition: none;
+        }
+
+        .header { display: flex; justify-content: center; margin-bottom: 14px; gap: 12px; }
+        
+        .copy-btn, .save-btn, .cancel-btn { min-width: 120px; max-width: 135px; min-height: 34px; max-height: 38px; height: 36px; padding: 0 10px; border: 1px solid transparent; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600; font-size: 12px; transition: 0.2s; box-shadow: var(--shadow-sm); box-sizing: border-box; display: flex; align-items: center; justify-content: center; white-space: nowrap; }
+        .save-btn { background: var(--success); color: #fff; }
+        .cancel-btn { background: var(--border); color: var(--text); }
+
+        .save-btn:hover { background: #36b84a; }
+        .cancel-btn:hover { background: #3d444d; }
+
+        #wizard-overlay, #group-create-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(1, 4, 9, 0.8); display: none; justify-content: center;
+            align-items: center; z-index: 2000; backdrop-filter: blur(8px);
+            opacity: 0; transition: opacity 0.2s ease-out;
+        }
+        #wizard-overlay.visible, #group-create-overlay.visible { opacity: 1; }
+
+        .wizard-card {
+            background: var(--bg); border: 1px solid var(--border); width: 600px;
+            padding: 40px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+            transform: scale(0.95); transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        #wizard-overlay.visible .wizard-card, #group-create-overlay.visible .wizard-card { transform: scale(1); }
+
+        .wizard-card h3 { margin-top: 0; margin-bottom: 25px; font-weight: 600; color: var(--blue); }
+
+        .wizard-field { margin-bottom: 20px; }
+        .wizard-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-dim); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .wizard-field input, .wizard-field textarea, .wizard-field select { width: 100%; background: var(--bg-light); border: 1px solid var(--border); color: var(--gold); padding: 12px; border-radius: var(--radius-sm); font-family: inherit; outline: none; box-sizing: border-box; transition: all 0.2s; }
+        .wizard-field input:focus, .wizard-field textarea:focus, .wizard-field select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15); }
+
+        .wizard-field .field-error { color: var(--error); font-size: 12px; margin-top: 6px; display: none; }
+        .wizard-field.has-error input, .wizard-field.has-error textarea { border-color: var(--error); }
+        .wizard-field.has-error .field-error { display: block; }
+
+        .wiz-duplicate-warning { color: var(--warning); font-size: 12px; margin-top: 6px; display: none; align-items: center; gap: 6px; padding: 8px; background: rgba(210, 153, 34, 0.1); border-radius: var(--radius-sm); border: 1px solid rgba(210, 153, 34, 0.2); }
+        .wiz-duplicate-warning.visible { display: flex; }
+        .wiz-duplicate-warning svg { width: 16px; height: 16px; fill: currentColor; flex-shrink: 0; }
+
+        .toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
+            background: var(--blue); color: #fff; padding: 12px 24px; border-radius: var(--radius-pill);
+            font-size: 13px; font-weight: 600; z-index: 3000; display: block; opacity: 0;
+            box-shadow: var(--shadow-lg); transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+        .toast.visible { transform: translateX(-50%) translateY(0); opacity: 1; }
+        .toast.success { background: var(--success); }
+        .toast.error { background: #da3633; }
+        .toast.warning { background: var(--warning); }
+        .toast.info { background: var(--info); }
+
+        .wiz-save { background: var(--success); color: #fff; border: none; font-weight: 600; }
+        .wiz-save:hover { background: #36b84a; }
+        .wiz-cancel { background: var(--border); color: var(--text); border: 1px solid transparent; }
+        .wiz-cancel:hover { background: #3d444d; }
+
+        
+        .bridge-status { position: fixed; bottom: 15px; right: 15px; font-size: 11px; font-weight: 600; color: var(--text-dim); background: var(--bg-light); padding: 4px 10px; border-radius: var(--radius-pill); border: 1px solid var(--border); z-index: 100; }
+        .bridge-status.online { color: var(--success); border-color: rgba(46, 160, 67, 0.4); }
+
+        #bridge-offline-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(1, 4, 9, 0.9);
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 9999; text-align: center; color: #fff;
+            backdrop-filter: blur(12px);
+        }
+        .offline-card {
+            background: var(--bg);
+            border: 1px solid #da3633;
+            padding: 40px; border-radius: var(--radius-lg);
+            max-width: 500px;
+            box-shadow: var(--shadow-lg);
+        }
+        .spinner {
+            border: 3px solid rgba(88, 166, 255, 0.1);
+            border-left-color: var(--blue);
+            border-radius: 50%;
+            width: 32px; height: 32px;
+            animation: spin 0.8s linear infinite;
+            margin: 24px auto;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .search-empty-state { width: 100%; text-align: center; padding: 80px 20px; }
+        .search-empty-state h3 { color: var(--text); font-weight: 600; font-size: 20px; margin: 0 0 12px 0; }
+        .search-empty-state p { color: var(--text-dim); font-size: 14px; margin: 0 0 20px 0; }
+        .search-empty-state button { background: var(--blue); color: #fff; border: none; padding: 10px 24px; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.2s; }
+        .search-empty-state button:hover { background: var(--blue-hover); }
+
+        
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(1, 4, 9, 0.85); display: none; justify-content: center;
+            align-items: center; z-index: 5000; backdrop-filter: blur(8px);
+            opacity: 0; transition: opacity 0.2s ease-out;
+        }
+        .modal-overlay.visible { opacity: 1; }
+        .modal-card {
+            background: var(--bg); border: 1px solid var(--border); width: 450px;
+            padding: 30px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+            transform: scale(0.95); transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            text-align: center;
+        }
+        .modal-overlay.visible .modal-card { transform: scale(1); }
+        .modal-card h3 { margin-top: 0; color: var(--blue); font-size: 1.2rem; margin-bottom: 15px; }
+        .modal-card p { color: var(--text); font-size: 14px; line-height: 1.5; margin-bottom: 25px; }
+        .modal-actions { display: flex; justify-content: center; gap: 12px; }
+
+        
+        .edit-hint-btn {
+            position: absolute; top: 15px; right: 15px;
+            background: rgba(88, 166, 255, 0.1); border: 1px solid var(--border-glow);
+            color: var(--blue); padding: 6px 12px; border-radius: var(--radius-sm);
+            font-size: 11px; font-weight: 600; cursor: pointer; transition: 0.2s;
+            display: flex; align-items: center; gap: 6px; z-index: 10;
+        }
+        .edit-hint-btn:hover { background: var(--blue); color: #fff; box-shadow: 0 0 10px var(--border-glow); }
+        .edit-hint-btn svg { width: 14px; height: 14px; fill: currentColor; }
+
+        #prompt-box-wrap.editing-state .edit-hint-btn { display: none; }
+
+        
+        .move-selected-btn {
+            background: rgba(88, 166, 255, 0.1); color: var(--blue); border-color: rgba(88, 166, 255, 0.4);
+            padding: 8px 16px; border-radius: var(--radius-sm); display: none; align-items: center;
+            justify-content: center; font-weight: 500; font-size: 13px; transition: 0.2s; cursor: pointer;
+            border: 1px solid;
+        }
+        .move-selected-btn:hover { background: var(--blue); color: #fff; }
+        .move-selected-btn.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+        .wiz-inline-add {
+            display: flex; align-items: center; gap: 8px; margin-top: 8px;
+        }
+        .wiz-inline-btn {
+            background: none; border: 1px solid var(--border); color: var(--text-dim);
+            padding: 4px 8px; border-radius: var(--radius-sm); font-size: 11px;
+            cursor: pointer; transition: 0.2s; font-weight: 600;
+        }
+        .wiz-inline-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+        
+        .group-container .group-color-bar { 
+            position: absolute; 
+            top: 1px; left: 1px; right: 1px; 
+            height: 3px; 
+            border-radius: calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px) 0 0; 
+            opacity: 0.6; 
+            transition: opacity 0.2s; 
+        }
+        .group-container:hover .group-color-bar { opacity: 1; }
+
+        
+        .recycle-bin-btn {
+            background: none; border: 1px solid var(--border); color: var(--gold);
+            min-width: 36px; width: 36px; height: 36px; max-width: 36px; max-height: 36px;
+            border-radius: var(--radius-sm); cursor: pointer; display: flex;
+            align-items: center; justify-content: center; transition: 0.2s;
+            position: relative; flex-shrink: 0; padding: 0;
+            box-shadow: 0 0 0 0 rgba(255, 195, 40, 0);
+        }
+        .recycle-bin-btn:hover { border-color: var(--gold); color: var(--gold); background: rgba(255, 195, 40, 0.1); box-shadow: 0 0 10px var(--gold-glow); }
+        .recycle-bin-btn svg { width: 20px; height: 20px; fill: currentColor; }
+        .recycle-bin-btn .bin-badge {
+            position: absolute; top: -6px; right: -6px; background: var(--gold); color: var(--bg);
+            border-radius: 50%; min-width: 16px; height: 16px; font-size: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; opacity: 0; transition: 0.2s; pointer-events: none;
+        }
+        .recycle-bin-btn .bin-badge.has-items { opacity: 1; }
+
+        
+        #recycle-bin-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(1, 4, 9, 0.85); display: none; justify-content: center;
+            align-items: center; z-index: 6000; backdrop-filter: blur(8px);
+            opacity: 0; transition: opacity 0.2s ease-out;
+        }
+        #recycle-bin-overlay.visible { opacity: 1; }
+        .recycle-card {
+            background: var(--bg); border: 1px solid var(--border); width: 600px; max-height: 80vh;
+            padding: 30px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+            transform: scale(0.95); transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: flex; flex-direction: column;
+        }
+        #recycle-bin-overlay.visible .recycle-card { transform: scale(1); }
+        .recycle-card h3 { margin-top: 0; color: var(--gold); font-size: 1.2rem; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
+        .recycle-card h3 svg { width: 20px; height: 20px; fill: currentColor; }
+        .recycle-subtitle { color: var(--text-dim); font-size: 12px; margin-bottom: 16px; }
+        .recycle-list { flex: 1; overflow-y: auto; min-height: 0; }
+        .recycle-group-header { color: var(--text-dim); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 12px 0 6px 0; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+        .recycle-group-header:first-child { margin-top: 0; }
+        .recycle-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 12px; border-radius: var(--radius-sm); transition: 0.15s;
+            border: 1px solid transparent; margin-bottom: 4px;
+        }
+        .recycle-item:hover { background: rgba(88, 166, 255, 0.05); border-color: var(--border); }
+        .recycle-item-info { flex: 1; min-width: 0; }
+        .recycle-item-name { color: var(--gold); font-weight: 500; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .recycle-item-meta { color: var(--text-dim); font-size: 11px; margin-top: 2px; }
+        .recycle-item-actions { display: flex; gap: 6px; flex-shrink: 0; margin-left: 12px; }
+        .recycle-restore-btn {
+            background: rgba(88, 166, 255, 0.1); color: var(--blue); border: 1px solid rgba(88, 166, 255, 0.3);
+            padding: 4px 12px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 600;
+            cursor: pointer; transition: 0.2s;
+        }
+        .recycle-restore-btn:hover { background: var(--blue); color: #fff; }
+        .recycle-purge-btn {
+            background: rgba(255, 140, 137, 0.1); color: var(--error); border: 1px solid rgba(255, 140, 137, 0.3);
+            padding: 4px 12px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 600;
+            cursor: pointer; transition: 0.2s;
+        }
+        .recycle-purge-btn:hover { background: #da3633; color: #fff; border-color: #da3633; }
+        .recycle-empty { text-align: center; padding: 40px 20px; color: var(--text-dim); font-size: 14px; }
+        .recycle-empty svg { width: 40px; height: 40px; fill: var(--text-dim); opacity: 0.3; margin-bottom: 12px; }
+        .recycle-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+        .recycle-footer-info { color: var(--text-dim); font-size: 11px; }
+        .recycle-close-btn {
+            background: var(--border); color: var(--text); border: none; padding: 8px 20px;
+            border-radius: var(--radius-sm); cursor: pointer; font-weight: 600; font-size: 12px; transition: 0.2s;
+        }
+        .recycle-close-btn:hover { background: #3d444d; }
+        .recycle-purge-all-btn {
+            background: rgba(255, 140, 137, 0.1); color: var(--error); border: 1px solid rgba(255, 140, 137, 0.3);
+            padding: 8px 16px; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600; font-size: 12px; transition: 0.2s;
+        }
+        .recycle-purge-all-btn:hover { background: #da3633; color: #fff; border-color: #da3633; }
+
+        
+        :focus-visible {
+            outline: 2px solid var(--blue);
+            outline-offset: 2px;
+        }
+        button:focus-visible, [role="button"]:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible {
+            outline: 2px solid var(--blue);
+            outline-offset: 2px;
+        }
+        .agent-checkbox:focus-visible {
+            outline: 2px solid var(--gold);
+            outline-offset: 2px;
+        }
+
+        
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+
+        
+        @media (max-width: 768px) {
+            #menu-container { padding: 20px; }
+            #prompt-view { padding: 20px; }
+            .control-bar { flex-wrap: wrap; gap: 12px; }
+            .control-left, .control-right { flex: 0 0 auto; }
+            .control-center { flex: 0 0 100%; order: -1; }
+            .group-container { min-width: 100%; }
+            .wizard-card { width: 90vw; max-width: 600px; padding: 24px; }
+            .modal-card { width: 90vw; max-width: 450px; }
+            #prompt-box { white-space: pre-wrap !important; } 
+            #line-gutter { display: none; } 
+        }
+        @media (max-width: 480px) {
+            #menu-container { padding: 15px 10px; }
+            #prompt-view { padding: 15px 10px; }
+            .control-right { flex-wrap: wrap; gap: 8px; }
+            .control-right button { padding: 8px 10px; font-size: 12px; }
+            .header { flex-wrap: wrap; }
+            .copy-btn, .save-btn, .cancel-btn { padding: 10px 20px; font-size: 13px; }
+            .nav-bar { flex-wrap: wrap; gap: 8px; }
+        }
+
+        
+        .agent-checkbox { width: 18px; height: 18px; }
+
+        
+        .edit-hint-btn {
+            position: relative; top: 0; right: 0;
+            background: rgba(88, 166, 255, 0.1); border: 1px solid var(--border-glow);
+            color: var(--blue); padding: 0 16px; border-radius: var(--radius-sm);
+            font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s;
+            display: flex; align-items: center; gap: 8px; z-index: 10;
+            height: 36px; min-width: 120px; box-sizing: border-box; justify-content: center;
+        }
+        .edit-hint-btn:hover { background: var(--blue); color: #fff; box-shadow: 0 0 10px var(--border-glow); }
+        .edit-hint-btn svg { width: 14px; height: 14px; fill: currentColor; }
+
+        #prompt-view .header .edit-hint-btn { margin-left: 0; }
+        #prompt-box-wrap.editing-state .edit-hint-btn { display: none; }
+
+        
+    </style>
+</head>
+<body>
+    
+    <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+        <symbol id="icon-warning" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></symbol>
+        <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></symbol>
+        <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></symbol>
+        <symbol id="icon-recycle" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" opacity=".3"/><path d="M7 10l5 5 5-5z"/></symbol>
+        <symbol id="icon-bin-full" viewBox="0 0 24 24"><path d="M16 9h-2.1l-1.9-3.4c-.2-.4-.6-.6-1-.6s-.8.2-1 .6L8.1 9H6c-1.1 0-2 .9-2 2v9c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-9c0-1.1-.9-2-2-2zm-6-2l1.7 3H8.3L10 7zm8 13H6v-9h12v9z"/></symbol>
+        <symbol id="icon-edit" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></symbol>
+        <symbol id="icon-copy" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></symbol>
+        <symbol id="icon-search" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></symbol>
+        <symbol id="icon-drag" viewBox="0 0 24 24"><path d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></symbol>
+        <symbol id="icon-logo" viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm0 3.45l8.15 14.1H3.85L12 5.45zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></symbol>
+    </svg>
+
+    
+    <div id="a11y-announce" aria-live="polite" aria-atomic="true" class="sr-only" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0"></div>
+
+    
+
+    <div id="bridge-offline-overlay">
+        <div class="offline-card">
+            <h2 style="color: var(--error); margin-top: 0;">BRIDGE OFFLINE</h2>
+            <p>The AI Agent Bridge backend is not responding.</p>
+            <div class="spinner"></div>
+            <p style="font-size: 13px; opacity: 0.7; color: var(--text-dim);">This application requires the local Python server to operate.</p>
+            <div style="margin: 25px 0;"><button class="add-btn" style="margin: 0 auto; padding: 12px 30px;" onclick="checkBridge()">RETRY CONNECTION</button></div>
+            <p style="font-size: 14px; color: var(--blue);"><b>How to fix:</b></p>
+            <ul style="text-align: left; font-size: 13px; display: inline-block; margin-bottom: 20px; color: var(--text-dim);">
+                <li>Run <b>Install.bat</b> (recommended)</li>
+                <li>Or manually run <b>python bridge.py</b></li>
+            </ul>
+            <div id="debug-info" style="font-size: 10px; opacity: 0.4; border-top: 1px solid var(--border); padding-top: 15px;">Target: http://127.0.0.1:5589/api/data</div>
+        </div>
+    </div>
+
+    <div id="global-trash-zone" role="region" aria-label="Drop zone to delete items">
+        <svg aria-hidden="true"><use href="#icon-trash"/></svg>
+        <span>DELETE</span>
+    </div>
+
+    <div id="menu-container">
+        <div id="active-menu" style="display: none; width: 100%;">
+            <div class="control-bar">
+                <div class="control-left" style="gap: 10px;">
+                    <button class="group-btn" onclick="createNewGroup()" aria-label="Create New Group Folder">
+                        <svg aria-hidden="true" style="width: 18px; height: 18px; fill: #fff; margin-right: 8px;"><use href="#icon-plus"/></svg>
+                        ADD GROUP
+                    </button>
+                    <button class="recycle-bin-btn" onclick="openRecycleBin()" aria-label="Open Recycle Bin" title="Open Recycle Bin">
+                        <svg aria-hidden="true"><use href="#icon-recycle"/></svg>
+                        <span class="bin-badge" id="bin-badge">0</span>
+                    </button>
+                </div>
+                <div class="control-center">
+                    <div class="search-wrapper">
+                        <input type="text" id="search-box" placeholder="Search prompts..." aria-label="Search prompts" oninput="filterAgents()">
+                        <svg aria-hidden="true"><use href="#icon-search"/></svg>
+                    </div>
+                </div>
+                <div class="control-right">
+                    <button class="del-btn" onclick="enterDeleteMode()">DELETE</button>
+                    <button class="cancel-del-btn" onclick="cancelDeleteMode()">CANCEL</button>
+                    <button class="move-selected-btn" id="bulk-move-btn" onclick="openBulkMove()">MOVE SELECTED</button>
+                    <button class="confirm-del-btn disabled" id="confirm-del-btn" onclick="confirmDeleteMode()">
+                        DELETE SELECTED <span class="del-badge" id="del-count">0</span>
+                    </button>
+                    <button class="add-btn" onclick="openWizard()" aria-label="Create New AI Agent Prompt">
+                        <svg aria-hidden="true" style="width: 18px; height: 18px; fill: #fff; margin-right: 8px;"><use href="#icon-plus"/></svg>
+                        ADD PROMPT
+                    </button>
+                </div>
+            </div>
+            <div id="main-menu"></div>
+        </div>
+    </div>
+
+    <div id="prompt-view">
+        <div class="nav-bar">
+            <button class="back-btn" onclick="showMenu()"><span>←</span> RETURN</button>
+            <button class="nav-arrow" id="prev-agent-btn" onclick="navigateAgent(-1)" aria-label="Previous agent">‹</button>
+            <span class="nav-cross-hint" id="prev-cross-hint" aria-hidden="true"></span>
+            <button class="nav-arrow" id="next-agent-btn" onclick="navigateAgent(1)" aria-label="Next agent">›</button>
+            <span class="nav-cross-hint" id="next-cross-hint" aria-hidden="true"></span>
+            <div class="agent-title-wrap" style="display: flex; align-items: center; flex: 1; margin: 0 15px; position: relative;">
+                <h2 id="agent-title" style="margin: 0; text-align: left; outline: none;">Agent Name</h2>
+                <button class="edit-title-btn" onclick="startEditTitle()" aria-label="Edit Agent Name">
+                    <svg aria-hidden="true"><use href="#icon-edit"/></svg>
+                </button>
+                <button class="delete-agent-btn" id="delete-agent-btn" onclick="deleteCurrentAgent()" aria-label="Delete Agent">
+                    <svg aria-hidden="true"><use href="#icon-trash"/></svg>
+                </button>
+                <span id="agent-breadcrumb" class="breadcrumb" style="margin-left: 15px;"></span>
+                <div style="flex: 1;"></div>
+                <button class="title-save-btn" id="title-save-btn" onmousedown="event.preventDefault()" onclick="saveTitleEdit()">SAVE</button>
+                <button class="title-cancel-btn" id="title-cancel-btn" onmousedown="event.preventDefault()" onclick="cancelTitleEdit()">CANCEL</button>
+            </div>
+        </div>
+        <div class="header">
+            <button id="main-copy-btn" class="btn btn-primary copy-btn" onclick="copyPrompt()">COPY PROMPT</button>
+            
+            <button id="main-edit-btn" class="edit-hint-btn" onclick="startEdit()" aria-label="Edit prompt">
+                <svg aria-hidden="true"><use href="#icon-edit"/></svg>
+                EDIT PROMPT
+            </button>
+            <button id="save-btn" class="btn btn-success save-btn" style="display:none" onclick="saveEdit()">SAVE CHANGES</button>
+            <button id="cancel-btn" class="btn btn-secondary cancel-btn" style="display:none" onclick="stopEdit()">CANCEL</button>
+        </div>
+        <div id="prompt-box-wrap">
+            <div id="line-gutter"></div>
+            <div id="search-overlay">
+                <button class="search-close" onclick="closeSearch()" aria-label="Close search">×</button>
+                <div class="search-row">
+                    <input type="text" id="search-find" placeholder="Find..." oninput="updateSearchStats()" onkeydown="handleSearchKey(event)">
+                </div>
+                <div id="replace-row" class="search-row" style="display:none">
+                    <input type="text" id="search-replace" placeholder="Replace with..." onkeydown="handleReplaceKey(event)">
+                </div>
+                <div class="search-options">
+                    <label class="search-opt"><input type="checkbox" id="search-case" onchange="updateSearchStats()"> Match Case</label>
+                    <label class="search-opt"><input type="checkbox" id="search-word" onchange="updateSearchStats()"> Whole Word</label>
+                </div>
+                <div class="search-actions">
+                    <span id="search-stats" class="search-stats">0 of 0</span>
+                    <button class="search-btn" id="find-prev-btn" onclick="findNext(-1)">Prev</button>
+                    <button class="search-btn primary" id="find-next-btn" onclick="findNext(1)">Next</button>
+                    <button class="search-btn" id="replace-btn" style="display:none" onclick="replaceCurrent()">Replace</button>
+                    <button class="search-btn" id="replace-all-btn" style="display:none" onclick="replaceAll()">All</button>
+                </div>
+            </div>
+            <div id="prompt-box" ondblclick="startEdit()" role="textbox" aria-multiline="true" aria-label="Prompt content" aria-readonly="true"></div>
+        </div>
+    </div>
+
+    <div id="wizard-overlay" role="dialog" aria-modal="true" aria-labelledby="wizard-title">
+        <div class="wizard-card">
+            <h3 id="wizard-title">Add New AI Agent</h3>
+            <div class="wizard-field">
+                <label for="wiz-group">Group</label>
+                <select id="wiz-group" aria-label="Select group" onchange="checkWizardDuplicate()"></select>
+                <div class="wiz-inline-add">
+                    <button class="wiz-inline-btn" onclick="createNewGroup()">+ CREATE NEW GROUP</button>
+                </div>
+            </div>
+            <div class="wizard-field" id="wiz-name-field">
+                <label for="wiz-name">AI Agent Prompt Name</label>
+                <input type="text" id="wiz-name" placeholder="e.g. C# Image_Editor" aria-label="Agent prompt name" oninput="checkWizardDuplicate()">
+                
+                <div class="wiz-duplicate-warning" id="wiz-duplicate-warning">
+                    <svg aria-hidden="true"><use href="#icon-warning"/></svg>
+                    <span>An agent with this name already exists in the selected group. It will be overwritten.</span>
+                </div>
+                <div class="field-error">Agent name is required</div>
+            </div>
+            <div class="wizard-field" id="wiz-prompt-field">
+                <label for="wiz-prompt">System Prompt Content</label>
+                <textarea id="wiz-prompt" rows="10" placeholder="Paste prompt here..." aria-label="Prompt content"></textarea>
+                <div class="field-error">Prompt content is required</div>
+            </div>
+            <div class="wizard-actions">
+                <button class="wiz-save" onclick="saveNewAgent()">CREATE</button>
+                <button class="wiz-cancel" onclick="closeWizard()">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="bulk-move-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="bulk-move-title">
+        <div class="modal-card">
+            <h3 id="bulk-move-title">Move Selected Agents</h3>
+            <p id="bulk-move-text">Select a destination group for 0 agents:</p>
+            <label for="bulk-move-select" class="sr-only" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0">Destination group</label>
+            <select id="bulk-move-select" aria-label="Destination group"></select>
+            <div class="modal-actions">
+                <button class="wiz-save" onclick="confirmBulkMove()">MOVE NOW</button>
+                <button class="wiz-cancel" onclick="closeBulkMove()">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirm-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
+        <div class="modal-card">
+            <h3 id="confirm-modal-title">Confirm Action</h3>
+            <p id="confirm-modal-text">Are you sure you want to proceed?</p>
+            <div class="modal-actions">
+                <button id="confirm-modal-yes" class="wiz-save">YES</button>
+                <button id="confirm-modal-no" class="wiz-cancel">NO</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="alert-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="alert-modal-title">
+        <div class="modal-card">
+            <h3 id="alert-modal-title">Attention</h3>
+            <p id="alert-modal-text"></p>
+            <div class="modal-actions">
+                <button class="wiz-save" onclick="closeAlertModal()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="group-create-overlay" role="dialog" aria-modal="true" aria-labelledby="grp-title">
+        <div class="wizard-card">
+            <h3 id="grp-title">Create New Group</h3>
+            <div class="wizard-field" id="grp-name-field">
+                <label for="grp-name">Group Name</label>
+                <input type="text" id="grp-name" placeholder="e.g. BUG DETECTOR" aria-label="Group name">
+                <div class="field-error">Group name is required</div>
+            </div>
+            <div class="wizard-actions">
+                <button class="wiz-save" onclick="saveNewGroup()">CREATE GROUP</button>
+                <button class="wiz-cancel" onclick="closeGroupCreate()">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+    <div id="bridge-status" class="bridge-status">BRIDGE: OFFLINE</div>
+
+    <script>
+        
+        
+        
+        const FOCUSABLE_SELECTOR = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+        let focusTrapPrevious = null;
+
+        function trapFocusIn(overlayEl) {
+            focusTrapPrevious = document.activeElement;
+            const focusable = overlayEl.querySelectorAll(FOCUSABLE_SELECTOR);
+            if (focusable.length) setTimeout(() => focusable[0].focus(), 50);
+            overlayEl._focusTrapHandler = (e) => {
+                if (e.key !== 'Tab') return;
+                const fl = Array.from(overlayEl.querySelectorAll(FOCUSABLE_SELECTOR)).filter(el => el.offsetParent !== null);
+                if (!fl.length) return;
+                const first = fl[0], last = fl[fl.length - 1];
+                if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+                else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+            };
+            overlayEl.addEventListener('keydown', overlayEl._focusTrapHandler);
+        }
+
+        function releaseFocusTrap(overlayEl) {
+            if (overlayEl._focusTrapHandler) { overlayEl.removeEventListener('keydown', overlayEl._focusTrapHandler); overlayEl._focusTrapHandler = null; }
+            if (focusTrapPrevious) { focusTrapPrevious.focus(); focusTrapPrevious = null; }
+        }
+
+        
+        function clearSearch() { search.value = ''; filterAgents(); }
+
+        
+        let scrollAnchorId = null;
+        function saveScroll() {
+            const containers = menu.querySelectorAll('.group-container');
+            const viewportTop = window.scrollY;
+            for (const c of containers) {
+                if (c.getBoundingClientRect().top >= 0 && c.getBoundingClientRect().top < window.innerHeight) {
+                    scrollAnchorId = c.dataset.folder; break;
+                }
+            }
+        }
+        function restoreScroll() {
+            requestAnimationFrame(() => {
+                if (!scrollAnchorId) return;
+                const target = menu.querySelector(`.group-container[data-folder="${scrollAnchorId}"]`);
+                if (target) target.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+                scrollAnchorId = null;
+            });
+        }
+
+        
+        function a11yAnnounce(msg) {
+            const el = document.getElementById('a11y-announce');
+            if (el) { el.textContent = ''; requestAnimationFrame(() => { el.textContent = msg; }); }
+        }
+
+        
+        function setPromptBoxEditing(isEditing) {
+            box.setAttribute('aria-readonly', isEditing ? 'false' : 'true');
+        }
+
+
+        let groups = {};
+        let isDeleteMode = false;
+        let draggedAgent = null;
+        let draggedFromGroup = null;
+
+
+        let activeGroupDrag = null;
+        let groupGhost = null;
+        let groupPlaceholder = null;
+        let dragStartX = 0, dragStartY = 0;
+        let ghostOffsetX = 0, ghostOffsetY = 0;
+        let groupOriginalParent = null;
+        let groupOriginalNextSibling = null;
+
+
+        let agentPointerStartX = 0, agentPointerStartY = 0;
+        let agentDragStarted = false;
+        let agentSourceCard = null;
+        let agentGhost = null;
+        let agentPlaceholder = null;
+        let agentGhostOffsetX = 0, agentGhostOffsetY = 0;
+        let agentOriginalParent = null;
+        let agentOriginalNextSibling = null;
+        let isGroupDragging = false;
+        let isAnimating = false;
+        let isSearching = false;
+        let lastPlaceholderIndex = -1;
+        let lastPlaceholderGroup = null;
+
+        
+        function flip(container, action) {
+            const children = Array.from(container.querySelectorAll('.group-container, .agent-card, .add-agent-card'));
+            const firstRects = children.map(c => c.getBoundingClientRect());
+            action();
+            requestAnimationFrame(() => {
+                children.forEach((c, i) => {
+                    const firstRect = firstRects[i];
+                    if (!firstRect) return;
+                    const lastRect = c.getBoundingClientRect();
+                    const dx = firstRect.left - lastRect.left;
+                    const dy = firstRect.top - lastRect.top;
+                    if (dx || dy) {
+                        c.style.transition = 'none';
+                        c.style.transform = `translate(${dx}px, ${dy}px)`;
+                        c.offsetHeight;
+                        c.style.transition = 'transform 0.4s cubic-bezier(0.2, 0, 0, 1)';
+                        c.style.transform = '';
+                    }
+                });
+            });
+        }
+
+        let currentGroup = '', currentAgent = '';
+        let titleEditBackup = '';
+        let isBridgeOnline = false;
+        let connectionFailures = 0;
+        let lastSyncTime = 0;
+        const MAX_FAILURES = 5; 
+
+        let activeEventSource = null;
+
+        
+        function getGroupHue(index) {
+
+
+
+            const startHue = 210;
+            return (startHue + (index * 137.508)) % 360;
+        }
+
+        let deleteSelections = new Set();
+        function selKey(folder, agent) { return folder + '||' + agent; }
+
+        async function showConfirm(message, title = "Confirm Action") {
+            return new Promise((resolve) => {
+                const overlay = document.getElementById('confirm-modal-overlay');
+                document.getElementById('confirm-modal-title').innerText = title;
+                document.getElementById('confirm-modal-text').innerText = message;
+                overlay.style.display = 'flex';
+                setTimeout(() => overlay.classList.add('visible'), 10);
+                trapFocusIn(overlay);
+
+                const yes = document.getElementById('confirm-modal-yes');
+                const no = document.getElementById('confirm-modal-no');
+
+                const cleanup = (val) => {
+                    overlay.classList.remove('visible');
+                    setTimeout(() => overlay.style.display = 'none', 200);
+                    yes.onclick = null; no.onclick = null;
+                    releaseFocusTrap(overlay);
+                    resolve(val);
+                };
+
+                yes.onclick = () => cleanup(true);
+                no.onclick = () => cleanup(false);
+            });
+        }
+
+        function showAlert(message, title = "Attention") {
+            const overlay = document.getElementById('alert-modal-overlay');
+            document.getElementById('alert-modal-title').innerText = title;
+            document.getElementById('alert-modal-text').innerText = message;
+            overlay.style.display = 'flex';
+            setTimeout(() => overlay.classList.add('visible'), 10);
+            trapFocusIn(overlay);
+        }
+
+        function closeAlertModal() {
+            const overlay = document.getElementById('alert-modal-overlay');
+            overlay.classList.remove('visible');
+            setTimeout(() => overlay.style.display = 'none', 200);
+            releaseFocusTrap(overlay);
+        }
+
+        const ILLEGAL_CHARS = /[<>:"\/\\|?*\x00-\x1F]/g;
+        const menu = document.getElementById('main-menu');
+        const view = document.getElementById('prompt-view');
+        const box = document.getElementById('prompt-box');
+        const title = document.getElementById('agent-title');
+        const search = document.getElementById('search-box');
+        const statusEl = document.getElementById('bridge-status');
+        const offlineOverlay = document.getElementById('bridge-offline-overlay');
+        const activeMenu = document.getElementById('active-menu');
+        const globalTrash = document.getElementById('global-trash-zone');
+        const promptBoxWrap = document.getElementById('prompt-box-wrap');
+        const gutter = document.getElementById('line-gutter');
+
+        
+        function updateLineNumbers() {
+            if (!gutter || !box) return;
+            const text = box.innerText;
+            const lines = text.split(/\r\n|\r|\n/);
+            const count = Math.max(1, lines.length);
+            
+
+            if (gutter.children.length !== count) {
+                let html = '';
+                for (let i = 1; i <= count; i++) html += `<div>${i}</div>`;
+                gutter.innerHTML = html;
+            }
+            syncGutterScroll();
+        }
+
+        function syncGutterScroll() {
+            if (gutter && box) gutter.scrollTop = box.scrollTop;
+        }
+
+        async function api(endpoint, method = 'GET', body = null) {
+            try {
+
+                const baseUrl = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') 
+                                ? `${window.location.protocol}//${window.location.host}` 
+                                : 'http://127.0.0.1:5589';
+                const url = new URL(`${baseUrl}/api/${endpoint}`);
+                url.searchParams.set('t', Date.now());
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: body ? JSON.stringify(body) : null
+                });
+                return await res.json();
+            } catch (e) { return null; }
+        }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            await checkBridge();
+            if (isBridgeOnline) { await syncFromBridge(); startEventStream(); }
+            setInterval(async () => {
+                const wasOnline = isBridgeOnline;
+                await checkBridge();
+                if (!wasOnline && isBridgeOnline) { await syncFromBridge(); startEventStream(); }
+            }, 3000);
+
+            window.addEventListener('pointermove', handleManualDragMove);
+            window.addEventListener('pointerup', handleManualDragUp);
+            window.addEventListener('pointermove', handleAgentPointerMove);
+            window.addEventListener('pointerup', handleAgentPointerUp);
+
+            
+            window.addEventListener('contextmenu', (e) => {
+                if (activeGroupDrag || agentDragStarted) {
+                    e.preventDefault();
+                    cancelDrag();
+                }
+            });
+
+            
+            box.addEventListener('scroll', syncGutterScroll);
+        });
+
+        async function cancelDrag() {
+            if (activeGroupDrag) {
+                const folder = activeGroupDrag;
+                const original = document.querySelector(`.group-container[data-folder="${folder}"]`);
+                if (original && groupOriginalParent) {
+                    flip(menu, () => {
+                        groupOriginalParent.insertBefore(original, groupOriginalNextSibling);
+                        original.classList.remove('group-dragging');
+                    });
+                    animateGhostTo(original);
+                } else { cleanupDragState(); }
+            } else if (agentDragStarted) {
+                const sourceCard = agentSourceCard;
+                if (sourceCard && agentOriginalParent) {
+                    flip(agentOriginalParent, () => {
+                        agentOriginalParent.insertBefore(sourceCard, agentOriginalNextSibling);
+                        sourceCard.classList.remove('dragging');
+                    });
+                    animateGhostTo(sourceCard);
+                } else { cleanupDragState(); }
+            }
+        }
+
+        function animateGhostTo(targetEl) {
+            const ghost = groupGhost || agentGhost;
+            if (!ghost || !targetEl) { cleanupDragState(); return; }
+            isAnimating = true;
+            const rect = targetEl.getBoundingClientRect();
+            ghost.style.transition = 'all 0.4s cubic-bezier(0.2, 0, 0, 1)';
+            ghost.style.left = rect.left + 'px';
+            ghost.style.top = rect.top + 'px';
+            ghost.style.transform = 'scale(1)';
+            ghost.style.opacity = '0.5';
+            setTimeout(() => {
+                cleanupDragState();
+                isAnimating = false;
+                syncFromBridge();
+            }, 400);
+        }
+
+        function cleanupDragState() {
+            if (groupGhost) { groupGhost.remove(); groupGhost = null; }
+            if (agentGhost) { agentGhost.remove(); agentGhost = null; }
+            if (groupPlaceholder) { groupPlaceholder.remove(); groupPlaceholder = null; }
+            if (agentPlaceholder) { agentPlaceholder.remove(); agentPlaceholder = null; }
+            if (agentSourceCard) agentSourceCard.classList.remove('dragging');
+            document.querySelectorAll('.group-container.group-dragging').forEach(el => el.classList.remove('group-dragging'));
+            document.querySelectorAll('.group-container.drag-over').forEach(el => el.classList.remove('drag-over'));
+            globalTrash.classList.remove('active', 'drag-over');
+            activeGroupDrag = null; agentDragStarted = false; agentSourceCard = null;
+            isGroupDragging = false; draggedAgent = null; draggedFromGroup = null;
+        }
+
+        function handleManualDragStart(e, folderName, container) {
+            e.preventDefault();
+            activeGroupDrag = folderName;
+            isGroupDragging = true;
+            groupOriginalParent = container.parentNode;
+            groupOriginalNextSibling = container.nextSibling;
+
+            const rect = container.getBoundingClientRect();
+            ghostOffsetX = e.clientX - rect.left;
+            ghostOffsetY = e.clientY - rect.top;
+
+            groupGhost = container.cloneNode(true);
+            groupGhost.classList.add('drag-ghost');
+            groupGhost.style.width = rect.width + 'px';
+            groupGhost.style.height = rect.height + 'px';
+            groupGhost.style.left = rect.left + 'px';
+            groupGhost.style.top = rect.top + 'px';
+            document.body.appendChild(groupGhost);
+
+            groupPlaceholder = document.createElement('div');
+            groupPlaceholder.className = 'group-placeholder';
+            groupPlaceholder.style.width = rect.width + 'px';
+            groupPlaceholder.style.height = rect.height + 'px';
+
+            container.classList.add('group-dragging');
+            container.parentNode.insertBefore(groupPlaceholder, container);
+            globalTrash.classList.add('active');
+        }
+
+        function handleManualDragMove(e) {
+            if (!activeGroupDrag) return;
+            groupGhost.style.left = (e.clientX - ghostOffsetX) + 'px';
+            groupGhost.style.top = (e.clientY - ghostOffsetY) + 'px';
+
+            const target = e.target.closest('.group-container');
+            if (target && target.dataset.folder !== activeGroupDrag && !target.classList.contains('group-dragging')) {
+                const rect = target.getBoundingClientRect();
+                const next = (e.clientX > rect.left + rect.width / 2);
+                flip(menu, () => {
+                    if (next) menu.insertBefore(groupPlaceholder, target.nextSibling);
+                    else menu.insertBefore(groupPlaceholder, target);
+                });
+            }
+
+            const trashRect = globalTrash.getBoundingClientRect();
+            if (e.clientX > trashRect.left && e.clientX < trashRect.right &&
+                e.clientY > trashRect.top && e.clientY < trashRect.bottom) {
+                globalTrash.classList.add('drag-over');
+            } else { globalTrash.classList.remove('drag-over'); }
+        }
+
+        async function handleManualDragUp(e) {
+            if (!activeGroupDrag) return;
+            const folder = activeGroupDrag;
+            const trashActive = globalTrash.classList.contains('drag-over');
+
+            if (trashActive) {
+                const group = groups[folder];
+                const count = group ? Object.keys(group.agents).length : 0;
+                const msg = count > 0
+                    ? `DELETE GROUP "${group ? group.title : folder}" with ${count} agents? This moves them to the Recycle Bin.`
+                    : `DELETE EMPTY GROUP "${group ? group.title : folder}"? This moves it to the Recycle Bin.`;
+                if (await showConfirm(msg, 'Delete Group')) {
+                    await moveToRecycleBin(folder);
+                    
+                    a11yAnnounce(`Group ${group ? group.title : folder} moved to recycle bin.`);
+                    cleanupDragState();
+                } else { cancelDrag(); }
+            } else {
+                const original = document.querySelector(`.group-container[data-folder="${folder}"]`);
+                if (original) {
+                    flip(menu, () => {
+                        menu.insertBefore(original, groupPlaceholder);
+                        original.classList.remove('group-dragging');
+                    });
+                    const folders = Array.from(menu.querySelectorAll('.group-container:not(.drag-ghost)'))
+                                        .map(el => el.dataset.folder).filter(f => f);
+                    animateGhostTo(original);
+                    await api('save-order', 'POST', { order: folders });
+                    
+                    a11yAnnounce(`Group ${groups[folder] ? groups[folder].title : folder} reordered.`);
+                    syncFromBridge();
+                } else { cleanupDragState(); }
+            }
+        }
+
+        function handleAgentPointerMove(e) {
+            if (!agentSourceCard) return;
+            if (agentDragStarted) {
+                if (agentGhost) {
+                    agentGhost.style.left = (e.clientX - agentGhostOffsetX) + 'px';
+                    agentGhost.style.top = (e.clientY - agentGhostOffsetY) + 'px';
+                }
+                
+                const elem = document.elementFromPoint(e.clientX, e.clientY);
+                const targetGroup = elem ? elem.closest('.group-container') : null;
+                
+                document.querySelectorAll('.group-container.drag-over').forEach(el => {
+                    if (el !== targetGroup) el.classList.remove('drag-over');
+                });
+
+                if (targetGroup) {
+                    targetGroup.classList.add('drag-over');
+                    const grid = targetGroup.querySelector('.group-grid');
+                    if (grid) {
+                        const children = Array.from(grid.children).filter(c => c !== agentSourceCard && c.classList.contains('agent-card'));
+                        let afterElement = null;
+                        
+
+                        const dragName = agentSourceCard.dataset.agent;
+                        for (const child of children) {
+                            const childName = child.dataset.agent;
+                            if (dragName.length < childName.length || (dragName.length === childName.length && dragName.localeCompare(childName) < 0)) {
+                                afterElement = child; break;
+                            }
+                        }
+                        
+
+                        flip(grid, () => {
+                            if (afterElement) {
+                                if (agentSourceCard.nextSibling !== afterElement) grid.insertBefore(agentSourceCard, afterElement);
+                            } else {
+                                const addBtn = targetGroup.querySelector('.add-agent-card');
+
+                                if (grid.lastChild !== agentSourceCard) grid.appendChild(agentSourceCard);
+                            }
+                        });
+                    }
+                }
+
+                const trashRect = globalTrash.getBoundingClientRect();
+                if (e.clientX > trashRect.left && e.clientX < trashRect.right &&
+                    e.clientY > trashRect.top && e.clientY < trashRect.bottom) {
+                    globalTrash.classList.add('drag-over');
+                } else { globalTrash.classList.remove('drag-over'); }
+                return;
+            }
+
+            if (e.buttons === 0) { agentSourceCard = null; return; }
+            const dx = e.clientX - agentPointerStartX, dy = e.clientY - agentPointerStartY;
+            if (Math.sqrt(dx * dx + dy * dy) > 5) {
+                agentDragStarted = true;
+                draggedAgent = agentSourceCard.dataset.agent;
+                draggedFromGroup = agentSourceCard.dataset.folder;
+                agentOriginalParent = agentSourceCard.parentNode;
+                agentOriginalNextSibling = agentSourceCard.nextSibling;
+                
+                const rect = agentSourceCard.getBoundingClientRect();
+                agentGhostOffsetX = e.clientX - rect.left; agentGhostOffsetY = e.clientY - rect.top;
+                
+                agentGhost = agentSourceCard.cloneNode(true);
+                agentGhost.classList.add('drag-ghost');
+                agentGhost.style.width = rect.width + 'px';
+                agentGhost.style.height = rect.height + 'px';
+                agentGhost.style.left = rect.left + 'px';
+                agentGhost.style.top = rect.top + 'px';
+                agentGhost.style.margin = '0';
+                
+                agentSourceCard.classList.add('dragging');
+                document.body.appendChild(agentGhost);
+                globalTrash.classList.add('active');
+            }
+        }
+
+        async function handleAgentPointerUp(e) {
+            if (!agentDragStarted) {
+                if (agentSourceCard && agentSourceCard.dataset.agent) {
+                    if (!e.target.closest('.quick-copy-btn') && !e.target.closest('.agent-checkbox')) {
+                        showPrompt(agentSourceCard.dataset.folder, agentSourceCard.dataset.agent);
+                    }
+                }
+                agentSourceCard = null; return;
+            }
+
+            const sourceCard = agentSourceCard, agent = draggedAgent, fromGroup = draggedFromGroup;
+            const trashRect = globalTrash.getBoundingClientRect();
+            const overTrash = e.clientX > trashRect.left && e.clientX < trashRect.right &&
+                              e.clientY > trashRect.top && e.clientY < trashRect.bottom;
+
+            if (overTrash) {
+                if (await showConfirm(`MOVE "${agent}" TO RECYCLE BIN?`, "Confirm Delete")) {
+                    const res = await api('recycle-delete-agents', 'POST', { agents: [{ g: fromGroup, a: agent }] });
+                    if (res && res.status === 'success') {
+                        showToast(`MOVED TO BIN: ${agent}`, "success");
+                        
+                        a11yAnnounce(`Agent ${agent} moved to recycle bin.`);
+                        cleanupDragState(); await syncFromBridge(); updateBinBadge();
+                    } else { showToast("DELETE FAILED", "error"); syncFromBridge(); cleanupDragState(); }
+                } else { cancelDrag(); }
+            } else {
+                const elem = document.elementFromPoint(e.clientX, e.clientY);
+                const targetGroup = elem ? elem.closest('.group-container') : null;
+                if (targetGroup && targetGroup.dataset.folder !== fromGroup) {
+                    const res = await api('move', 'POST', { from: fromGroup, to: targetGroup.dataset.folder, name: agent });
+                    if (res && res.status === 'success') {
+                        showToast(`MOVED ${agent}`, "success");
+                        
+                        a11yAnnounce(`Agent ${agent} moved to ${groups[targetGroup.dataset.folder].title}.`);
+                        animateGhostTo(sourceCard);
+                        await syncFromBridge();
+                    } else { showToast("MOVE FAILED", "error"); cancelDrag(); }
+                } else {
+
+                    animateGhostTo(sourceCard);
+                    setTimeout(() => { 
+                        if (!overTrash) {
+                            
+                            a11yAnnounce(`Agent ${agent} moved within its group.`);
+                            syncFromBridge(); 
+                        }
+                    }, 400);
+                }
+            }
+        }
+
+        let bridgeVersion = '';
+        async function checkBridge() {
+            const data = await api('ping');
+            if (data && data.status === 'ok') {
+                isBridgeOnline = true; connectionFailures = 0;
+                if (data.version && data.version !== bridgeVersion) bridgeVersion = data.version;
+                statusEl.innerText = `BRIDGE: ONLINE v${bridgeVersion}`; statusEl.classList.add('online');
+                offlineOverlay.style.display = 'none'; activeMenu.style.display = 'block';
+            } else {
+                connectionFailures++; isBridgeOnline = false;
+                if (connectionFailures >= MAX_FAILURES) {
+                    statusEl.innerText = "BRIDGE: OFFLINE"; statusEl.classList.remove('online');
+                    offlineOverlay.style.display = 'flex'; activeMenu.style.display = 'none';
+                }
+            }
+        }
+
+        function startEventStream() {
+            if (activeEventSource) { activeEventSource.close(); activeEventSource = null; }
+            activeEventSource = new EventSource('http://127.0.0.1:5589/events');
+            activeEventSource.onmessage = (e) => {
+                if (e.data === 'sync') {
+                    if (isAnimating || isGroupDragging || agentDragStarted) return;
+                    if (Date.now() - lastSyncTime > 1000) syncFromBridge();
+                }
+            };
+            activeEventSource.onerror = () => {
+                isBridgeOnline = false; if (activeEventSource) { activeEventSource.close(); activeEventSource = null; }
+                checkBridge();
+            };
+        }
+
+        async function syncFromBridge() {
+            lastSyncTime = Date.now();
+            const data = await api('data');
+            if (data && !data.status) {
+                saveScroll();
+                const promptVisible = (view.style.display === 'flex'), wasEditing = box.classList.contains('editing');
+                groups = data;
+                if (!isGroupDragging && !agentDragStarted && !isAnimating) renderMenu(search.value);
+                if (isDeleteMode) updateDeleteCount();
+                updateBinBadge();
+                if (promptVisible && currentGroup && currentAgent) {
+                    const agentExists = groups[currentGroup] && groups[currentGroup].agents && groups[currentGroup].agents.hasOwnProperty(currentAgent);
+                    if (!agentExists) {
+                        showToast("AGENT WAS DELETED EXTERNALLY", wasEditing ? "error" : "warning");
+                        stopEdit(); cancelTitleEdit(); view.style.display = 'none';
+                        document.getElementById('menu-container').style.display = 'flex';
+                        return true;
+                    }
+                    updateBreadcrumb();
+                }
+                restoreScroll();
+                return true;
+            }
+            return false;
+        }
+
+        function renderMenu(filter = '') {
+            menu.innerHTML = '';
+            const f = filter.toLowerCase();
+            const groupFolders = Object.keys(groups);
+            groupFolders.forEach((folderName, index) => {
+                const groupData = groups[folderName], groupAgents = groupData.agents;
+                const filteredAgents = Object.keys(groupAgents).filter(a => a.toLowerCase().includes(f));
+                if (filteredAgents.length === 0 && f) return;
+
+                const container = document.createElement('div');
+                container.className = 'group-container'; container.dataset.folder = folderName;
+                container.setAttribute('role', 'region');
+                container.setAttribute('aria-label', groupData.title + ' group');
+
+                
+                const colorBar = document.createElement('div');
+                colorBar.className = 'group-color-bar';
+                const groupHue = getGroupHue(index);
+                colorBar.style.background = `hsl(${groupHue}, 50%, 55%)`;
+                container.appendChild(colorBar);
+
+                const header = document.createElement('div'); header.className = 'group-header';
+
+                
+                const handle = document.createElement('div');
+                handle.className = 'group-drag-handle'; handle.title = 'Drag to reorder group';
+                handle.setAttribute('role', 'button');
+                handle.setAttribute('tabindex', '0');
+                handle.setAttribute('aria-roledescription', 'drag handle');
+                handle.setAttribute('aria-label', 'Reorder ' + groupData.title + ' group');
+                handle.innerHTML = '<svg aria-hidden="true"><use href="#icon-drag"/></svg>';
+                handle.onpointerdown = (e) => handleManualDragStart(e, folderName, container);
+                handle.onkeydown = (e) => {
+                    if ((e.ctrlKey || e.metaKey) && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+                        e.preventDefault();
+                        const allFolders = Object.keys(groups);
+                        const idx = allFolders.indexOf(folderName);
+                        if (idx === -1) return;
+                        const dir = e.key === 'ArrowLeft' ? -1 : 1;
+                        const newIdx = idx + dir;
+                        if (newIdx < 0 || newIdx >= allFolders.length) return;
+                        const reordered = [...allFolders];
+                        reordered.splice(idx, 1);
+                        reordered.splice(newIdx, 0, folderName);
+                        api('save-order', 'POST', { order: reordered }).then(() => {
+                            showToast('GROUP REORDERED', 'success');
+                            syncFromBridge();
+                        });
+                    }
+                };
+                header.appendChild(handle);
+
+                const titleEl = document.createElement('h3'); titleEl.className = 'group-title'; titleEl.innerText = groupData.title;
+                titleEl.onpointerdown = (e) => {
+                    if (titleEl.classList.contains('editing')) return;
+                    handleManualDragStart(e, folderName, container);
+                };
+                header.appendChild(titleEl);
+
+                const editIcon = document.createElement('button'); editIcon.className = 'edit-group-icon';
+                editIcon.setAttribute('aria-label', 'Rename ' + groupData.title + ' group');
+                editIcon.innerHTML = '<svg aria-hidden="true"><use href="#icon-edit"/></svg>';
+                editIcon.onclick = () => startRenameGroup(folderName, groupData.title, titleEl, header);
+                header.appendChild(editIcon);
+
+                if (groupData.title !== "GENERAL") {
+                    const delIcon = document.createElement('button'); delIcon.className = 'delete-group-icon';
+                    delIcon.setAttribute('aria-label', 'Delete ' + groupData.title + ' group');
+                    delIcon.innerHTML = '<svg aria-hidden="true"><use href="#icon-trash"/></svg>';
+                    delIcon.onclick = () => confirmDeleteGroup(folderName);
+                    header.appendChild(delIcon);
+                }
+                if (groupData.title === "GENERAL") editIcon.style.display = 'none';
+                container.appendChild(header);
+
+                const grid = document.createElement('div'); grid.className = 'group-grid';
+                filteredAgents.sort((a, b) => {
+                    if (a.length !== b.length) return a.length - b.length;
+                    return a.localeCompare(b);
+                }).forEach(agentName => {
+                    const card = document.createElement('button'); card.className = 'agent-card';
+                    card.dataset.folder = folderName; card.dataset.agent = agentName;
+                    card.setAttribute('aria-label', agentName + ' prompt');
+                    
+                    card.onkeydown = (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            if (!isDeleteMode) showPrompt(folderName, agentName);
+                        }
+                        if (e.key === 'Delete' || (e.shiftKey && e.key === 'm')) {
+                            e.preventDefault();
+                            if (!e.shiftKey) return;
+                            openKeyboardMove(folderName, agentName);
+                        }
+                    };
+                    card.onpointerdown = (e) => {
+                        if (e.target.closest('.quick-copy-btn') || e.target.closest('.agent-checkbox')) return;
+                        agentPointerStartX = e.clientX; agentPointerStartY = e.clientY;
+                        agentDragStarted = false; agentSourceCard = card;
+                    };
+                    const cardLabel = document.createElement('span'); cardLabel.className = 'card-label'; cardLabel.innerText = agentName;
+                    card.appendChild(cardLabel);
+
+                    const chk = document.createElement('input'); chk.type = 'checkbox'; chk.className = 'agent-checkbox';
+                    chk.setAttribute('aria-label', 'Select ' + agentName);
+                    chk.onclick = (e) => e.stopPropagation(); chk.onpointerdown = (e) => e.stopPropagation();
+                    chk.onchange = () => {
+                        const key = selKey(folderName, agentName);
+                        if (chk.checked) deleteSelections.add(key); else deleteSelections.delete(key);
+                        updateDeleteCount();
+                    };
+                    if (deleteSelections.has(selKey(folderName, agentName))) chk.checked = true;
+                    card.appendChild(chk);
+                    const cp = document.createElement('button'); cp.className = 'quick-copy-btn';
+                    cp.setAttribute('aria-label', 'Copy ' + agentName + ' prompt');
+                    cp.innerHTML = '<svg aria-hidden="true"><use href="#icon-copy"/></svg>';
+                    cp.onpointerdown = (e) => e.stopPropagation();
+                    cp.onclick = (e) => { e.stopPropagation(); copyToClipboard(groupAgents[agentName]); };
+                    card.appendChild(cp); grid.appendChild(card);
+                });
+
+                if (filteredAgents.length === 0 && !f) {
+                    const emptyMsg = document.createElement('div'); emptyMsg.className = 'empty-group-msg';
+                    emptyMsg.innerText = 'No agents yet - click + to add one'; grid.appendChild(emptyMsg);
+                }
+
+                const addCard = document.createElement('button'); addCard.className = 'add-agent-card';
+                addCard.setAttribute('aria-label', 'Add new prompt to ' + groupData.title);
+                addCard.innerHTML = '<svg aria-hidden="true"><use href="#icon-plus"/></svg> Add AI Agent Prompt';
+                addCard.onclick = (e) => { e.stopPropagation(); openWizard(folderName); };
+                grid.appendChild(addCard);
+                container.appendChild(grid); menu.appendChild(container);
+            });
+
+            if (f && menu.children.length === 0) {
+                const emptyState = document.createElement('div'); emptyState.className = 'search-empty-state';
+                emptyState.innerHTML = '<h3>No agents match your search</h3><p>Try a different search term</p><button onclick="clearSearch()">Clear Search</button>';
+                menu.appendChild(emptyState);
+            }
+            if (isDeleteMode) menu.classList.add('delete-mode');
+        }
+
+        function filterAgents() { saveScroll(); renderMenu(search.value); restoreScroll(); }
+
+        
+        async function openKeyboardMove(fromFolder, agentName) {
+            const allGroups = Object.keys(groups).sort();
+            if (allGroups.length <= 1) { showToast('No other groups to move to', 'info'); return; }
+            const targets = allGroups.filter(f => f !== fromFolder);
+            const groupNames = targets.map(f => groups[f].title);
+            const choice = await showConfirm(
+                `Move "${agentName}" to which group?\n\n${groupNames.map((n,i) => `${i+1}. ${n}`).join('\n')}`,
+                'Move Agent'
+            );
+            if (!choice) return;
+            
+            
+            if (targets.length === 1) {
+                const res = await api('move', 'POST', { from: fromFolder, to: targets[0], name: agentName });
+                if (res && res.status === 'success') { showToast(`MOVED ${agentName}`, 'success'); await syncFromBridge(); }
+                else showToast('MOVE FAILED', 'error');
+            } else {
+                
+                showToast('Use drag-and-drop or the move-selected feature for multi-group targets', 'info');
+            }
+        }
+
+        async function moveToRecycleBin(folder) {
+            const res = await api('recycle-delete-group', 'POST', { folder });
+            if (res && res.status === 'success') { showToast('GROUP MOVED TO RECYCLE BIN', 'success'); await syncFromBridge(); }
+            else { showToast('DELETE FAILED', 'error'); syncFromBridge(); }
+        }
+
+        async function confirmDeleteGroup(folder) {
+            const group = groups[folder]; if (!group) return;
+            const count = Object.keys(group.agents).length;
+            if (count === 0 || await showConfirm(`Move group "${group.title}" with ${count} agents to Recycle Bin?`, "Delete Group")) {
+                await moveToRecycleBin(folder);
+            } else { syncFromBridge(); }
+        }
+
+        function startRenameGroup(oldFolder, oldTitle, titleEl, header) {
+            titleEl.contentEditable = true; titleEl.classList.add('editing'); titleEl.focus();
+            const range = document.createRange(); range.selectNodeContents(titleEl);
+            const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+
+            const saveBtn = document.createElement('button'); saveBtn.className = 'group-rename-btn group-rename-save'; saveBtn.innerHTML = '&#10003;';
+            const cancelBtn = document.createElement('button'); cancelBtn.className = 'group-rename-btn group-rename-cancel'; cancelBtn.innerHTML = '&#10005;';
+            header.appendChild(saveBtn); header.appendChild(cancelBtn);
+            const editIcon = header.querySelector('.edit-group-icon'), delIcon = header.querySelector('.delete-group-icon');
+            if (editIcon) editIcon.style.display = 'none'; if (delIcon) delIcon.style.display = 'none';
+
+            const cleanup = () => {
+                titleEl.contentEditable = false; titleEl.classList.remove('editing');
+                saveBtn.remove(); cancelBtn.remove();
+                if (editIcon) editIcon.style.display = ''; if (delIcon) delIcon.style.display = '';
+                titleEl.onblur = null;
+            };
+
+            saveBtn.onclick = async (e) => {
+                e.stopPropagation(); const newTitle = titleEl.innerText.trim(); cleanup();
+                if (newTitle && newTitle !== oldTitle) {
+                    const res = await api('rename-group', 'POST', { old: oldFolder, new: newTitle });
+                    if (res && res.status === 'success') { showToast(`RENAMED TO: ${newTitle}`, "success"); syncFromBridge(); }
+                    else { showToast("RENAME FAILED", "error"); syncFromBridge(); }
+                } else { titleEl.innerText = oldTitle; }
+            };
+            cancelBtn.onclick = (e) => { e.stopPropagation(); titleEl.innerText = oldTitle; cleanup(); };
+            saveBtn.onmousedown = (e) => e.preventDefault(); 
+            cancelBtn.onmousedown = (e) => e.preventDefault(); 
+            titleEl.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); saveBtn.click(); } if (e.key === 'Escape') cancelBtn.click(); };
+            titleEl.onblur = () => { setTimeout(() => { if (titleEl.contentEditable === 'true') { titleEl.innerText = oldTitle; cleanup(); } }, 200); };
+        }
+
+        function createNewGroup() {
+            document.getElementById('grp-name').value = ''; document.getElementById('grp-name-field').classList.remove('has-error');
+            const overlay = document.getElementById('group-create-overlay'); overlay.style.display = 'flex';
+            setTimeout(() => { overlay.classList.add('visible'); document.getElementById('grp-name').focus(); }, 10);
+            trapFocusIn(overlay);
+        }
+
+        function closeGroupCreate() {
+            const overlay = document.getElementById('group-create-overlay'); overlay.classList.remove('visible');
+            setTimeout(() => overlay.style.display = 'none', 200);
+            releaseFocusTrap(overlay);
+        }
+
+        async function saveNewGroup() {
+            const name = document.getElementById('grp-name').value.trim();
+            if (!name) { document.getElementById('grp-name-field').classList.add('has-error'); return; }
+            const res = await api('create-group', 'POST', { name: name });
+            if (res && res.status === 'success') {
+                showToast(`CREATED GROUP: ${name}`, "success");
+                closeGroupCreate();
+                await syncFromBridge();
+                const wiz = document.getElementById('wizard-overlay');
+                if (wiz.classList.contains('visible')) {
+                    const sel = document.getElementById('wiz-group');
+                    sel.innerHTML = '';
+                    Object.keys(groups).sort().forEach(f => {
+                        const o = document.createElement('option');
+                        o.value = f; o.innerText = groups[f].title;
+                        sel.appendChild(o);
+                    });
+                    const folder = Object.keys(groups).find(f => groups[f].title === name);
+                    if (folder) sel.value = folder;
+                }
+            }
+            else { showToast("CREATE FAILED", "error"); }
+        }
+
+        function showPrompt(folder, agent) {
+            currentGroup = folder; currentAgent = agent; stopEdit(); cancelTitleEdit();
+            document.getElementById('menu-container').style.display = 'none';
+            view.style.display = 'flex'; title.innerText = agent; box.innerText = groups[folder].agents[agent];
+            updateLineNumbers();
+            setPromptBoxEditing(false);
+            updateNavArrows(); updateBreadcrumb();
+        }
+
+        function showMenu() {
+            if (box.classList.contains('editing') || document.getElementById('title-save-btn').style.display === 'flex') {
+                showConfirm('Discard unsaved changes?', "Unsaved Changes").then(res => {
+                    if (res) {
+                        stopEdit(); cancelTitleEdit(); view.style.display = 'none';
+                        document.getElementById('menu-container').style.display = 'flex';
+                        syncFromBridge();
+                    }
+                });
+                return;
+            }
+            stopEdit(); cancelTitleEdit(); view.style.display = 'none';
+            document.getElementById('menu-container').style.display = 'flex';
+            syncFromBridge();
+        }
+
+        function buildAllAgentsList() {
+            const list = [];
+            Object.keys(groups).sort().forEach(f => Object.keys(groups[f].agents).sort().forEach(a => list.push({f, a})));
+            return list;
+        }
+
+        function navigateAgent(dir) {
+            const list = buildAllAgentsList(), idx = list.findIndex(i => i.f === currentGroup && i.a === currentAgent);
+            const newIdx = idx + dir; if (newIdx < 0 || newIdx >= list.length) return;
+            if (box.classList.contains('editing') || document.getElementById('title-save-btn').style.display === 'flex') {
+                showConfirm('Discard unsaved changes?', "Unsaved Changes").then(res => {
+                    if (res) showPrompt(list[newIdx].f, list[newIdx].a);
+                });
+                return;
+            }
+            showPrompt(list[newIdx].f, list[newIdx].a);
+        }
+
+        function updateNavArrows() {
+            const list = buildAllAgentsList(), idx = list.findIndex(i => i.f === currentGroup && i.a === currentAgent);
+            document.getElementById('prev-agent-btn').disabled = (idx <= 0);
+            document.getElementById('next-agent-btn').disabled = (idx >= list.length - 1);
+            const prevH = document.getElementById('prev-cross-hint'), nextH = document.getElementById('next-cross-hint');
+            if (prevH && idx > 0 && list[idx-1].f !== currentGroup) prevH.innerText = '? ' + groups[list[idx-1].f].title; else prevH.innerText = '';
+            if (nextH && idx < list.length-1 && list[idx+1].f !== currentGroup) nextH.innerText = '? ' + groups[list[idx+1].f].title; else nextH.innerText = '';
+        }
+
+        function updateBreadcrumb() { const bc = document.getElementById('agent-breadcrumb'); if (bc && groups[currentGroup]) bc.innerText = groups[currentGroup].title; }
+
+        function startEdit() {
+            box.contentEditable = true; box.classList.add('editing');
+            box.setAttribute('aria-readonly', 'false');
+            document.getElementById('main-copy-btn').style.display = 'none';
+            document.getElementById('save-btn').style.display = 'block'; document.getElementById('cancel-btn').style.display = 'block';
+            promptBoxWrap.classList.add('editing-state');
+            box.oninput = updateLineNumbers;
+            box.onscroll = () => { if (gutter) gutter.scrollTop = box.scrollTop; };
+            box.onkeydown = (e) => {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveEdit(); }
+                if (e.key === 'Escape') { e.preventDefault(); stopEdit(); }
+            };
+        }
+
+        async function deleteCurrentAgent() {
+            if (await showConfirm(`MOVE "${currentAgent}" TO RECYCLE BIN?`, "Confirm Delete")) {
+                const res = await api('recycle-delete-agents', 'POST', { agents: [{ g: currentGroup, a: currentAgent }] });
+                if (res && res.status === 'success') {
+                    showToast(`MOVED TO BIN: ${currentAgent}`, "success");
+                    updateBinBadge();
+                    showMenu();
+                } else { showToast("DELETE FAILED", "error"); }
+            }
+        }
+
+        function startEditTitle() {
+            titleEditBackup = currentAgent; title.contentEditable = true; title.focus();
+            const range = document.createRange(); range.selectNodeContents(title);
+            const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+            document.getElementById('title-save-btn').style.display = 'flex';
+            document.getElementById('title-cancel-btn').style.display = 'flex';
+            document.querySelector('.edit-title-btn').style.display = 'none';
+            document.getElementById('delete-agent-btn').style.display = 'none';
+            title.setAttribute('role', 'textbox');
+            title.setAttribute('aria-label', 'Agent name');
+            title.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); saveTitleEdit(); } if (e.key === 'Escape') cancelTitleEdit(); };
+            title.onblur = () => { setTimeout(() => { if (title.contentEditable === 'true') cancelTitleEdit(); }, 200); };
+        }
+
+        async function saveTitleEdit() {
+            const newName = title.innerText.trim().replace(ILLEGAL_CHARS, '_'), prev = titleEditBackup;
+            title.contentEditable = false; document.getElementById('title-save-btn').style.display = 'none';
+            document.getElementById('title-cancel-btn').style.display = 'none'; document.querySelector('.edit-title-btn').style.display = 'flex';
+            document.getElementById('delete-agent-btn').style.display = 'flex';
+            title.removeAttribute('role');
+            if (newName && newName !== prev) {
+                const res = await api('save', 'POST', { group: currentGroup, name: newName, content: box.innerText, old_name: prev });
+                if (res && res.status === 'success') {
+                    currentAgent = newName; await syncFromBridge(); title.innerText = newName;
+                    showToast("AGENT RENAMED", "success"); updateNavArrows(); updateBreadcrumb();
+                } else { title.innerText = prev; showToast("RENAME FAILED", "error"); }
+            } else title.innerText = prev;
+        }
+
+        function cancelTitleEdit() {
+            title.contentEditable = false; title.innerText = titleEditBackup || currentAgent;
+            document.getElementById('title-save-btn').style.display = 'none';
+            document.getElementById('title-cancel-btn').style.display = 'none';
+            document.querySelector('.edit-title-btn').style.display = 'flex';
+            document.getElementById('delete-agent-btn').style.display = 'flex';
+            title.removeAttribute('role');
+        }
+
+        function stopEdit() {
+            box.contentEditable = false; box.classList.remove('editing'); title.contentEditable = false; box.onkeydown = null;
+            box.setAttribute('aria-readonly', 'true');
+            document.getElementById('main-copy-btn').style.display = 'block';
+            document.getElementById('save-btn').style.display = 'none'; document.getElementById('cancel-btn').style.display = 'none';
+            document.querySelector('.edit-title-btn').style.display = 'flex';
+            document.getElementById('delete-agent-btn').style.display = 'flex';
+            promptBoxWrap.classList.remove('editing-state');
+            if (currentAgent && groups[currentGroup]?.agents?.[currentAgent]) {
+                title.innerText = currentAgent; box.innerText = groups[currentGroup].agents[currentAgent];
+            }
+        }
+
+        async function saveEdit() {
+            const res = await api('save', 'POST', { group: currentGroup, name: currentAgent, content: box.innerText, old_name: currentAgent });
+            if (res && res.status === 'success') { showToast("PROMPT SAVED", "success"); await syncFromBridge(); stopEdit(); }
+            else showToast("SAVE FAILED", "error");
+        }
+
+        function openWizard(pre) {
+            const sel = document.getElementById('wiz-group'); sel.innerHTML = '';
+            Object.keys(groups).sort().forEach(f => { const o = document.createElement('option'); o.value = f; o.innerText = groups[f].title; sel.appendChild(o); });
+            if (pre) sel.value = pre;
+            document.getElementById('wiz-name').value = ''; document.getElementById('wiz-prompt').value = '';
+            document.getElementById('wiz-name-field').classList.remove('has-error');
+            document.getElementById('wiz-prompt-field').classList.remove('has-error');
+            document.getElementById('wiz-duplicate-warning').classList.remove('visible');
+            const overlay = document.getElementById('wizard-overlay'); overlay.style.display = 'flex';
+            setTimeout(() => { overlay.classList.add('visible'); document.getElementById('wiz-name').focus(); }, 10);
+            trapFocusIn(overlay);
+        }
+
+        function closeWizard() {
+            const overlay = document.getElementById('wizard-overlay'); overlay.classList.remove('visible');
+            setTimeout(() => overlay.style.display = 'none', 200);
+            releaseFocusTrap(overlay);
+        }
+
+        function checkWizardDuplicate() {
+            const f = document.getElementById('wiz-group').value, n = document.getElementById('wiz-name').value.trim().replace(ILLEGAL_CHARS, '_');
+            const w = document.getElementById('wiz-duplicate-warning');
+            if (f && n && groups[f]?.agents?.hasOwnProperty(n)) w.classList.add('visible'); else w.classList.remove('visible');
+        }
+
+        async function saveNewAgent() {
+            const f = document.getElementById('wiz-group').value, n = document.getElementById('wiz-name').value.trim().replace(ILLEGAL_CHARS, '_'), c = document.getElementById('wiz-prompt').value;
+            let err = false;
+            if (!n) { document.getElementById('wiz-name-field').classList.add('has-error'); err = true; }
+            if (!c) { document.getElementById('wiz-prompt-field').classList.add('has-error'); err = true; }
+            if (err) return;
+            if (groups[f]?.agents?.hasOwnProperty(n) && !(await showConfirm(`Overwrite existing agent "${n}"?`, "Overwrite Agent"))) return;
+            const res = await api('save', 'POST', { group: f, name: n, content: c });
+            if (res && res.status === 'success') { showToast("AGENT CREATED", "success"); closeWizard(); await syncFromBridge(); }
+            else showToast("CREATE FAILED", "error");
+        }
+
+        function copyToClipboard(t) { navigator.clipboard.writeText(t).then(() => showToast("COPIED", "success")); }
+        function copyPrompt() { copyToClipboard(box.innerText); }
+
+        function showToast(m, t = 'info') {
+            const el = document.getElementById('toast'); el.innerText = m; el.className = 'toast visible ' + t;
+            setTimeout(() => el.classList.remove('visible'), 3000);
+        }
+
+        function enterDeleteMode() {
+            isDeleteMode = true;
+            document.querySelector('.del-btn').style.display = 'none';
+            document.querySelector('.cancel-del-btn').style.display = 'flex';
+            document.getElementById('bulk-move-btn').style.display = 'flex';
+            document.getElementById('confirm-del-btn').style.display = 'flex';
+            menu.classList.add('delete-mode'); updateDeleteCount();
+            a11yAnnounce('Delete mode activated. Select agents to delete or move.');
+        }
+
+        function cancelDeleteMode() {
+            isDeleteMode = false; deleteSelections.clear();
+            document.querySelector('.del-btn').style.display = 'flex';
+            document.querySelector('.cancel-del-btn').style.display = 'none';
+            document.getElementById('bulk-move-btn').style.display = 'none';
+            document.getElementById('confirm-del-btn').style.display = 'none';
+            menu.classList.remove('delete-mode');
+            a11yAnnounce('Delete mode cancelled.');
+        }
+
+        async function confirmDeleteMode() {
+            const sel = Array.from(deleteSelections).map(k => { const i = k.indexOf('||'); return { g: k.substring(0, i), a: k.substring(i + 2) }; });
+            if (sel.length === 0) { showToast("NO AGENTS SELECTED", "info"); return; }
+            if (await showConfirm(`Move ${sel.length} agents to Recycle Bin?`, "Confirm Delete")) {
+                api('recycle-delete-agents', 'POST', { agents: sel }).then(() => { deleteSelections.clear(); syncFromBridge(); cancelDeleteMode(); showToast("AGENTS MOVED TO RECYCLE BIN", "success"); updateBinBadge(); });
+            }
+        }
+        function updateDeleteCount() {
+            const c = deleteSelections.size, b = document.getElementById('del-count');
+            const delBtn = document.getElementById('confirm-del-btn');
+            const moveBtn = document.getElementById('bulk-move-btn');
+            if (b) b.innerText = c;
+            if (delBtn) { if (c === 0) delBtn.classList.add('disabled'); else delBtn.classList.remove('disabled'); }
+            if (moveBtn) { if (c === 0) moveBtn.classList.add('disabled'); else moveBtn.classList.remove('disabled'); }
+            a11yAnnounce(c + ' agents selected');
+        }
+
+        function openBulkMove() {
+            const c = deleteSelections.size;
+            if (c === 0) return;
+            const overlay = document.getElementById('bulk-move-overlay');
+            document.getElementById('bulk-move-text').innerText = `Select a destination group for ${c} agents:`;
+            const sel = document.getElementById('bulk-move-select');
+            sel.innerHTML = '';
+            Object.keys(groups).sort().forEach(f => {
+                const o = document.createElement('option');
+                o.value = f; o.innerText = groups[f].title;
+                sel.appendChild(o);
+            });
+            overlay.style.display = 'flex';
+            setTimeout(() => overlay.classList.add('visible'), 10);
+            trapFocusIn(overlay);
+        }
+
+        function closeBulkMove() {
+            const overlay = document.getElementById('bulk-move-overlay');
+            overlay.classList.remove('visible');
+            setTimeout(() => overlay.style.display = 'none', 200);
+            releaseFocusTrap(overlay);
+        }
+
+        async function confirmBulkMove() {
+            const target = document.getElementById('bulk-move-select').value;
+            const sel = Array.from(deleteSelections).map(k => { const i = k.indexOf('||'); return { g: k.substring(0, i), a: k.substring(i + 2) }; });
+            if (!target || sel.length === 0) return;
+            const res = await api('bulk-move', 'POST', { agents: sel, to: target });
+            if (res && res.status === 'success') {
+                showToast(`MOVED ${sel.length} AGENTS`, "success");
+                deleteSelections.clear();
+                closeBulkMove();
+                cancelDeleteMode();
+                await syncFromBridge();
+            } else {
+                showToast("MOVE FAILED", "error");
+            }
+        }
+
+
+        async function openRecycleBin() {
+            const overlay = document.getElementById('recycle-bin-overlay');
+            overlay.style.display = 'flex';
+            setTimeout(() => overlay.classList.add('visible'), 10);
+            trapFocusIn(overlay);
+            await refreshRecycleBinList();
+        }
+
+        function closeRecycleBin() {
+            const overlay = document.getElementById('recycle-bin-overlay');
+            overlay.classList.remove('visible');
+            setTimeout(() => overlay.style.display = 'none', 200);
+            releaseFocusTrap(overlay);
+        }
+
+        async function refreshRecycleBinList() {
+            const list = document.getElementById('recycle-list');
+            try {
+                const res = await api('recycle-list');
+                if (!res || !res.items || res.items.length === 0) {
+                    list.innerHTML = '<div class="recycle-empty"><svg aria-hidden="true"><use href="#icon-trash"/></svg><br>Recycle bin is empty</div>';
+                    document.getElementById('purge-all-btn').style.display = 'none';
+                    return;
+                }
+                document.getElementById('purge-all-btn').style.display = 'inline-flex';
+                const grouped = {};
+                res.items.forEach(item => {
+                    const g = item.original_group || 'Unknown Group';
+                    if (!grouped[g]) grouped[g] = [];
+                    grouped[g].push(item);
+                });
+                let html = '';
+                Object.keys(grouped).sort().forEach(groupName => {
+                    html += '<div class="recycle-group-header">' + escapeHtml(groupName) + '</div>';
+                    grouped[groupName].forEach(item => {
+                        const daysLeft = Math.max(0, 30 - Math.floor((Date.now()/1000 - item.deleted_at) / 86400));
+                        const typeLabel = item.type === 'group' ? 'Group' : 'Agent';
+                        html += '<div class="recycle-item">';
+                        html += '<div class="recycle-item-info">';
+                        html += '<div class="recycle-item-name">' + escapeHtml(item.name) + '</div>';
+                        html += '<div class="recycle-item-meta">' + typeLabel + ' · ' + daysLeft + ' days remaining</div>';
+                        html += '</div>';
+                        html += '<div class="recycle-item-actions">';
+                        html += '<button class="recycle-restore-btn" onclick="restoreBinItem(\'' + escapeHtml(item.bin_path) + '\')">Restore</button>';
+                        html += '<button class="recycle-purge-btn" onclick="purgeBinItem(\'' + escapeHtml(item.bin_path) + '\')">Delete Forever</button>';
+                        html += '</div></div>';
+                    });
+                });
+                list.innerHTML = html;
+            } catch (e) {
+                list.innerHTML = '<div class="recycle-empty">Failed to load recycle bin</div>';
+            }
+        }
+
+        function escapeHtml(s) {
+            const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+        }
+
+        async function restoreBinItem(binPath) {
+            const res = await api('recycle-restore', 'POST', { bin_path: binPath });
+            if (res && res.status === 'success') {
+                showToast('ITEM RESTORED', 'success');
+                await refreshRecycleBinList();
+                await syncFromBridge();
+                updateBinBadge();
+            } else { showToast('RESTORE FAILED', 'error'); }
+        }
+
+        async function purgeBinItem(binPath) {
+            if (!await showConfirm('Permanently delete this item? This cannot be undone.', 'Permanent Delete')) return;
+            const res = await api('recycle-purge', 'POST', { bin_path: binPath });
+            if (res && res.status === 'success') {
+                showToast('PERMANENTLY DELETED', 'success');
+                await refreshRecycleBinList();
+                updateBinBadge();
+            } else { showToast('PURGE FAILED', 'error'); }
+        }
+
+        async function purgeAllBinItems() {
+            if (!await showConfirm('Permanently delete ALL recycle bin items? This cannot be undone.', 'Purge All')) return;
+            const res = await api('recycle-purge-all', 'POST');
+            if (res && res.status === 'success') {
+                showToast('RECYCLE BIN EMPTIED', 'success');
+                await refreshRecycleBinList();
+                updateBinBadge();
+            } else { showToast('PURGE FAILED', 'error'); }
+        }
+
+        async function updateBinBadge() {
+            try {
+                const res = await api('recycle-list');
+                const count = (res && res.items) ? res.items.length : 0;
+                const badge = document.getElementById('bin-badge');
+                if (badge) {
+                    badge.innerText = count;
+                    if (count > 0) badge.classList.add('has-items');
+                    else badge.classList.remove('has-items');
+                }
+            } catch (e) {}
+        }
+
+        
+        let searchMatches = [];
+        let currentSearchIdx = -1;
+
+        function openSearch(replaceMode = false) {
+            if (view.style.display !== 'flex') return;
+            const overlay = document.getElementById('search-overlay');
+            const replaceRow = document.getElementById('replace-row');
+            const replaceBtn = document.getElementById('replace-btn');
+            const replaceAllBtn = document.getElementById('replace-all-btn');
+            
+            overlay.style.display = 'flex';
+            setTimeout(() => overlay.classList.add('visible'), 10);
+            
+            if (replaceMode) {
+                replaceRow.style.display = 'flex';
+                replaceBtn.style.display = 'inline-flex';
+                replaceAllBtn.style.display = 'inline-flex';
+            } else {
+                replaceRow.style.display = 'none';
+                replaceBtn.style.display = 'none';
+                replaceAllBtn.style.display = 'none';
+            }
+            
+            const findInput = document.getElementById('search-find');
+            findInput.focus();
+            findInput.select();
+            updateSearchStats();
+        }
+
+        function closeSearch() {
+            const overlay = document.getElementById('search-overlay');
+            overlay.classList.remove('visible');
+            setTimeout(() => overlay.style.display = 'none', 200);
+            searchMatches = [];
+            currentSearchIdx = -1;
+            window.getSelection().removeAllRanges();
+        }
+
+        function getSearchRegex(term) {
+            if (!term) return null;
+            const isCase = document.getElementById('search-case').checked;
+            const isWord = document.getElementById('search-word').checked;
+            let escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            if (isWord) escaped = `\\b${escaped}\\b`;
+            return new RegExp(escaped, isCase ? 'g' : 'gi');
+        }
+
+        function updateSearchStats() {
+            const term = document.getElementById('search-find').value;
+            const stats = document.getElementById('search-stats');
+            if (!term) { searchMatches = []; currentSearchIdx = -1; stats.innerText = '0 of 0'; return; }
+            
+            const regex = getSearchRegex(term);
+            const text = box.innerText;
+            searchMatches = [];
+            let match;
+            while ((match = regex.exec(text)) !== null) {
+                searchMatches.push({ index: match.index, length: match[0].length });
+                if (regex.lastIndex === match.index) regex.lastIndex++;
+            }
+            
+            if (searchMatches.length > 0) {
+                if (currentSearchIdx === -1) currentSearchIdx = 0;
+                else if (currentSearchIdx >= searchMatches.length) currentSearchIdx = 0;
+                stats.innerText = `${currentSearchIdx + 1} of ${searchMatches.length}`;
+                highlightCurrentMatch(true);
+            } else {
+                currentSearchIdx = -1;
+                stats.innerText = '0 of 0';
+                window.getSelection().removeAllRanges();
+            }
+        }
+
+        function highlightCurrentMatch(scroll = true) {
+            if (currentSearchIdx === -1 || searchMatches.length === 0) return;
+            const match = searchMatches[currentSearchIdx];
+            
+            const selection = window.getSelection();
+            const range = document.createRange();
+
+            let charCount = 0;
+            const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null, false);
+            let node, foundStart = false;
+
+            while (node = walker.nextNode()) {
+                const nextCount = charCount + node.length;
+                if (!foundStart && nextCount > match.index) {
+                    range.setStart(node, match.index - charCount);
+                    foundStart = true;
+                }
+                if (foundStart && nextCount >= match.index + match.length) {
+                    range.setEnd(node, (match.index + match.length) - charCount);
+                    break;
+                }
+                charCount = nextCount;
+            }
+            
+            if (foundStart) {
+                selection.removeAllRanges();
+                selection.addRange(range);
+
+                if (scroll) {
+                    const rect = range.getBoundingClientRect();
+                    const boxRect = box.getBoundingClientRect();
+
+                    if (rect.top < boxRect.top || rect.bottom > boxRect.bottom) {
+                        const top = box.scrollTop + (rect.top - boxRect.top) - (boxRect.height / 2);
+                        box.scrollTo({ top, behavior: 'smooth' });
+                    }
+                }
+            }
+        }
+
+        function findNext(dir) {
+            if (searchMatches.length === 0) return;
+            currentSearchIdx = (currentSearchIdx + dir + searchMatches.length) % searchMatches.length;
+            document.getElementById('search-stats').innerText = `${currentSearchIdx + 1} of ${searchMatches.length}`;
+            highlightCurrentMatch(true);
+        }
+
+        function replaceCurrent() {
+            if (currentSearchIdx === -1) return;
+            if (!box.classList.contains('editing')) startEdit();
+            
+            const replacement = document.getElementById('search-replace').value;
+            const selection = window.getSelection();
+            
+
+            if (selection.rangeCount > 0) {
+
+
+                document.execCommand('insertText', false, replacement);
+                updateSearchStats();
+            }
+        }
+
+        function replaceAll() {
+            if (searchMatches.length === 0) return;
+            if (!box.classList.contains('editing')) startEdit();
+            
+            const term = document.getElementById('search-find').value;
+            const replacement = document.getElementById('search-replace').value;
+            const regex = getSearchRegex(term);
+            
+
+            currentSearchIdx = 0;
+            while (searchMatches.length > 0) {
+                highlightCurrentMatch(false);
+                document.execCommand('insertText', false, replacement);
+                updateSearchStats();
+                if (searchMatches.length === 0) break;
+            }
+            
+            closeSearch();
+            showToast("REPLACED ALL OCCURRENCES", "success");
+        }
+
+        function handleSearchKey(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (e.shiftKey) findNext(-1); else findNext(1);
+            }
+            if (e.key === 'Escape') closeSearch();
+        }
+
+        function handleReplaceKey(e) {
+            if (e.key === 'Enter') { e.preventDefault(); replaceCurrent(); }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'f') { e.preventDefault(); openSearch(false); }
+                if (e.key === 'h') { e.preventDefault(); openSearch(true); }
+                if (e.key === 'w' && view.style.display === 'flex') {
+                    e.preventDefault();
+                    const lineStr = window.prompt("Jump to line number:");
+                    if (lineStr) {
+                        const line = parseInt(lineStr, 10);
+                        if (!isNaN(line) && line > 0) {
+
+                            const targetTop = (line - 1) * 24;
+                            box.scrollTo({ top: targetTop, behavior: 'smooth' });
+                        }
+                    }
+                }
+            }
+            if (e.key === 'Escape') {
+                const searchOverlay = document.getElementById('search-overlay');
+                if (searchOverlay.classList.contains('visible')) { closeSearch(); return; }
+                
+                if (activeGroupDrag || agentDragStarted) { cancelDrag(); return; }
+                const confirmOverlay = document.getElementById('confirm-modal-overlay');
+                const alertOverlay = document.getElementById('alert-modal-overlay');
+                const bulkOverlay = document.getElementById('bulk-move-overlay');
+                if (document.getElementById('wizard-overlay').classList.contains('visible')) closeWizard();
+                else if (document.getElementById('group-create-overlay').classList.contains('visible')) closeGroupCreate();
+                else if (confirmOverlay.classList.contains('visible')) { document.getElementById('confirm-modal-no').click(); }
+                else if (alertOverlay.classList.contains('visible')) closeAlertModal();
+                else if (bulkOverlay.classList.contains('visible')) closeBulkMove();
+                else if (document.getElementById('recycle-bin-overlay').classList.contains('visible')) closeRecycleBin();
+                else if (view.style.display === 'flex') showMenu();
+                else if (isDeleteMode) cancelDeleteMode();
+            }
+        });
+    </script>
+
+    
+    <div id="recycle-bin-overlay" role="dialog" aria-label="Recycle Bin">
+        <div class="recycle-card">
+            <h3><svg aria-hidden="true"><use href="#icon-trash"/></svg> Recycle Bin</h3>
+            <div class="recycle-subtitle">Deleted agents and groups are stored here for 30 days</div>
+            <div class="recycle-list" id="recycle-list"></div>
+            <div class="recycle-footer">
+                <span class="recycle-footer-info">Items older than 30 days are permanently deleted on restart</span>
+                <div style="display: flex; gap: 8px;">
+                    <button class="recycle-purge-all-btn" onclick="purgeAllBinItems()" id="purge-all-btn" style="display:none;">Purge All</button>
+                    <button class="recycle-close-btn" onclick="closeRecycleBin()">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

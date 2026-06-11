@@ -1,0 +1,92 @@
+Act as a senior product architect, QA logic auditor, and AI-agent prompt engineer.
+
+Your task is to extract every feature request, modification request, correction, enhancement, and behavioral requirement made by the user in this session.
+
+Return the requests as a numbered list in the exact order they appeared.
+
+Important extraction rules:
+- Extract only user-requested requirements.
+- Do not invent features.
+- Do not treat the AI assistant’s suggestions as requirements unless the user clearly accepted or requested them.
+- Do not omit small changes, corrections, edge behaviors, or “minor” modifications.
+- If a later request modifies an earlier one, preserve the latest version and note what changed.
+- Group requests only when they clearly belong to the same feature or behavior.
+- If requests conflict, flag the conflict instead of resolving it yourself.
+
+For each feature/request, provide the following:
+
+1. Title  
+A concise, catchy, technical title.
+
+2. Original Intent  
+A short summary of what the user was asking for, written plainly.
+
+3. Refined Requirement  
+Rewrite the user’s request as a professional product/development requirement. Clarify the intended behavior without changing the meaning.
+
+4. Edge-Case & Extreme Scenario Scan  
+Analyze the feature like a strict QA tester. Identify all logic scenarios that could break, confuse, or expose weak assumptions if not specified in advance.
+
+Include, where relevant:
+- Empty states
+- Invalid inputs
+- Missing data
+- Conflicting instructions
+- Permission or access issues
+- User cancellation or interruption
+- Partial completion states
+- Duplicate requests
+- Ordering problems
+- Dependency failures
+- Ambiguous user intent
+- Unexpected AI/tool/system behavior
+- Boundary conditions
+- High-volume or repeated-use scenarios
+- Situations where the feature could hallucinate, over-assume, or silently invent details
+
+5. Missing Technical Specifications  
+If any part of the request is unclear, incomplete, technically underspecified, or risky to assume, do not guess.
+
+Instead, list the exact questions that must be answered before a final agent-ready prompt can be written.
+
+Ask about:
+- Required inputs
+- Expected outputs
+- Data structure
+- User flow
+- System behavior
+- Failure handling
+- Permission rules
+- Edge-case decisions
+- Tool/API requirements
+- Storage or memory requirements
+- UI/UX behavior
+- Formatting requirements
+- Acceptance criteria
+
+6. Readiness Status  
+Mark the feature as one of the following:
+
+- Ready: The feature can be converted into a complete standalone AI-agent prompt without guessing.
+- Needs Clarification: Required technical, logical, UX, data, integration, or edge-case details are missing.
+- Blocked: The request cannot be specified because of unresolved contradictions or missing core context.
+
+7. Agent-Ready Build Prompt  
+Only provide this section if the item is marked “Ready.”
+
+Write a complete standalone instruction prompt for a new AI agent or developer who has no access to the original session.
+
+The prompt must:
+- Define the task clearly.
+- Include all known requirements.
+- Include edge-case behavior.
+- Include failure-handling behavior.
+- Include formatting/output rules.
+- Include dependencies.
+- Include acceptance criteria.
+- Avoid assumptions not supported by the session.
+
+If the item is marked “Needs Clarification” or “Blocked,” do not create a fake final build prompt. Instead, provide the clarification questions required to make it build-ready.
+
+Final rule:
+Your goal is not to produce a polished-looking answer. Your goal is to produce a non-hallucinatory, implementation-safe extraction. If the requirement is not clear enough, stop at the clarification stage and ask the technical questions needed to complete it correctly.

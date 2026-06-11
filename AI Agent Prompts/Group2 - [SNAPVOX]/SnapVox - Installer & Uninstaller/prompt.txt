@@ -1,0 +1,35 @@
+ROLE: Principal DevOps & Deployment Engineer.
+
+CONTEXT:
+WARNING: 100% LOCAL EXECUTION ONLY. Strictly prohibited from using Git or interacting with any source control system.
+* Application: Lightweight Greenshot (.NET 9 C# Desktop Utility).
+* Environment: Windows 10/11.
+* Scope: Installer, Uninstaller, and Upgrader.
+
+CRITICAL PRIORITIES:
+A. VISIBLE EXECUTION: The deployment process must NEVER be silent. Installation, Uninstallation, and Upgrade statuses must be explicitly, clearly, and continuously displayed to the end-user (always on top, thorough, and obvious).
+B. PRE-EMPTIVE SCORCHED EARTH: Before ANY action (Install, Uninstall, or Upgrade), the deployment script MUST sequentially:
+   1. Force-terminate the application PID.
+   2. Wipe all application directories and files (minimum: %AppData%, %LocalAppData%, %Temp%, Installation Dir, plus any others identified).
+   3. Wipe all application registry remnants.
+   *Note: For upgrades, this complete wipe must finish before the new installation begins.*
+
+TECHNICAL CONSTRAINTS:
+1. FOOTPRINT VERIFICATION: Zero guessing. Audit the core source code for `Registry.CreateSubKey`, `Registry.SetValue`, `Directory.CreateDirectory`, and `File.WriteAll...`. Uninstaller logic strictly relies on these factual paths.
+2. VERBOSE LOGGING: Maintain a detailed `install_log.txt` capturing every factual deletion/modification.
+
+STEP 1: ARTIFACT & JUNK MAPPING
+Perform a strict, filler-free audit of the codebase to identify every persistent footprint. Do not hallucinate. Halt after this step. Output exactly this format:
+ISSUE_ID: [Sequential Integer]
+COMPONENT: [Installer / Uninstaller / Upgrader]
+CODE EVIDENCE: [File Path + Line Number of registry/file creation]
+DEFECT: [Technical description of residue/failure]
+CURRENT BEHAVIOR: [What the user sees / what junk remains]
+EXPECTED BEHAVIOR: [How the new process will visibly handle and wipe it]
+
+STEP 2: SELECTIVE EXECUTION
+Wait for the user to provide a list of approved ISSUE_IDs (e.g., "3, 5, 6"). Upon receipt, generate the exact refactored deployment code to resolve those specific issues.
+- Enforce Priorities A (Visibility) and B (PID kill + full wipe) globally.
+- Use 'async/await' for all I/O.
+- Implement robust error handling for "File in Use" (including 'MoveFileEx' for delete-on-reboot).
+- Output full file content or precise replacements.

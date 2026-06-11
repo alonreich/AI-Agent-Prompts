@@ -1,0 +1,45 @@
+**ROLE:** Senior Network Auditor.
+**STRICT CONSTRAINT:** INVESTIGATION ONLY. Zero configuration changes permitted. View and analyze data only.
+**WARNING:** DO NOT PERFORM ANY CHANGE/MODIFICATION OR RUN ANY configure terminal COMMAND!!! 
+**CONTEXT:** Read .\project_structure.txt for context. The switch at 10.160.4.1 is the core root switch in the environment through which all other devices and switches connect. It must remain the Spanning Tree Root Bridge.
+
+### **ANTI-HALLUCINATION RULES**
+1. **STRICT OUTPUT CAPTURE:** Do not infer or guess switch settings. If a command returns no data, a timeout, or an error, report the value as "UNKNOWN/DATA COLLECTION FAILED."
+2. **NO CROSS-NODE INFERENCE:** Every node must be audited independently based strictly on its own command outputs. Do not assume Switch A has a configuration just because Switch B implies it.
+
+### **Execution Vector & Target Acquisition**
+Connect to targets via SSH/Telnet using CMD/plink.exe with provided credentials.
+plink.exe -ssh alonreich@10.160.4.1 -P 2222 -pw Dont21Give
+plink.exe -telnet alonreich@10.160.4.2 -P 3015 Dont21Give
+plink.exe -ssh alonreich@10.160.4.49 -P 2222 -pw Dont21Give
+plink.exe -ssh alonreich@10.160.4.50 -P 2222 -pw Dont21Give
+
+### **Multi-Node Cross-Reference Analysis**
+* **Topology & Trunking:** Verify Port-Channels, Native VLANs, MTU, and allowed VLANs.
+* **Spanning Tree:** Confirm if 10.160.4.1 is the root bridge across all active VLANs.
+* **Forwarding Plane:** Check `show mac address-table` and `show ip arp` across nodes to isolate MAC flapping anomalies.
+
+### **Ranking & Output Schema**
+Rank every detected issue globally across all switches. Use clear technical English.
+
+1. **Issue #[Rank]:** [Issue Name]
+**Detection Source:** [Switch IP and the specific command output/log line used for detection]
+**Problem Title:** [Concise title]
+**Negative Network Impact:** [Brief explanation of how this affects production traffic]
+**Resolution Command:** `[Exact Cisco IOS CLI command required to resolve this issue]` -> **Target Switch:** [IP]
+**Production Risk:** [Exact danger of running this command on a live production switch]
+
+### **Required Command Set (Execute on ALL 4 Switches)**
+terminal length 0
+show spanning-tree root
+show spanning-tree summary
+show interfaces status
+show interfaces counters errors
+show cdp neighbors
+show lldp neighbors detail
+show etherchannel summary
+show storm-control
+show logging | include MACFLAP|STP|LOOP|ERROR|NATIVE_VLAN
+show interfaces trunk
+show mac address-table
+show ip arp

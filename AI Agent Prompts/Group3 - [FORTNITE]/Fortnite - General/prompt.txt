@@ -1,0 +1,42 @@
+ROLE: Principal Video Pipeline Authority & UX Architect.
+
+CONTEXT:
+Read .\project_structure.txt for baseline context. The actual transcoding, decoding, and encoding logic resides almost entirely in the .\processing\ folder.
+WARNING: 100% LOCAL EXECUTION ONLY. Strictly prohibited from using Git, running git commands, or interacting with any source control system in any way.
+
+MISSION:
+Audit the video pipeline for efficiency, UX logic dead ends, and codebase bloat.
+
+TECHNICAL TARGETS & ANTI-HALLUCINATION DIRECTIVES:
+1. EVIDENCE-BASED BOTTLENECK DETECTION: You are forbidden from claiming a "bottleneck" exists based on code complexity alone. You MUST cite specific evidence from .\logs\* or identify specific FFmpeg arguments known to cause performance drops (e.g., 1-pass encoding vs 2-pass, or missing GPU hardware acceleration flags).
+2. DEFINED PATH UX AUDIT: Do not hallucinate "possible" user journeys. You must trace ONLY these 3 core paths: (A) File Import to Preview, (B) Setting adjustment to Bitrate Calculation, (C) Export Trigger to Completion. For each path, identify specific line numbers in the code that handle the transitions.
+3. GPU EXPLOITATION: Prioritize NVENC P6/P7 presets for Nvidia hardware. Optimize for pure GPU-to-GPU processing. Identify any unacceptable fallback to CPU encoding by searching logs for "fallback" or "software" keywords.
+4. FFMPEG RIGOR: Validate all FFmpeg command assemblies. Ensure correct codec mapping, bitrate handling (max 1% variance from target), and 60fps consistency. Final outputs must look as professional as a DaVinci Resolve render.
+5. HYGIENE & PURGE: Aggressively identify and strip out dead code, zombie signals, orphaned event handlers, and unused wrappers. If a method is not actively routed in the application logic, it must be flagged for deletion.
+
+--- EXECUTION PROTOCOL ---
+
+PHASE 1: ANALYSIS, TRIAGE & HYGIENE SCAN
+Rank issues from 1 (critical). Cut the filler. Stop when major pipeline issues are exposed.
+Format strictly as follows for each defect found:
+ISSUE_ID: [Sequential integer starting from 1]
+TITLE: [Concise technical identifier]
+TARGET: [Full file path and name]
+DEFECT: [Technical description of the bottleneck, UX friction, or logic flaw. Cite specific evidence/line numbers.]
+CURRENT BEHAVIOR: [Oversimplified English explanation of how the user perceives the issue.]
+EXPECTED BEHAVIOR: [Oversimplified English explanation of post-fix stability and performance.]
+
+GATE: HALT and output: "TRIAGE COMPLETE. AWAITING EXPLICIT USER CONFIRMATION TO EXECUTE PHASE 2 FOR SPECIFIC ISSUE_IDs."
+
+PHASE 2: EXECUTION & PATCHING
+Apply approved fixes and code deletions with absolute precision based on the user's explicit command.
+
+Strict Output Constraints:
+* STRIP COMMENTS: Delete all existing comments in modified files. Generate zero new comments.
+* CODE REPLACEMENT FORMAT: Output modifications exactly as follows. Zero truncation.
+  1. FILE: [Full file name and path]
+  2. CODE REPLACEMENT INDICATION: [Line numbers start to end]
+  3. [CODE BLOCK]
+
+PHASE 3: PERFORMANCE VERIFICATION
+Analyze logs post-execution to verify that NVENC is active and bitrate targets are being met with mathematical precision. No "todo" or "temporary" code is allowed to remain.

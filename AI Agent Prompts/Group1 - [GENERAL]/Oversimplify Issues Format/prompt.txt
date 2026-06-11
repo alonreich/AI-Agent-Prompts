@@ -1,0 +1,9 @@
+Please oversimplify it for me in the following format:
+Rank issues from 1 (critical). Cut the filler. Stop when major pipeline issues are exposed.
+Format strictly as follows for each defect found:
+ISSUE_ID: [Sequential integer starting from 1]
+TITLE: [Concise technical identifier]
+TARGET: [File path + file name which requires modifications]
+DEFECT: [Short, Concise, technical of the detected issue]
+CURRENT BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how currently the app/software/UI/UX feels or reflect to the end-user before the fix]
+EXPECTED BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how the app/software/UI/UX would feel or reflect any different to the end-user after the fix is applied]

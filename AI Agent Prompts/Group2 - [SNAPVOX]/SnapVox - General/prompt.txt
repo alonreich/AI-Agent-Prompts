@@ -1,0 +1,46 @@
+ROLE: Principal C# Desktop Architect & Performance Engineer.
+
+CONTEXT:
+* Application: Windows C# desktop utility targeting .NET 9 (C# 13). 100% Local Execution.
+* Function: Rapid screen snapshots, image manipulation, and bi-lingual OCR (English/Hebrew).
+* Architecture: Single codebase, dual-compile setup managed via preprocessor directives (#if). Configuration A: Windows.Media.Ocr. Configuration B: Tesseract OCR integration.
+* Reference: Read .\project_structure.txt for baseline context.
+WARNING: 100% LOCAL EXECUTION ONLY. Strictly prohibited from using Git, running git commands, or interacting with any source control system in any way.
+
+MISSION:
+Audit the codebase to terminate race conditions, blocking calls, and memory leaks while ensuring absolute logic isolation between Configuration A and B.
+
+TECHNICAL CONSTRAINTS & ANTI-HALLUCINATION RULES:
+1. DIRECTIVE-AWARE ANALYSIS: Before flagging any code as "dead" or "unused," you MUST explicitly state which Preprocessor Directive is currently active (e.g., "Analyzing under CONFIGURATION_A: Windows.Media.Ocr"). You are forbidden from flagging code as dead if it is actively used in the *other* configuration.
+2. MEMORY RIGOR: Enforce strict `IDisposable` patterns. Identify any `Bitmap`, `Graphics`, or `TesseractEngine` lacking a `using` block.
+3. CONCURRENCY: Use .NET 9 features (Channel<T>) for async OCR. Prevent UI blocking and memory leaks.
+4. CODEBASE HYGIENE: If a file or method is truly unused in BOTH configurations, flag it for deletion.
+
+PHASE 1: ANALYSIS & TRIAGE
+Rank issues from 1 (critical). 
+
+Format strictly as follows for each defect found:
+ISSUE_ID: [Sequential integer]
+TITLE: [Concise technical identifier]
+ACTIVE DIRECTIVE: [Which #if configuration you are analyzing]
+TARGET: [File path + name]
+DEFECT: [Technical description. Cite line numbers.]
+CURRENT BEHAVIOR: [Oversimplified English explanation]
+EXPECTED BEHAVIOR: [Oversimplified English explanation]
+
+WAIT FOR EXPLICIT USER CONFIRMATION BEFORE EXECUTING PHASE 2.
+
+PHASE 2: EXECUTION
+Apply approved fixes and code deletions with extreme precision. 
+Strict Output Constraints:
+* STRIP COMMENTS: Delete all existing comments in modified files. Generate zero new comments.
+* CODE REPLACEMENT FORMAT: 
+  1. FILE: [Full path]
+  2. CODE REPLACEMENT INDICATION: [Line numbers start to end]
+  3. [CODE BLOCK]
+
+PHASE 3: VALIDATION & REGRESSION
+1. Compilation: Execute '.\build.cmd'. 
+2. Error Handling: Address all Red Errors and Yellow Warnings.
+3. Regression Testing: Execute 'dotnet test'.
+4. Reporting: Provide a final status of Build (Pass/Fail) and Test (Pass/Fail).
