@@ -104,8 +104,8 @@
         
         #main-menu { 
             width: 100%; 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); 
+            display: flex; 
+            flex-wrap: wrap;
             gap: 20px; 
             padding-top: 10px; 
             align-items: flex-start; 
@@ -114,12 +114,14 @@
             border: 1px solid var(--border);
             background: linear-gradient(180deg, var(--group-bg-top), var(--group-bg-bottom));
             border-radius: var(--radius-lg);
-            padding: 12px 15px 15px 15px;
+            padding: 12px 30px 15px 30px;
             min-height: 80px;
             transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.3s, border-color 0.3s, opacity 0.3s;
             position: relative;
             cursor: default;
-            width: 100%;
+            width: fit-content;
+            min-width: 220px;
+            max-width: 350px;
             box-sizing: border-box;
             box-shadow: 0 4px 16px rgba(0,0,0,0.3), 0 0 0 1px rgba(88,166,255,0.08);
             display: flex;
@@ -232,8 +234,8 @@
         
         .group-grid {
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
             gap: 8px;
             width: 100%;
         }
@@ -256,7 +258,7 @@
         .agent-card {
             width: fit-content;
             min-width: 150px;
-            max-width: 360px;
+            max-width: 100%;
             height: auto;
             min-height: 38px;
             border: 1px solid var(--border);
@@ -303,8 +305,8 @@
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
         .nav-bar { display: flex; align-items: center; margin-bottom: 14px; gap: 10px; }
-        .nav-bar h2 { margin: 0; font-size: 1.4rem; font-weight: 600; color: var(--blue); flex: 1; text-align: left; outline: none; }
-        .nav-bar h2[contenteditable="true"] { border-bottom: 2px solid var(--blue); background: var(--bg-light); padding: 5px; border-radius: var(--radius-sm); }
+        .nav-bar h2 { margin: 0; font-size: 1.4rem; font-weight: 600; color: var(--blue); flex: 0 1 auto; text-align: left; outline: none; }
+        .nav-bar h2[contenteditable="true"] { border-bottom: 2px solid var(--blue); background: var(--bg-light); padding: 5px; border-radius: var(--radius-sm); min-width: 150px; }
 
         .nav-arrow { background: var(--card-bg); color: var(--text); border: 1px solid var(--border); width: 36px; height: 36px; border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; font-size: 20px; font-weight: 500; }
         .nav-arrow:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
@@ -432,7 +434,7 @@
             color: #000;
         }
 
-        .header { display: flex; justify-content: center; margin-bottom: 14px; gap: 12px; }
+        .header { display: flex; justify-content: center; margin-bottom: 14px; gap: 12px; position: relative; }
         
         .copy-btn, .save-btn, .cancel-btn { min-width: 120px; max-width: 135px; min-height: 34px; max-height: 38px; height: 36px; padding: 0 10px; border: 1px solid transparent; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600; font-size: 12px; transition: 0.2s; box-shadow: var(--shadow-sm); box-sizing: border-box; display: flex; align-items: center; justify-content: center; white-space: nowrap; }
         .save-btn { background: var(--success); color: #fff; }
@@ -483,10 +485,10 @@
         .toast.warning { background: var(--warning); }
         .toast.info { background: var(--info); }
 
-        .wiz-save { background: var(--success); color: #fff; border: none; font-weight: 600; }
-        .wiz-save:hover { background: #36b84a; }
-        .wiz-cancel { background: var(--border); color: var(--text); border: 1px solid transparent; }
-        .wiz-cancel:hover { background: #3d444d; }
+        .wiz-save { background: var(--success); color: #fff; border: none; font-weight: 600; padding: 10px 24px; border-radius: var(--radius-sm); cursor: pointer; transition: 0.2s; font-size: 13px; }
+        .wiz-save:hover { background: var(--success-hover); }
+        .wiz-cancel { background: var(--border); color: var(--text); border: 1px solid transparent; padding: 10px 24px; border-radius: var(--radius-sm); cursor: pointer; transition: 0.2s; font-weight: 600; font-size: 13px; }
+        .wiz-cancel:hover { background: var(--secondary-hover); }
 
         
         .bridge-status { position: fixed; bottom: 15px; right: 15px; font-size: 11px; font-weight: 600; color: var(--text-dim); background: var(--bg-light); padding: 4px 10px; border-radius: var(--radius-pill); border: 1px solid var(--border); z-index: 100; }
@@ -526,7 +528,7 @@
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(1, 4, 9, 0.85); display: none; justify-content: center;
-            align-items: center; z-index: 5000; backdrop-filter: blur(8px);
+            align-items: center; z-index: 7000; backdrop-filter: blur(8px);
             opacity: 0; transition: opacity 0.2s ease-out;
         }
         .modal-overlay.visible { opacity: 1; }
@@ -616,9 +618,16 @@
             background: var(--bg); border: 1px solid var(--border); width: 600px; max-height: 80vh;
             padding: 30px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
             transform: scale(0.95); transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-            display: flex; flex-direction: column;
+            display: flex; flex-direction: column; position: relative; overflow: hidden;
         }
         #recycle-bin-overlay.visible .recycle-card { transform: scale(1); }
+        .recycle-loading-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(1, 4, 9, 0.7); backdrop-filter: blur(4px);
+            display: none; justify-content: center; align-items: center; flex-direction: column;
+            z-index: 100; border-radius: inherit;
+        }
+        .recycle-loading-overlay.visible { display: flex; }
         .recycle-card h3 { margin-top: 0; color: var(--gold); font-size: 1.2rem; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
         .recycle-card h3 svg { width: 20px; height: 20px; fill: currentColor; }
         .recycle-subtitle { color: var(--text-dim); font-size: 12px; margin-bottom: 16px; }
@@ -725,7 +734,18 @@
         .edit-hint-btn svg { width: 14px; height: 14px; fill: currentColor; }
 
         #prompt-view .header .edit-hint-btn { margin-left: 0; }
-        #prompt-box-wrap.editing-state .edit-hint-btn { display: none; }
+        
+        .ai-review-btn {
+            position: absolute; top: 0; right: 0;
+            background: rgba(147, 112, 219, 0.1); border: 1px solid rgba(147, 112, 219, 0.4);
+            color: #bfa3ff; padding: 0 16px; border-radius: 15px;
+            font-size: 11px; font-weight: 600; cursor: pointer; transition: 0.2s;
+            display: flex; align-items: center; gap: 6px; height: 36px;
+        }
+        .ai-review-btn:hover { background: rgba(147, 112, 219, 0.3); box-shadow: 0 0 10px rgba(147, 112, 219, 0.4); color: #fff; }
+        .ai-review-btn svg { width: 14px; height: 14px; fill: currentColor; }
+
+        #prompt-box-wrap.editing-state .ai-review-btn { display: none; }#prompt-box-wrap.editing-state .edit-hint-btn { display: none; }
 
         
     </style>
@@ -837,6 +857,11 @@
             </button>
             <button id="save-btn" class="btn btn-success save-btn" style="display:none" onclick="saveEdit()">SAVE CHANGES</button>
             <button id="cancel-btn" class="btn btn-secondary cancel-btn" style="display:none" onclick="stopEdit()">CANCEL</button>
+            
+            <button class="ai-review-btn" onclick="reviewPromptWithAI()" title="Allow AI to review and improve this AI Agent prompt">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                AI REVIEW
+            </button>
         </div>
         <div id="prompt-box-wrap">
             <div id="line-gutter"></div>
@@ -1315,12 +1340,14 @@
                 const msg = count > 0
                     ? `DELETE GROUP "${group ? group.title : folder}" with ${count} agents? This moves them to the Recycle Bin.`
                     : `DELETE EMPTY GROUP "${group ? group.title : folder}"? This moves it to the Recycle Bin.`;
+                
+                cancelDrag();
+
                 if (await showConfirm(msg, 'Delete Group')) {
                     await moveToRecycleBin(folder);
                     
                     a11yAnnounce(`Group ${group ? group.title : folder} moved to recycle bin.`);
-                    cleanupDragState();
-                } else { cancelDrag(); }
+                }
             } else {
                 const original = document.querySelector(`.group-container[data-folder="${folder}"]`);
                 if (original) {
@@ -1433,15 +1460,16 @@
                               e.clientY > trashRect.top && e.clientY < trashRect.bottom;
 
             if (overTrash) {
+                cancelDrag();
                 if (await showConfirm(`MOVE "${agent}" TO RECYCLE BIN?`, "Confirm Delete")) {
                     const res = await api('recycle-delete-agents', 'POST', { agents: [{ g: fromGroup, a: agent }] });
                     if (res && res.status === 'success') {
                         showToast(`MOVED TO BIN: ${agent}`, "success");
                         
                         a11yAnnounce(`Agent ${agent} moved to recycle bin.`);
-                        cleanupDragState(); await syncFromBridge(); updateBinBadge();
-                    } else { showToast("DELETE FAILED", "error"); syncFromBridge(); cleanupDragState(); }
-                } else { cancelDrag(); }
+                        await syncFromBridge(); updateBinBadge();
+                    } else { showToast(res ? res.message || "DELETE FAILED" : "DELETE FAILED", "error"); syncFromBridge(); }
+                }
             } else {
                 const elem = document.elementFromPoint(e.clientX, e.clientY);
                 const targetGroup = elem ? elem.closest('.group-container') : null;
@@ -1790,7 +1818,9 @@
         }
 
         function showMenu() {
-            if (box.classList.contains('editing') || document.getElementById('title-save-btn').style.display === 'flex') {
+            const hasRealChanges = (box.classList.contains('editing') && box.innerText !== groups[currentGroup].agents[currentAgent]) ||
+                                   (document.getElementById('title-save-btn').style.display === 'flex' && title.innerText !== currentAgent);
+            if (hasRealChanges) {
                 showConfirm('Discard unsaved changes?', "Unsaved Changes").then(res => {
                     if (res) {
                         stopEdit(); cancelTitleEdit(); view.style.display = 'none';
@@ -1805,16 +1835,20 @@
             syncFromBridge();
         }
 
-        function buildAllAgentsList() {
+        function buildGroupAgentsList() {
             const list = [];
-            Object.keys(groups).sort().forEach(f => Object.keys(groups[f].agents).sort().forEach(a => list.push({f, a})));
+            if (groups[currentGroup]) {
+                Object.keys(groups[currentGroup].agents).sort().forEach(a => list.push({f: currentGroup, a}));
+            }
             return list;
         }
 
         function navigateAgent(dir) {
-            const list = buildAllAgentsList(), idx = list.findIndex(i => i.f === currentGroup && i.a === currentAgent);
+            const list = buildGroupAgentsList(), idx = list.findIndex(i => i.f === currentGroup && i.a === currentAgent);
             const newIdx = idx + dir; if (newIdx < 0 || newIdx >= list.length) return;
-            if (box.classList.contains('editing') || document.getElementById('title-save-btn').style.display === 'flex') {
+            const hasRealChanges = (box.classList.contains('editing') && box.innerText !== groups[currentGroup].agents[currentAgent]) ||
+                                   (document.getElementById('title-save-btn').style.display === 'flex' && title.innerText !== currentAgent);
+            if (hasRealChanges) {
                 showConfirm('Discard unsaved changes?', "Unsaved Changes").then(res => {
                     if (res) showPrompt(list[newIdx].f, list[newIdx].a);
                 });
@@ -1824,12 +1858,12 @@
         }
 
         function updateNavArrows() {
-            const list = buildAllAgentsList(), idx = list.findIndex(i => i.f === currentGroup && i.a === currentAgent);
+            const list = buildGroupAgentsList(), idx = list.findIndex(i => i.f === currentGroup && i.a === currentAgent);
             document.getElementById('prev-agent-btn').disabled = (idx <= 0);
             document.getElementById('next-agent-btn').disabled = (idx >= list.length - 1);
             const prevH = document.getElementById('prev-cross-hint'), nextH = document.getElementById('next-cross-hint');
-            if (prevH && idx > 0 && list[idx-1].f !== currentGroup) prevH.innerText = '? ' + groups[list[idx-1].f].title; else prevH.innerText = '';
-            if (nextH && idx < list.length-1 && list[idx+1].f !== currentGroup) nextH.innerText = '? ' + groups[list[idx+1].f].title; else nextH.innerText = '';
+            if (prevH) prevH.innerText = '';
+            if (nextH) nextH.innerText = '';
         }
 
         function updateBreadcrumb() { const bc = document.getElementById('agent-breadcrumb'); if (bc && groups[currentGroup]) bc.innerText = groups[currentGroup].title; }
@@ -1857,6 +1891,13 @@
                     showMenu();
                 } else { showToast("DELETE FAILED", "error"); }
             }
+        }
+
+        function reviewPromptWithAI() {
+            const rawPrompt = box.innerText;
+            const aiInstructions = `Please review this AI agent prompt pasted below. Please in real real short bulletins summerize what is good about the prompt, and then below in real real short what is not good about this prompt, and may not get the expected results duo to missing hallucination guards, or lack of details and constrains. Please point out and suggest correction for any grammer or typo issues as well. On the very bottom please reprint in full the entire suggested corrected AI Agent prompt for me to copy and paste the corrected version of it easily. keep all the answers real short and consice, and keep everything in an extremely oversimplified english which would be easy for the average human to understand:\n\n"${rawPrompt}"`;
+            const encoded = encodeURIComponent(aiInstructions);
+            window.open('https://chatgpt.com/?q=' + encoded, '_blank');
         }
 
         function startEditTitle() {
@@ -2082,8 +2123,8 @@
                         html += '<div class="recycle-item-meta">' + typeLabel + ' · ' + daysLeft + ' days remaining</div>';
                         html += '</div>';
                         html += '<div class="recycle-item-actions">';
-                        html += '<button class="recycle-restore-btn" onclick="restoreBinItem(\'' + escapeHtml(item.bin_path) + '\')">Restore</button>';
-                        html += '<button class="recycle-purge-btn" onclick="purgeBinItem(\'' + escapeHtml(item.bin_path) + '\')">Delete Forever</button>';
+                        html += '<button class="recycle-restore-btn" onclick="restoreBinItem(\'' + escapeHtml(item.bin_path) + '\', this)">Restore</button>';
+                        html += '<button class="recycle-purge-btn" onclick="purgeBinItem(\'' + escapeHtml(item.bin_path) + '\', this)">Delete Forever</button>';
                         html += '</div></div>';
                     });
                 });
@@ -2097,34 +2138,102 @@
             const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
         }
 
-        async function restoreBinItem(binPath) {
-            const res = await api('recycle-restore', 'POST', { bin_path: binPath });
-            if (res && res.status === 'success') {
-                showToast('ITEM RESTORED', 'success');
-                await refreshRecycleBinList();
-                await syncFromBridge();
-                updateBinBadge();
-            } else { showToast('RESTORE FAILED', 'error'); }
+        async function verifyRecycleAction(actionType, binPath = null) {
+            await new Promise(r => setTimeout(r, 200));
+            const check = await api('recycle-list');
+            if (!check || !check.items) return false;
+            
+            if (actionType === 'purge-all') {
+                return check.items.length === 0;
+            } else if (binPath) {
+                const stillExists = check.items.some(i => i.bin_path === binPath);
+                return !stillExists;
+            }
+            return true;
         }
 
-        async function purgeBinItem(binPath) {
+        function showRecycleLoader(text) {
+            const loader = document.getElementById('recycle-loader');
+            const textEl = document.getElementById('recycle-loader-text');
+            if (loader && textEl) {
+                textEl.innerText = text;
+                loader.classList.add('visible');
+            }
+        }
+        function hideRecycleLoader() {
+            const loader = document.getElementById('recycle-loader');
+            if (loader) loader.classList.remove('visible');
+        }
+
+        async function restoreBinItem(binPath, btnElement) {
+            showRecycleLoader('Restoring...');
+            try {
+                const res = await api('recycle-restore', 'POST', { bin_path: binPath });
+                if (res && res.status === 'success') {
+                    if (await verifyRecycleAction('restore', binPath)) {
+                        showToast('ITEM RESTORED SUCCESSFULLY', 'success');
+                        await refreshRecycleBinList();
+                        await syncFromBridge();
+                        updateBinBadge();
+                    } else {
+                        showToast('RESTORE VERIFICATION FAILED', 'warning');
+                        await refreshRecycleBinList();
+                    }
+                } else { 
+                    showToast(res ? res.message || 'RESTORE FAILED' : 'RESTORE FAILED', 'error'); 
+                }
+            } catch (e) {
+                showToast('RESTORE FAILED', 'error');
+            } finally {
+                hideRecycleLoader();
+            }
+        }
+
+        async function purgeBinItem(binPath, btnElement) {
             if (!await showConfirm('Permanently delete this item? This cannot be undone.', 'Permanent Delete')) return;
-            const res = await api('recycle-purge', 'POST', { bin_path: binPath });
-            if (res && res.status === 'success') {
-                showToast('PERMANENTLY DELETED', 'success');
-                await refreshRecycleBinList();
-                updateBinBadge();
-            } else { showToast('PURGE FAILED', 'error'); }
+            showRecycleLoader('Deleting...');
+            try {
+                const res = await api('recycle-purge', 'POST', { bin_path: binPath });
+                if (res && res.status === 'success') {
+                    if (await verifyRecycleAction('purge', binPath)) {
+                        showToast('PERMANENTLY DELETED', 'success');
+                        await refreshRecycleBinList();
+                        updateBinBadge();
+                    } else {
+                        showToast('DELETION VERIFICATION FAILED', 'warning');
+                        await refreshRecycleBinList();
+                    }
+                } else { 
+                    showToast(res ? res.message || 'PURGE FAILED' : 'PURGE FAILED', 'error'); 
+                }
+            } catch (e) {
+                showToast('PURGE FAILED', 'error');
+            } finally {
+                hideRecycleLoader();
+            }
         }
 
         async function purgeAllBinItems() {
             if (!await showConfirm('Permanently delete ALL recycle bin items? This cannot be undone.', 'Purge All')) return;
-            const res = await api('recycle-purge-all', 'POST');
-            if (res && res.status === 'success') {
-                showToast('RECYCLE BIN EMPTIED', 'success');
-                await refreshRecycleBinList();
-                updateBinBadge();
-            } else { showToast('PURGE FAILED', 'error'); }
+            showRecycleLoader('Purging all items...');
+            try {
+                const res = await api('recycle-purge-all', 'POST');
+                if (res && res.status === 'success') {
+                    if (await verifyRecycleAction('purge-all')) {
+                        showToast('RECYCLE BIN EMPTIED', 'success');
+                        await refreshRecycleBinList();
+                        updateBinBadge();
+                        closeRecycleBin();
+                    } else {
+                        showToast('PURGE VERIFICATION FAILED: Some items remained', 'warning');
+                        await refreshRecycleBinList();
+                    }
+                } else { showToast(res ? res.message || 'PURGE FAILED' : 'PURGE FAILED', 'error'); }
+            } catch (e) {
+                showToast('PURGE FAILED', 'error');
+            } finally {
+                hideRecycleLoader();
+            }
         }
 
         async function updateBinBadge() {
@@ -2437,6 +2546,14 @@
                     <button class="recycle-purge-all-btn" onclick="purgeAllBinItems()" id="purge-all-btn" style="display:none;">Purge All</button>
                     <button class="recycle-close-btn" onclick="closeRecycleBin()">Close</button>
                 </div>
+            </div>
+            
+            <div class="recycle-loading-overlay" id="recycle-loader">
+                <div class="spinner"></div>
+                <div id="recycle-loader-text" style="color:var(--text); font-weight:600; font-size:14px; margin-top:10px;">Working...</div>
+            </div>
+        </div>
+    </div>
             </div>
         </div>
     </div>

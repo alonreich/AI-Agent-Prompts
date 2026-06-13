@@ -70,8 +70,234 @@ C. Atomic Move Operations:
 ===============================================================================
 5. FRONTEND DESIGN LANGUAGE
 ===============================================================================
+# AI Agent Prompt Controller - Architectural Manual
+# Version: 2.0.0 (Self-Organizing Edition)
+# Date: May 6, 2026
+
+===============================================================================
+1. CORE ARCHITECTURE (3-FILE ROOT STRATEGY)
+===============================================================================
+The project is designed for maximum portability and zero-clutter. The root 
+directory contains only 3 permanent files and 1 generated infrastructure file.
+
+ROOT/
+├── AI Agent Prompts.html   # High-Performance 3D Frontend (React/CSS)
+├── Install.bat             # Master Setup & Background Logic Generator
+├── project_structure.txt   # This Manual (Architectural Source of Truth)
+└── bridge.py               # [GENERATED] Sequence-Aware Flask Backend
+
+All data is isolated within a single root-level directory:
+└── AI Agent Prompts/       # Physical Persistence Layer
+
+===============================================================================
+2. PHYSICAL DATA PERSISTENCE (SEQUENTIAL SCHEMA)
+===============================================================================
+Groups are stored as physical directories using a strict sequential pattern. 
+This sequence is the "Source of Truth" for the UI order.
+
+Schema: "GroupX - [Title]"
+Example:
+├── Group1 - [GENERAL]
+├── Group2 - [BUG DETECTOR]
+└── Group3 - [Fortnite]
+
+RULES:
+- [GENERAL] Priority: The "GENERAL" title is hard-locked to always be Group 1.
+- Gapless Sequence: The backend automatically re-indexes all folders (1, 2, 3...) 
+  whenever a group is created, moved, or deleted. There are never gaps.
+- Character Safety: Forbidden Windows characters (< > : " / \ | ? *) are 
+  automatically replaced with underscores (_) to prevent Error 123.
+
+===============================================================================
+3. AUTOMATED LIFECYCLE MANAGEMENT
+===============================================================================
+The system operates autonomously with zero manual maintenance required.
+
+A. Persistent Scaffolding:
+   - Group folders are preserved even when empty to maintain organizational 
+     structure and user metadata.
+   - Deletion of groups is an explicit, user-initiated action via the UI.
+   - Triggered by: Moving the last agent out, or direct file deletion.
+
+B. Atomic "Mirror Sync":
+   - Uses a high-speed Watchdog observer to monitor the disk.
+   - Any change made directly to folders/files is reflected in the UI within 
+     0.5 seconds (bidirectional sync).
+
+C. Atomic Move Operations:
+   - Drag-and-drop actions use a dedicated backend `/api/move` endpoint.
+   - Relocations are performed as a single disk move (`shutil.move`), 
+     eliminating duplicates and ensuring data integrity.
+
+===============================================================================
+4. SYSTEM OPERATION & STARTUP
+===============================================================================
+- Network: Runs on http://127.0.0.1:5589.
+- Visibility: Operates invisibly via 'pythonw.exe'.
+- Persistence: Startup is managed via a VBS bridge located in:
+  %LOCALAPPDATA%\AIAgentController\silent_start.vbs
+- Installer: 'Install.bat' handles dependency checking, port clearing, 
+  bridge.py extraction, and Windows Startup shortcut creation.
+
+===============================================================================
+5. FRONTEND DESIGN LANGUAGE
+===============================================================================
 - Visuals: 3D "Forward Indentation" effect with CSS gradients and deep shadows.
 - Layout: Responsive Grid with dynamic card sizing (175px - 400px).
 - Interaction: Inline group renaming, real-time toast notifications, 
   and multi-agent bulk deletion.
 ===============================================================================
+
+===============================================================================
+6. FEATURE REQUESTS
+===============================================================================
+1. UI/UX & Accessibility Hardening: Resolve UI/UX defects, WCAG accessibility contrast failures, and missing interaction states. Improve contrast ratios for success/warning elements, add visual focus rings to inputs, apply correct cursors to disabled elements, fix missing active states on drag handles, and ensure modal buttons have correct cursor/padding states.
+
+2. Duplicate Python Process Prevention: Prevent the backend from spawning duplicate `pythonw.exe` processes on system startup by cleaning up legacy startup shortcuts and redundant scheduled tasks during installation.
+
+3. Strict Unsaved Changes Detection: Ensure the "Discard unsaved changes?" modal only triggers if the user has actually modified the prompt text or title, eliminating false positives caused purely by clicking into the text box.
+
+4. Group-Locked Prompt Navigation: Lock the top-left "Next/Previous" navigation arrows inside the prompt screen so they cycle strictly within the currently viewed group and do not traverse into external groups.
+
+5. Free External AI Prompt Reviewer: Add a dedicated "AI REVIEW" button to the prompt screen that automatically injects the current prompt into a highly specific evaluation instruction set and opens it anonymously in ChatGPT for a free, zero-auth review.
+
+6. Smart Flex-Wrap Dashboard Layout: Overhaul the dashboard layout to use a dynamic Flexbox flow instead of rigid grid columns. Allow each group to shrink-wrap its own width (min 220px, max 350px) while maintaining exactly 30px lateral padding. Ensure groups flow densely left-to-right, force long text to wrap cleanly at 350px, and strictly ban agent cards from sitting side-by-side within a group.
+
+===============================================================================
+7. PRODUCT SPECIFICATIONS
+===============================================================================
+
+### 1. UI/UX & Accessibility Hardening
+- Purpose: Ensure the application meets enterprise-grade usability, visual hierarchy, and WCAG accessibility standards.
+- User goal: Interact with the application seamlessly without visual friction or accessibility barriers.
+- Main behavior: Adjusts CSS variables and element states for enhanced usability feedback.
+- UI/UX behavior:
+  - Success/Warning backgrounds pass WCAG AA 4.5:1 contrast ratios.
+  - Form inputs display a clear, accessible focus ring on interaction.
+  - Disabled buttons show a `not-allowed` cursor on hover.
+  - Drag handles show `cursor: grabbing` when active.
+  - Modal buttons (`.wiz-save`, `.wiz-cancel`) have standard padding, transitions, and `cursor: pointer`.
+- Logic Details: CSS variables updated `--success` changed to `#238636`, `--warning` changed to `#9e6a03`. `pointer-events: none` was removed from disabled buttons in favor of `cursor: not-allowed` and `opacity: 0.5`. `:active` pseudo-classes added to drag handles. Modal buttons were explicitly given `padding: 10px 24px`, `cursor: pointer`, and `transition: 0.2s`.
+- Edge Cases: Focus rings must not clip outside modal boundaries. If other CSS rules override modal buttons, `.wiz-save` explicitly enforces padding and cursor.
+- Acceptance Criteria: 
+  1. System shows `not-allowed` cursor when hovering over disabled buttons.
+  2. System renders a visible focus ring when form inputs are focused.
+  3. System passes WCAG AA contrast ratio checks for success and warning elements.
+
+### 2. Duplicate Python Process Prevention
+- Purpose: Prevent background zombie processes and port collision issues caused by duplicate bridge instances.
+- Main behavior: The installation script aggressively hunts and deletes outdated startup methods before creating the new scheduled task.
+- System behavior: Deletes old `.lnk` files and old scheduled tasks before registering the new task.
+- Permission rules: Script must be run as Administrator to modify Scheduled Tasks.
+- Failure handling: If a shortcut doesn't exist, the deletion command fails silently without stopping the script (`>nul 2>&1`).
+- Logic Details: Execute deletion commands targeting `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\AIAgentBridge.lnk` and `AIAgentPromptBridge.lnk`. Execute `schtasks /delete` for legacy task names before setting up the correct task.
+- Edge Cases: If the files are already deleted, the script ignores the error and proceeds. If only some legacy files exist, only those are deleted.
+- Acceptance Criteria:
+  1. System deletes legacy `.lnk` files from the Startup folder.
+  2. System does not spawn two identical python processes on boot.
+  3. System safely ignores errors if legacy files are not found.
+
+### 3. Strict Unsaved Changes Detection
+- Purpose: Remove friction and annoyance when navigating away from unmodified prompts.
+- Main behavior: Verifies string equality between the live text box and the stored dictionary data before firing the modal.
+- System behavior: Silently calls `stopEdit()` and navigates if the strings match perfectly.
+- Data rules: Live `innerText` is compared against `groups[currentGroup].agents[currentAgent]`.
+- Failure handling: If the dictionary key is somehow missing, the comparison evaluates as changed to safely prevent data loss.
+- Logic Details: Calculates a `hasRealChanges` boolean. It evaluates to `true` ONLY IF `box.classList.contains('editing')` AND `box.innerText !== groups[currentGroup].agents[currentAgent]`. If false, executes `stopEdit()` and routes immediately.
+- Edge Cases: Invisible DOM formatting (like `contenteditable` injecting `<br>`) must not trigger false positives. The use of `innerText` against raw text string mitigates this.
+- Acceptance Criteria:
+  1. Feature shows a warning modal when the user modifies text and attempts to navigate away.
+  2. Feature does not show a warning modal when the user enters edit mode but makes zero string changes.
+
+### 4. Group-Locked Prompt Navigation
+- Purpose: Keep the user focused on the contextual grouping they are currently reviewing.
+- Main behavior: The navigation list array is restricted strictly to the bounds of the `currentGroup`.
+- System behavior: Compiles an active list of agents only belonging to the currently active folder.
+- UI/UX behavior: Arrows disable natively when `idx <= 0` or `idx >= list.length - 1`. Cross-group text hints are deprecated and hidden.
+- Logic Details: Replaced `buildAllAgentsList()` with `buildGroupAgentsList()`, which iterates only over `Object.keys(groups[currentGroup].agents)`. Removed DOM manipulation associated with cross-hints.
+- Edge Cases: Rapid clicking of the arrow prevents array out-of-bounds exceptions via a strict length check constraint.
+- Acceptance Criteria:
+  1. System disables the "Next" arrow when viewing the last prompt in the current group.
+  2. System disables the "Previous" arrow when viewing the first prompt in the current group.
+  3. Feature never loads a prompt belonging to a different group.
+
+### 5. External AI Prompt Reviewer
+- Purpose: Provide immediate, free, and robust AI feedback on prompt engineering quality without requiring API keys.
+- Main behavior: Packages raw text into a strict template and opens ChatGPT with the payload pre-filled via URI parameters.
+- System behavior: Executes `window.open` targeting `https://chatgpt.com/?q=...`.
+- Data rules: Text payload is `encodeURIComponent()` sanitized.
+- UI/UX behavior: An elliptical, purple button (`.ai-review-btn`) sits in the top right of the header, featuring a tooltip and star SVG. Hides natively when the user enters editing state.
+- Failure handling: If the browser blocks popups, the user must manually allow it.
+- Logic Details: The `reviewPromptWithAI()` function wraps `box.innerText` inside a strict prompt requesting bulleted summaries, hallucination guard checks, and simplified reprints.
+- Edge Cases: Formatting/line breaks are safely preserved via URI encoding. Handled natively by ChatGPT's rate limits.
+- Acceptance Criteria:
+  1. Feature opens a new tab directed to ChatGPT when clicked.
+  2. System securely passes the exact text of the active prompt inside the URL parameter.
+  3. Button disappears correctly when the user enters edit mode.
+
+### 6. Smart Flex-Wrap Dashboard Layout
+- Purpose: Maximize horizontal screen real estate by allowing narrow groups to pack tightly next to wide groups.
+- Main behavior: Groups dynamically scale to `fit-content` but remain bound by hard max/min constraints.
+- System behavior: Groups wrap naturally using CSS Flexbox flowing left-to-right.
+- UI/UX behavior: 
+  - `#main-menu` uses `display: flex; flex-wrap: wrap;`.
+  - `.group-container` uses `width: fit-content; min-width: 220px; max-width: 350px;`.
+  - Group padding is strictly locked to `12px 30px 15px 30px`.
+  - `.agent-card` uses `max-width: 100%` to fill their parent container and force text wrapping when parent caps at 350px.
+  - `.group-grid` uses `flex-direction: column` to strictly stack internal cards downwards.
+- Logic Details: CSS Grid `auto-fill` was completely removed in favor of `flex-wrap`. Internal card flow issue (cards sitting side-by-side) was mitigated by removing `flex-wrap: wrap` from the internal `.group-grid` and replacing it with `flex-direction: column; align-items: center`.
+- Edge Cases: If a single uninterrupted word exceeds 350px, standard `overflow-wrap: anywhere` CSS kicks in. On mobile screens (`max-width: 768px`), flexbox naturally wraps to 1 item per row.
+- Acceptance Criteria:
+  1. System aligns groups left-to-right, wrapping to the next line when screen space runs out.
+  2. System forces group containers to shrink horizontally to fit short text tightly.
+  3. System prevents any group from growing wider than 350px.
+  4. System stacks all agent cards in a strict vertical line, never rendering them side-by-side inside the same group.
+
+### 7. Native Recycle Bin & Soft Deletion
+- Purpose: Prevent catastrophic data loss when users delete prompts or entire groups, providing a 30-day recovery window.
+- Main behavior: Items deleted via the UI or Drag-and-Drop are moved to a hidden `[RECYCLE BIN]` directory on the filesystem rather than being permanently destroyed.
+- System behavior: 
+  - Every deletion creates a timestamped folder inside `[RECYCLE BIN]` and writes a `.bin_meta.json` file containing the original group name, item name, type ('group' or 'agent'), and deletion timestamp.
+  - A background cleanup function (`cleanup_recycle_bin()`) runs automatically when the Flask server starts, permanently purging items older than 30 days (`RECYCLE_RETENTION_DAYS = 30`).
+- UI/UX behavior:
+  - Users delete items by dragging them into the "Global Trash Zone" (bottom right, appears only during drag) or using inline trash icons.
+  - A persistent "Recycle Bin" button with a dynamic notification badge tracks the count of deleted items.
+  - Clicking the bin opens a modal to view, individually restore (`/api/recycle-restore`), individually purge (`/api/recycle-purge`), or "Empty Recycle Bin" (`/api/recycle-purge-all`).
+- Data rules: Restoring an agent attempts to put it back in its original group. If the group no longer exists, it is placed in the `[GENERAL]` group.
+- Failure handling: Safe cleanup utilizing `robust_rmtree()` to prevent permission locks on Windows.
+- Edge Cases: Duplicate filenames in the recycle bin are handled by appending a numeric counter `ts_counter_safeName`.
+- Acceptance Criteria:
+  1. Deleted files are physically moved to `[RECYCLE BIN]` and not destroyed.
+  2. Items older than 30 days are automatically deleted upon bridge startup.
+  3. The recycle bin badge updates immediately after a deletion.
+
+### 8. Drag and Drop Architecture (Groups & Agents)
+- Purpose: Allow fluid reorganization of agents across groups, and reordering of the groups themselves.
+- Main behavior: Client-side HTML5 drag-and-drop combined with atomic backend folder manipulation.
+- System behavior: 
+  - Agent Drag: Relocates the agent's folder using `shutil.move` via `/api/move`.
+  - Group Drag: Reorders the sequential numbering scheme of the root folders (e.g., swapping `Group2` and `Group3`) via `/api/save-order`.
+- UI/UX behavior: 
+  - Drag handles (`cursor: grab`) are explicitly required to initiate dragging (prevents accidental drags while selecting text).
+  - Valid drop targets highlight dynamically.
+  - Global Trash Zone animates into view only when a drag operation begins.
+- Edge Cases: Dragging an agent into its own current group is a no-op.
+- Acceptance Criteria:
+  1. The backend performs the move atomically without duplicating the file.
+  2. The UI instantly reflects the new hierarchy.
+
+### 9. Real-Time Disk Mirroring (Watchdog Observer)
+- Purpose: Ensure the UI perfectly mirrors the physical file system in real-time without requiring manual browser refreshes.
+- Main behavior: A Python `watchdog` process monitors the root `AI Agent Prompts` directory.
+- System behavior:
+  - Fires `/api/poll` long-polling endpoints.
+  - Detected changes (file creation, modification, deletion by third-party apps like VSCode or File Explorer) trigger an atomic `migrate_folders_locked()` re-indexing.
+  - The UI polls `/api/get-tree` and injects the updated JSON state into the React/DOM layer automatically.
+- Acceptance Criteria:
+  1. Creating a folder directly in Windows Explorer instantly spawns a new Group in the browser.
+
+### 10. Agent Bulk Deletion Mode
+- Purpose: Allow users to rapidly clean up deprecated prompts.
+- Main behavior: Toggling "Delete Mode" transforms all agent cards into selectable checkboxes.
+- UI/UX behavior: The dashboard turns red. Users click cards to queue them for deletion. A floating action bar tracks the selection count and provides a final "Delete Selected" confirmation.
+- System behavior: Submits an array of `{group, agent}` objects to `/api/recycle-delete-agents` for batch processing.

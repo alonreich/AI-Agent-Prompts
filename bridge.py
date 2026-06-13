@@ -126,9 +126,11 @@ def robust_rmtree(path, max_retries=10):
             logger.warning(f"robust_rmtree retry {i+1}/{max_retries} for '{path}': {e}")
             time.sleep(0.3)
     try:
-        ps_script = 'Remove-Item -LiteralPath $args[0] -Recurse -Force'
+        import base64
+        ps_script = f"Remove-Item -LiteralPath '{path}' -Recurse -Force"
+        encoded = base64.b64encode(ps_script.encode('utf-16le')).decode('utf-8')
         subprocess.run(
-            ['powershell', '-NoProfile', '-Command', ps_script, '-', path],
+            ['powershell', '-NoProfile', '-EncodedCommand', encoded],
             capture_output=True, timeout=30
         )
         time.sleep(0.1)

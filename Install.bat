@@ -98,11 +98,11 @@ if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
 
 
 schtasks /delete /tn "%TASK_NAME%" /f >nul 2>&1
+schtasks /delete /tn "AIAgentBridge" /f >nul 2>&1
 
-
-
-
-
+:: Clean up any potential legacy startup shortcuts to avoid duplicate processes
+if exist "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\AIAgentBridge.lnk" del /f /q "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\AIAgentBridge.lnk" >nul 2>&1
+if exist "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\AIAgentPromptBridge.lnk" del /f /q "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\AIAgentPromptBridge.lnk" >nul 2>&1
 echo [INFO] Creating Task Scheduler task...
 schtasks /create /tn "%TASK_NAME%" /tr "cmd /c set PYTHONDONTWRITEBYTECODE=1 ^& pythonw.exe \"%BRIDGE_PY%\"" /sc onlogon /rl highest /f >nul 2>&1
 

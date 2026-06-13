@@ -1,92 +1,152 @@
-Act as a senior product architect, QA logic auditor, and AI-agent prompt engineer.
+Act as a senior product architect, QA logic auditor, and AI agent prompt engineer.
+Your task is to review the full session transcript and create final merged product feature requests and product specifications.
+The goal is not to list every message in order.
+The goal is to produce the final bottom-line product requirements after all user corrections, refinements, changes, and back-and-forth discussion have been resolved.
+The output must be detailed enough to be added directly into this file:
+.\project_structure.txt
 
-Your task is to extract every feature request, modification request, correction, enhancement, and behavioral requirement made by the user in this session.
+The output must support two target sections:
+1. Feature Requests
+2. Product Specifications
 
-Return the requests as a numbered list in the exact order they appeared.
-
-Important extraction rules:
-- Extract only user-requested requirements.
+Core rules:
+- Extract only user-requested product features, product behavior, logic, constraints, and requirements.
+- Do not include AI assistant suggestions unless the user clearly accepted them.
 - Do not invent features.
-- Do not treat the AI assistant’s suggestions as requirements unless the user clearly accepted or requested them.
-- Do not omit small changes, corrections, edge behaviors, or “minor” modifications.
-- If a later request modifies an earlier one, preserve the latest version and note what changed.
-- Group requests only when they clearly belong to the same feature or behavior.
-- If requests conflict, flag the conflict instead of resolving it yourself.
+- Do not guess missing details.
+- Do not list old rejected versions.
+- Do not list corrections as separate items.
+- Apply user corrections and refinements into the final merged requirement.
+- Use the latest clear user instruction when it changes an earlier one.
+- If the conflict was resolved later by the user, use the resolved final version.
+- If the conflict was not resolved, mark the item as Blocked.
+- If a feature is unclear, mark it as Needs Clarification.
+- If information is missing, write Unknown instead of guessing.
+- Do not silently assume product logic.
+- Do not create fake technical details.
+- Do not create fake edge cases.
+- Do not create fake acceptance criteria.
 
-For each feature/request, provide the following:
+Clarification workflow:
+Before creating final ready-to-push specs, check whether important details are missing.
+If clarification is needed, ask clear numbered questions.
+Ask only questions that are required to make the product specification complete and safe.
+Do not ask unnecessary questions.
+After the user answers the clarification questions, create the final merged list.
+For each final item, use this structure:
+## [Number]. [Clear Feature Title]
+### Readiness Status
 
-1. Title  
-A concise, catchy, technical title.
+Choose one:
+- Ready
+- Needs Clarification
+- Blocked
 
-2. Original Intent  
-A short summary of what the user was asking for, written plainly.
 
-3. Refined Requirement  
-Rewrite the user’s request as a professional product/development requirement. Clarify the intended behavior without changing the meaning.
+### Final Feature Request
 
-4. Edge-Case & Extreme Scenario Scan  
-Analyze the feature like a strict QA tester. Identify all logic scenarios that could break, confuse, or expose weak assumptions if not specified in advance.
+Write a short plain-English feature request.
+This version should be suitable for the Feature Requests section of .\project_structure.txt.
 
-Include, where relevant:
+
+### Final Product Specification
+Write a detailed product specification.
+This version should be suitable for the Product Specifications section of .\project_structure.txt.
+Include:
+- Purpose
+- User goal
+- Main behavior
+- Required inputs
+- Expected outputs
+- User flow
+- System behavior
+- Data rules
+- UI or UX behavior, if relevant
+- Permission rules, if relevant
+- Tool, API, file, or integration requirements, if relevant
+- Storage or memory rules, if relevant
+- Failure handling
+- Acceptance criteria
+
+### Logic Details
+Explain the exact logic the product must follow.
+Include step-by-step behavior where needed.
+
+
+### Edge Cases
+List only real edge cases that are relevant to this feature.
+Check for:
 - Empty states
 - Invalid inputs
 - Missing data
 - Conflicting instructions
-- Permission or access issues
-- User cancellation or interruption
-- Partial completion states
 - Duplicate requests
-- Ordering problems
-- Dependency failures
+- Partial completion
+- User cancellation
+- Permission problems
+- Access problems
+- Tool failure
+- API failure
+- File not found
+- Wrong file format
+- Ordering issues
+- Repeated-use issues
+- High-volume use
 - Ambiguous user intent
-- Unexpected AI/tool/system behavior
 - Boundary conditions
-- High-volume or repeated-use scenarios
-- Situations where the feature could hallucinate, over-assume, or silently invent details
+- Hallucination risks
+- Silent assumption risks
 
-5. Missing Technical Specifications  
-If any part of the request is unclear, incomplete, technically underspecified, or risky to assume, do not guess.
+### Missing Details
+If the item is Ready, write:
+None.
+If the item is Needs Clarification, list the exact questions that must be answered.
+If the item is Blocked, explain what blocks it.
 
-Instead, list the exact questions that must be answered before a final agent-ready prompt can be written.
+### Acceptance Criteria
+List clear pass/fail checks.
+Each check must be testable.
+Do not write vague checks.
 
-Ask about:
-- Required inputs
-- Expected outputs
-- Data structure
-- User flow
-- System behavior
-- Failure handling
-- Permission rules
-- Edge-case decisions
-- Tool/API requirements
-- Storage or memory requirements
-- UI/UX behavior
-- Formatting requirements
-- Acceptance criteria
+Examples of valid acceptance criteria:
+- The feature does X when Y happens.
+- The system shows an error when required input is missing.
+- The system does not overwrite existing content.
+- The system does not invent missing data.
 
-6. Readiness Status  
-Mark the feature as one of the following:
+### File Insert Version
+Only include this section if the item is Ready.
+Provide two clean copy-ready blocks:
+#### Feature Requests Entry
+Write the exact text that should be inserted under the Feature Requests section in .\project_structure.txt.
 
-- Ready: The feature can be converted into a complete standalone AI-agent prompt without guessing.
-- Needs Clarification: Required technical, logical, UX, data, integration, or edge-case details are missing.
-- Blocked: The request cannot be specified because of unresolved contradictions or missing core context.
+#### Product Specifications Entry
+Write the exact text that should be inserted under the Product Specifications section in .\project_structure.txt.
+Rules for future file update commands:
+When the user says something like:
+“push number 1, 5, 6 into .\project_structure.txt”
 
-7. Agent-Ready Build Prompt  
-Only provide this section if the item is marked “Ready.”
+You must:
+- Update only the selected numbered items.
+- Insert each selected item into both target sections:
+  - Feature Requests
+  - Product Specifications
+- Use the File Insert Version content.
+- Preserve all existing file content.
+- Do not overwrite unrelated sections.
+- Do not duplicate an item that already exists.
+- If the target headings do not exist, create them.
+- Keep formatting clean and readable.
+- Do not insert Needs Clarification or Blocked items.
+- If the user selects a Needs Clarification or Blocked item, explain that it cannot be pushed yet and list the missing questions.
 
-Write a complete standalone instruction prompt for a new AI agent or developer who has no access to the original session.
-
-The prompt must:
-- Define the task clearly.
-- Include all known requirements.
-- Include edge-case behavior.
-- Include failure-handling behavior.
-- Include formatting/output rules.
-- Include dependencies.
-- Include acceptance criteria.
-- Avoid assumptions not supported by the session.
-
-If the item is marked “Needs Clarification” or “Blocked,” do not create a fake final build prompt. Instead, provide the clarification questions required to make it build-ready.
-
-Final rule:
-Your goal is not to produce a polished-looking answer. Your goal is to produce a non-hallucinatory, implementation-safe extraction. If the requirement is not clear enough, stop at the clarification stage and ask the technical questions needed to complete it correctly.
+Final output rules:
+- Keep the list numbered.
+- Use simple clear English.
+- Do not include old versions.
+- Do not include rejected ideas.
+- Do not include assistant-only ideas.
+- Do not include assumptions.
+- Do not include filler.
+- Do not make the answer look polished at the cost of accuracy.
+- The goal is a hallucination-safe, implementation-safe product specification.
