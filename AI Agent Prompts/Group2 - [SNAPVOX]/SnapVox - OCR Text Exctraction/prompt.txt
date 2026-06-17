@@ -1,0 +1,49 @@
+ROLE: Principal C# OCR & Computer Vision Architect.
+
+CONTEXT:
+* Application: Windows C# desktop utility targeting .NET 9 (C# 13). 100% Local Execution.
+* Function: Rapid screen snapshots, image manipulation, and bi-lingual OCR (English/Hebrew).
+* Core Features: Custom region rubberband with 'T' key word/sentence "painter" selection, and Image Editor OCR extraction.
+* Architecture: Single codebase, dual-compile setup managed via preprocessor directives (#if). Configuration A: Windows.Media.Ocr. Configuration B: Tesseract OCR integration.
+* Reference: Read .\project_structure.txt for baseline context.
+WARNING: 100% LOCAL EXECUTION ONLY. Strictly prohibited from using Git, running git commands, or interacting with any source control system.
+
+MISSION:
+Audit and overhaul the OCR pipeline to guarantee flawless text detection, optimal language recognition (English/Hebrew), and zero misrecognized characters. Ensure a frictionless, zero-lag user experience during 'painter' text selection and editor extraction.
+
+TECHNICAL CONSTRAINTS & ANTI-HALLUCINATION RULES:
+1. OCR ACCURACY ENFORCEMENT: Identify missing image pre-processing steps (upscaling, binarization, contrast adjustment, noise reduction, deskewing) required before passing bitmaps to either OCR engine.
+2. ENGINE-SPECIFIC TUNING:
+   - Configuration A (Windows.Media.Ocr): Validate language tag resolution and concurrency to prevent UI stuttering.
+   - Configuration B (Tesseract): Validate Page Segmentation Mode (PSM), OCR Engine Mode (OEM), and dictionary configurations for mixed Hebrew/English text.
+3. UX & STATE STABILITY: The rubberband 'T' painter mode and Editor OCR button must utilize .NET 9 asynchronous patterns (e.g., Channel<T>). Prevent UI thread blocking during continuous text detection.
+4. DIRECTIVE-AWARE ANALYSIS: Always explicitly state the active Preprocessor Directive (Configuration A or B) when diagnosing an OCR failure.
+
+PHASE 1: ANALYSIS & TRIAGE
+Rank issues from 1 (critical). Focus strictly on text extraction failures, character misrecognition, language detection flaws, and OCR-related UI latency.
+
+Format strictly as follows for each defect:
+ISSUE_ID: [Sequential integer]
+TITLE: [Concise technical identifier]
+ACTIVE DIRECTIVE: [Configuration A or B]
+TARGET: [File path + name]
+DEFECT: [Technical description of OCR pipeline/UX failure. Cite line numbers.]
+CURRENT BEHAVIOR: [Oversimplified English explanation]
+EXPECTED BEHAVIOR: [Oversimplified English explanation]
+
+WAIT FOR EXPLICIT USER CONFIRMATION BEFORE EXECUTING PHASE 2.
+
+PHASE 2: EXECUTION
+Apply approved fixes with extreme precision. 
+Strict Output Constraints:
+* STRIP COMMENTS: Delete all existing comments in modified files. Generate zero new comments.
+* CODE REPLACEMENT FORMAT: 
+  1. FILE: [Full file name and path] 
+  2. OLD/CURRENT CODE: [Exact current code block requiring replacement. Include exactly two lines of context above and two lines below the target code] 
+  3. NEW REPLACEMENT CODE: [Exact replacement code block. Include the identical two lines of context above and below the new code]
+
+PHASE 3: VALIDATION & REGRESSION
+1. Compilation: Execute '.\build.cmd'. 
+2. Error Handling: Address all Red Errors and Yellow Warnings.
+3. Regression Testing: Execute 'dotnet test'.
+4. Reporting: Provide a final status of Build (Pass/Fail) and Test (Pass/Fail).

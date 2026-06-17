@@ -6,13 +6,13 @@
 1. CORE ARCHITECTURE (3-FILE ROOT STRATEGY)
 ===============================================================================
 The project is designed for maximum portability and zero-clutter. The root 
-directory contains only 3 permanent files and 1 generated infrastructure file.
+directory contains only 3 permanent files.
 
 ROOT/
-├── AI Agent Prompts.html   # High-Performance 3D Frontend (React/CSS)
-├── Install.bat             # Master Setup & Background Logic Generator
+├── AI Agent Prompts.html   # Monolithic Frontend (Vanilla JS/CSS)
+├── Install.bat             # Master Setup & Dependency Installer
 ├── project_structure.txt   # This Manual (Architectural Source of Truth)
-└── bridge.py               # [GENERATED] Sequence-Aware Flask Backend
+└── bridge.py               # Sequence-Aware Flask Backend
 
 All data is isolated within a single root-level directory:
 └── AI Agent Prompts/       # Physical Persistence Layer
@@ -78,13 +78,13 @@ C. Atomic Move Operations:
 1. CORE ARCHITECTURE (3-FILE ROOT STRATEGY)
 ===============================================================================
 The project is designed for maximum portability and zero-clutter. The root 
-directory contains only 3 permanent files and 1 generated infrastructure file.
+directory contains only 3 permanent files.
 
 ROOT/
-├── AI Agent Prompts.html   # High-Performance 3D Frontend (React/CSS)
-├── Install.bat             # Master Setup & Background Logic Generator
+├── AI Agent Prompts.html   # Monolithic Frontend (Vanilla JS/CSS)
+├── Install.bat             # Master Setup & Dependency Installer
 ├── project_structure.txt   # This Manual (Architectural Source of Truth)
-└── bridge.py               # [GENERATED] Sequence-Aware Flask Backend
+└── bridge.py               # Sequence-Aware Flask Backend
 
 All data is isolated within a single root-level directory:
 └── AI Agent Prompts/       # Physical Persistence Layer

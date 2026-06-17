@@ -2,8 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <title>AI Agent Controller</title>
     <style>
+        button, [role="button"], [onclick] {
+            cursor: pointer;
+        }
+        button:disabled, [role="button"][aria-disabled="true"], [disabled] {
+            cursor: not-allowed !important;
+        }
         :root {
             --bg: #151f35;             
             --bg-light: #1a2d4a;
@@ -11,16 +20,16 @@
             --border: #5a7395;           
             --border-glow: rgba(88, 166, 255, 0.3);
             --text: #cdd5de;
-            --text-dim: #a8b0ba;
+            --text-dim: #9aa1a9; /* Improved from #a8b0ba for better contrast */
             --blue: #58a6ff;
             --blue-hover: #4095ff;
             --gold: rgb(255, 195, 40);
             --gold-glow: rgba(255, 195, 40, 0.3);
             --error: #ff8c89;            
             --error-dark: #b91c1c;       
-            --success: #2ea043;
+            --success: #238636;
             --info: #58a6ff;
-            --warning: #d29922;
+            --warning: #9e6a03;
             --group-bg-top: #223656;     
             --group-bg-bottom: #1a2c48;  
 
@@ -45,45 +54,68 @@
 
         
         .btn {
-            min-width: 120px; max-width: 135px; min-height: 34px; max-height: 38px;
-            height: 36px; cursor: pointer; padding: 0 10px; border-radius: var(--radius-sm);
-            display: flex; align-items: center; justify-content: center;
-            font-weight: 600; font-size: 12px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            box-sizing: border-box; white-space: nowrap; outline: none; border: 1px solid transparent;
-            text-decoration: none; user-select: none;
+            padding: 0 16px;
+            height: 40px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-sizing: border-box;
+            white-space: nowrap;
+            outline: none;
+            border: 1px solid transparent;
+            text-decoration: none;
+            user-select: none;
+            gap: 8px;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn .btn-icon {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
         }
 
-        .btn-primary, .add-btn, .group-btn, .copy-btn, .wiz-save, .save-btn { 
-            background: #2C5380; color: #fff; 
+        .btn-primary, .add-btn, .group-btn, .copy-btn, .save-btn { 
+            background: var(--blue);
+            color: #0c162c;
+            border: none;
         }
-        .btn-primary:hover, .add-btn:hover, .group-btn:hover, .copy-btn:hover, .wiz-save:hover, .save-btn:hover { 
-            background: #3a6a9e; box-shadow: 0 0 10px var(--border-glow); 
+        .btn-primary:hover, .add-btn:hover, .group-btn:hover, .copy-btn:hover, .save-btn:hover { 
+            background: var(--blue-hover);
         }
         
         
         .btn-secondary, .back-btn, .wiz-cancel, .cancel-btn, .cancel-del-btn, .title-cancel-btn { 
-            background: #3d4d63; color: #ffffff; border-color: #5a7395; 
+            background: #3d4d63;
+            color: var(--text);
+            border: 1px solid var(--border);
         }
         .btn-secondary:hover, .back-btn:hover, .wiz-cancel:hover, .cancel-btn:hover, .cancel-del-btn:hover, .title-cancel-btn:hover { 
-            background: #4e627d; border-color: #8b949e; 
+            background: #2d3b4d; /* Darkened for WCAG contrast */
+            border-color: var(--text-dim);
         }
 
         .btn-danger, .del-btn { 
-            background: rgba(255, 140, 137, 0.1); color: var(--error); border: 1px solid rgba(255, 140, 137, 0.4); 
+            background: #da3633;
+            color: #fff;
+            border: none;
         }
         .btn-danger:hover, .del-btn:hover { 
-            background: rgba(255, 140, 137, 0.2); border-color: var(--error); 
+            background: #f85149;
         }
 
-        .btn-success, .title-save-btn { background: var(--success); color: #fff; }
-        .btn-success:hover, .title-save-btn:hover { background: #36b84a; }
+        .btn-success, .title-save-btn, .wiz-save { background: var(--success); color: #fff; border: none; }
+        .btn-success:hover, .title-save-btn:hover, .wiz-save:hover { background: #36b84a; }
 
         .confirm-del-btn {
             background: #da3633; color: #fff; border: none; display: none;
             font-weight: 600; gap: 8px; box-shadow: var(--shadow-sm);
         }
         .confirm-del-btn:hover { background: #f85149; box-shadow: 0 0 10px rgba(248, 81, 73, 0.3); }
-        .confirm-del-btn.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+        .confirm-del-btn.disabled { opacity: 0.5; cursor: not-allowed; }
         
         .del-badge {
             background: #fff; color: var(--error-dark); border-radius: 50%; min-width: 18px; height: 18px;
@@ -91,15 +123,64 @@
             font-weight: 700;
         }
 
-        .control-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; width: 100%; gap: 10px; }
-        .control-left { flex: 1; display: flex; justify-content: flex-start; }
-        .control-center { flex: 0 1 500px; }
-        .control-right { flex: 1; display: flex; justify-content: flex-end; gap: 12px; }
+        .control-bar { 
+            display: flex; align-items: center; justify-content: space-between; 
+            width: 100%; gap: 12px; height: 60px; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .control-left { display: flex; align-items: center; gap: 12px; flex: 1; }
+        .control-center { flex: 2; max-width: 600px; position: relative; }
+        .control-right { display: flex; align-items: center; gap: 12px; flex: 1; justify-content: flex-end; }
 
+        /* Unified Button System */
+        .btn {
+            height: 40px; padding: 0 18px; border-radius: var(--radius-md);
+            font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px;
+            cursor: pointer; transition: all 0.2s; border: 1px solid transparent;
+            white-space: nowrap; user-select: none;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn svg { width: 18px; height: 18px; fill: currentColor; }
+
+        .btn-primary { background: var(--blue); color: #0c162c; border: none; box-shadow: 0 4px 12px rgba(88, 166, 255, 0.2); }
+        .btn-primary:hover { background: var(--blue-hover); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(88, 166, 255, 0.3); }
+
+        .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+        .btn-outline:hover { background: rgba(255,255,255,0.05); border-color: var(--text-dim); color: #fff; }
+
+        .btn-ghost { background: transparent; color: var(--text-dim); border: none; opacity: 0.7; }
+        .btn-ghost:hover { opacity: 1; color: var(--text); background: rgba(255,255,255,0.05); }
+
+        .btn-danger-outline { background: transparent; color: var(--error); border: 1px solid rgba(255,140,137,0.3); }
+        .btn-danger-outline:hover { background: rgba(255,140,137,0.1); border-color: var(--error); }
+
+        /* Contextual Selection Bar */
+        .toolbar-wrapper { width: 100%; position: relative; height: 60px; margin-bottom: 20px; overflow: hidden; }
+        #selection-bar {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(218, 54, 51, 0.1); border: 1px solid rgba(218, 54, 51, 0.3);
+            border-radius: var(--radius-lg); padding: 0 20px; box-sizing: border-box;
+            display: none; align-items: center; justify-content: space-between;
+            transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 10;
+        }
+        #selection-bar.active { display: flex; transform: translateY(0); }
+        .selection-info { color: var(--error); font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 12px; }
+        .selection-info .count-badge { background: var(--error); color: #fff; padding: 2px 8px; border-radius: var(--radius-pill); font-size: 12px; }
+
+        /* Existing Overrides */
         .search-wrapper { position: relative; width: 100%; }
         .search-wrapper svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; fill: var(--text-dim); pointer-events: none; }
-        #search-box { width: 100%; background: var(--bg-light); border: 1px solid var(--border); color: #fff; padding: 10px 16px 10px 40px; border-radius: var(--radius-sm); font-size: 14px; outline: none; transition: all 0.2s; box-sizing: border-box; }
+        #search-box { width: 100%; background: var(--bg-light); border: 1px solid var(--border); color: #fff; padding: 10px 16px 10px 40px; border-radius: var(--radius-md); font-size: 14px; outline: none; transition: all 0.2s; box-sizing: border-box; height: 42px; }
         #search-box:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15); }
+
+        .recycle-bin-btn { 
+            background: transparent; border: 1px solid var(--border); color: var(--gold); 
+            height: 40px; width: 40px; padding: 0; border-radius: var(--radius-md);
+            display: flex; align-items: center; justify-content: center; position: relative;
+        }
+        .recycle-bin-btn:hover { background: rgba(255, 195, 40, 0.1); border-color: var(--gold); }
+        .recycle-bin-btn .bin-badge { position: absolute; top: -5px; right: -5px; background: var(--gold); color: #000; font-size: 10px; font-weight: 800; padding: 2px 5px; border-radius: var(--radius-pill); }
 
         
         #main-menu { 
@@ -176,14 +257,22 @@
         }
 
         
-        .group-drag-handle { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; cursor: grab; opacity: 0.25; transition: 0.2s; touch-action: none; flex-shrink: 0; background: none; border: none; padding: 0; }
+        /* Disable dragging interactions in delete mode */
+        #main-menu.delete-mode .group-drag-handle { opacity: 0 !important; pointer-events: none; }
+        #main-menu.delete-mode .group-title { cursor: default !important; }
+        #main-menu.delete-mode .edit-group-icon, 
+        #main-menu.delete-mode .delete-group-icon { opacity: 0 !important; pointer-events: none; }
+        
+        .group-drag-handle { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; cursor: pointer; opacity: 0.5; transition: 0.2s; touch-action: none; flex-shrink: 0; background: none; border: none; padding: 0; }
         .group-drag-handle:hover { opacity: 0.8; }
+        .group-drag-handle:active { cursor: grabbing; transform: scale(0.9); }
         .group-header:hover .group-drag-handle { opacity: 0.6; }
         .group-drag-handle svg { width: 18px; height: 18px; fill: #fff; }
 
         
         .group-header { display: flex; align-items: center; justify-content: center; margin-bottom: 7px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 5px; padding-top: 2px; position: relative; gap: 6px; }
-        .group-title { font-size: 14px; font-weight: 600; color: var(--gold); text-transform: uppercase; letter-spacing: 1.5px; margin: 0; outline: none; text-align: center; padding: 4px 15px; border-radius: var(--radius-sm); transition: 0.2s; cursor: grab; user-select: none; }
+        .group-title { font-size: 14px; font-weight: 600; color: var(--gold); text-transform: uppercase; letter-spacing: 1.5px; margin: 0; outline: none; text-align: center; padding: 4px 15px; border-radius: var(--radius-sm); transition: 0.2s; cursor: pointer; user-select: none; }
+        .group-title:active { cursor: grabbing; }
         .group-title.editing { cursor: text; user-select: text; }
 
         .group-title.editing {
@@ -198,13 +287,13 @@
         
         .edit-group-icon, .delete-group-icon {
             display: flex; align-items: center; justify-content: center;
-            cursor: pointer; opacity: 0; transition: opacity 0.2s; padding: 4px;
+            cursor: pointer; opacity: 0.4; transition: opacity 0.2s; padding: 4px;
             flex-shrink: 0; width: 26px; height: 26px;
             background: none; border: none; color: inherit;
         }
         
         .group-header:hover .edit-group-icon,
-        .group-header:hover .delete-group-icon { opacity: 0.6; }
+        .group-header:hover .delete-group-icon { opacity: 0.7; }
 
         .edit-group-icon:hover { opacity: 1 !important; color: var(--blue); }
         .delete-group-icon:hover { opacity: 1 !important; color: var(--error); }
@@ -243,7 +332,8 @@
         
         .add-agent-card {
             width: 240px; height: 35px; border: 1px dashed var(--text-dim);
-            background: transparent; color: var(--text-dim); display: flex;
+            background: transparent; color: var(--text); /* Improved contrast */
+            display: flex;
             align-items: center; justify-content: center; cursor: pointer;
             transition: all 0.2s; box-sizing: border-box; font-size: 12px;
             font-weight: 500; border-radius: var(--radius-sm); gap: 6px;
@@ -292,6 +382,7 @@
         }
         
         .agent-card:hover { border-color: var(--gold-glow); background: #262c36; box-shadow: 0 0 10px var(--gold-glow); transform: translateY(-1px); }
+        .agent-card:active { transform: scale(0.97); }
         .agent-card.dragging { opacity: 0.4; border: 1px dashed var(--blue); }
 
         .agent-checkbox { position: absolute; top: 50%; left: 5px; transform: translateY(-50%); width: 18px; height: 18px; cursor: pointer; z-index: 10; display: none; }
@@ -310,7 +401,7 @@
 
         .nav-arrow { background: var(--card-bg); color: var(--text); border: 1px solid var(--border); width: 36px; height: 36px; border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; font-size: 20px; font-weight: 500; }
         .nav-arrow:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
-        .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
+        .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed !important; }
 
         .breadcrumb { font-size: 12px; color: var(--text-dim); margin-left: 12px; white-space: nowrap; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
 
@@ -422,11 +513,11 @@
         
         /* High-contrast highlight color for search matches */
         ::highlight(search-match) {
-            background-color: rgba(255, 195, 40, 0.4);
-            color: #fff;
+            background-color: #ffc328; /* Solid gold for contrast */
+            color: #000; /* Dark text for WCAG compliance */
         }
         ::highlight(search-current) {
-            background-color: #ffc328;
+            background-color: #ffeb3b;
             color: #000;
         }
         #prompt-box::selection, #prompt-box *::selection {
@@ -486,9 +577,9 @@
         .toast.info { background: var(--info); }
 
         .wiz-save { background: var(--success); color: #fff; border: none; font-weight: 600; padding: 10px 24px; border-radius: var(--radius-sm); cursor: pointer; transition: 0.2s; font-size: 13px; }
-        .wiz-save:hover { background: var(--success-hover); }
+        .wiz-save:hover { background: #36b84a; }
         .wiz-cancel { background: var(--border); color: var(--text); border: 1px solid transparent; padding: 10px 24px; border-radius: var(--radius-sm); cursor: pointer; transition: 0.2s; font-weight: 600; font-size: 13px; }
-        .wiz-cancel:hover { background: var(--secondary-hover); }
+        .wiz-cancel:hover { background: #3d444d; }
 
         
         .bridge-status { position: fixed; bottom: 15px; right: 15px; font-size: 11px; font-weight: 600; color: var(--text-dim); background: var(--bg-light); padding: 4px 10px; border-radius: var(--radius-pill); border: 1px solid var(--border); z-index: 100; }
@@ -564,7 +655,7 @@
             border: 1px solid;
         }
         .move-selected-btn:hover { background: var(--blue); color: #fff; }
-        .move-selected-btn.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+        .move-selected-btn.disabled { opacity: 0.4; cursor: not-allowed; }
 
         .wiz-inline-add {
             display: flex; align-items: center; gap: 8px; margin-top: 8px;
@@ -637,7 +728,7 @@
         .recycle-item {
             display: flex; align-items: center; justify-content: space-between;
             padding: 8px 12px; border-radius: var(--radius-sm); transition: 0.15s;
-            border: 1px solid transparent; margin-bottom: 4px;
+            border: 1px solid transparent; margin-bottom: 4px; cursor: pointer;
         }
         .recycle-item:hover { background: rgba(88, 166, 255, 0.05); border-color: var(--border); }
         .recycle-item-info { flex: 1; min-width: 0; }
@@ -756,6 +847,9 @@
         <symbol id="icon-warning" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></symbol>
         <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></symbol>
         <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></symbol>
+        <symbol id="icon-cancel" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></symbol>
+        <symbol id="icon-cancel" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></symbol>
+        <symbol id="icon-cancel" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></symbol>
         <symbol id="icon-recycle" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" opacity=".3"/><path d="M7 10l5 5 5-5z"/></symbol>
         <symbol id="icon-bin-full" viewBox="0 0 24 24"><path d="M16 9h-2.1l-1.9-3.4c-.2-.4-.6-.6-1-.6s-.8.2-1 .6L8.1 9H6c-1.1 0-2 .9-2 2v9c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-9c0-1.1-.9-2-2-2zm-6-2l1.7 3H8.3L10 7zm8 13H6v-9h12v9z"/></symbol>
         <symbol id="icon-edit" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></symbol>
@@ -793,34 +887,55 @@
 
     <div id="menu-container">
         <div id="active-menu" style="display: none; width: 100%;">
-            <div class="control-bar">
-                <div class="control-left" style="gap: 10px;">
-                    <button class="group-btn" onclick="createNewGroup()" aria-label="Create New Group Folder">
-                        <svg aria-hidden="true" style="width: 18px; height: 18px; fill: #fff; margin-right: 8px;"><use href="#icon-plus"/></svg>
-                        ADD GROUP
-                    </button>
-                    <button class="recycle-bin-btn" onclick="openRecycleBin()" aria-label="Open Recycle Bin" title="Open Recycle Bin">
-                        <svg aria-hidden="true"><use href="#icon-recycle"/></svg>
-                        <span class="bin-badge" id="bin-badge">0</span>
-                    </button>
-                </div>
-                <div class="control-center">
-                    <div class="search-wrapper">
-                        <input type="text" id="search-box" placeholder="Search prompts..." aria-label="Search prompts" oninput="filterAgents()">
-                        <svg aria-hidden="true"><use href="#icon-search"/></svg>
+            <div class="toolbar-wrapper">
+                <!-- Standard Action Bar -->
+                <div id="standard-bar" class="control-bar">
+                    <div class="control-left">
+                        <button class="btn btn-primary" onclick="openWizard()" aria-label="Add New AI Agent Prompt">
+                            <svg aria-hidden="true"><use href="#icon-plus"/></svg>
+                            ADD PROMPT
+                        </button>
+                        <button class="btn btn-outline" onclick="createNewGroup()" aria-label="Create New Group Folder">
+                            <svg aria-hidden="true"><use href="#icon-plus"/></svg>
+                            ADD GROUP
+                        </button>
+                    </div>
+                    
+                    <div class="control-center">
+                        <div class="search-wrapper">
+                            <input type="text" id="search-box" placeholder="Search prompts..." aria-label="Search prompts" oninput="filterAgents()">
+                            <svg aria-hidden="true"><use href="#icon-search"/></svg>
+                        </div>
+                    </div>
+                    
+                    <div class="control-right">
+                        <button class="recycle-bin-btn" onclick="openRecycleBin()" aria-label="Open Recycle Bin" title="Open Recycle Bin">
+                            <svg aria-hidden="true"><use href="#icon-recycle"/></svg>
+                            <span class="bin-badge" id="bin-badge">0</span>
+                        </button>
+                        <button class="btn btn-ghost" onclick="enterDeleteMode()" aria-label="Enter Delete Mode">
+                            <svg aria-hidden="true"><use href="#icon-trash"/></svg>
+                            DELETE
+                        </button>
                     </div>
                 </div>
-                <div class="control-right">
-                    <button class="del-btn" onclick="enterDeleteMode()">DELETE</button>
-                    <button class="cancel-del-btn" onclick="cancelDeleteMode()">CANCEL</button>
-                    <button class="move-selected-btn" id="bulk-move-btn" onclick="openBulkMove()">MOVE SELECTED</button>
-                    <button class="confirm-del-btn disabled" id="confirm-del-btn" onclick="confirmDeleteMode()">
-                        DELETE SELECTED <span class="del-badge" id="del-count">0</span>
-                    </button>
-                    <button class="add-btn" onclick="openWizard()" aria-label="Create New AI Agent Prompt">
-                        <svg aria-hidden="true" style="width: 18px; height: 18px; fill: #fff; margin-right: 8px;"><use href="#icon-plus"/></svg>
-                        ADD PROMPT
-                    </button>
+
+                <!-- Contextual Selection Bar -->
+                <div id="selection-bar" class="control-bar">
+                    <div class="selection-info">
+                        <span class="count-badge" id="del-count">0</span>
+                        SELECTED
+                    </div>
+                    
+                    <div class="control-center"></div>
+                    
+                    <div class="control-right">
+                        <button class="btn btn-danger-outline" id="confirm-del-btn" style="display: none;" onclick="confirmDeleteMode()">
+                            <svg aria-hidden="true"><use href="#icon-trash"/></svg>
+                            DELETE
+                        </button>
+                        <button class="btn btn-outline" onclick="cancelDeleteMode()">CANCEL</button>
+                    </div>
                 </div>
             </div>
             <div id="main-menu"></div>
@@ -835,6 +950,7 @@
             <button class="nav-arrow" id="next-agent-btn" onclick="navigateAgent(1)" aria-label="Next agent">›</button>
             <span class="nav-cross-hint" id="next-cross-hint" aria-hidden="true"></span>
             <div class="agent-title-wrap" style="display: flex; align-items: center; flex: 1; margin: 0 15px; position: relative;">
+                <span id="agent-breadcrumb" class="breadcrumb" style="margin-right: 15px; margin-left: 0;"></span>
                 <h2 id="agent-title" style="margin: 0; text-align: left; outline: none;">Agent Name</h2>
                 <button class="edit-title-btn" onclick="startEditTitle()" aria-label="Edit Agent Name">
                     <svg aria-hidden="true"><use href="#icon-edit"/></svg>
@@ -842,7 +958,6 @@
                 <button class="delete-agent-btn" id="delete-agent-btn" onclick="deleteCurrentAgent()" aria-label="Delete Agent">
                     <svg aria-hidden="true"><use href="#icon-trash"/></svg>
                 </button>
-                <span id="agent-breadcrumb" class="breadcrumb" style="margin-left: 15px;"></span>
                 <div style="flex: 1;"></div>
                 <button class="title-save-btn" id="title-save-btn" onmousedown="event.preventDefault()" onclick="saveTitleEdit()">SAVE</button>
                 <button class="title-cancel-btn" id="title-cancel-btn" onmousedown="event.preventDefault()" onclick="cancelTitleEdit()">CANCEL</button>
@@ -975,7 +1090,38 @@
 
     <script>
         
-        
+        let audioCtx;
+        function playClickSound() {
+            if (typeof audioCtx === 'undefined') {
+                try {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    console.warn("Web Audio API is not supported in this browser.");
+                    audioCtx = null;
+                }
+            }
+            if (!audioCtx) return;
+
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(987.77, audioCtx.currentTime); 
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.start(audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.05);
+            oscillator.stop(audioCtx.currentTime + 0.05);
+        }
+
+        document.addEventListener('click', function(e) {
+            
+            if (e.target.closest('button, [onclick], [role="button"], .agent-card, .recycle-item')) {
+                if (!e.target.closest('[disabled], .disabled')) {
+                    playClickSound();
+                }
+            }
+        }, true);
         
         const FOCUSABLE_SELECTOR = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
         let focusTrapPrevious = null;
@@ -1106,6 +1252,7 @@
         }
 
         let deleteSelections = new Set();
+        let selectedGroups = new Set();
         function selKey(folder, agent) { return folder + '||' + agent; }
 
         async function showConfirm(message, title = "Confirm Action") {
@@ -1581,6 +1728,19 @@
                 const header = document.createElement('div'); header.className = 'group-header';
 
                 
+                const groupChk = document.createElement('input'); 
+                groupChk.type = 'checkbox'; 
+                groupChk.className = 'agent-checkbox group-checkbox';
+                groupChk.style.position = 'static'; groupChk.style.transform = 'none';
+                groupChk.setAttribute('aria-label', 'Select all in ' + groupData.title);
+                groupChk.onclick = (e) => e.stopPropagation();
+                groupChk.onpointerdown = (e) => e.stopPropagation();
+                groupChk.onchange = () => toggleGroupSelection(folderName, groupChk.checked);
+                
+                const allSelected = filteredAgents.length > 0 && filteredAgents.every(a => deleteSelections.has(selKey(folderName, a)));
+                groupChk.checked = selectedGroups.has(folderName) || (filteredAgents.length > 0 && allSelected);
+                header.appendChild(groupChk);
+
                 const handle = document.createElement('div');
                 handle.className = 'group-drag-handle'; handle.title = 'Drag to reorder group';
                 handle.setAttribute('role', 'button');
@@ -1588,8 +1748,12 @@
                 handle.setAttribute('aria-roledescription', 'drag handle');
                 handle.setAttribute('aria-label', 'Reorder ' + groupData.title + ' group');
                 handle.innerHTML = '<svg aria-hidden="true"><use href="#icon-drag"/></svg>';
-                handle.onpointerdown = (e) => handleManualDragStart(e, folderName, container);
+                handle.onpointerdown = (e) => {
+                    if (isDeleteMode) return;
+                    handleManualDragStart(e, folderName, container);
+                };
                 handle.onkeydown = (e) => {
+                    if (isDeleteMode) return;
                     if ((e.ctrlKey || e.metaKey) && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
                         e.preventDefault();
                         const allFolders = Object.keys(groups);
@@ -1611,7 +1775,7 @@
 
                 const titleEl = document.createElement('h3'); titleEl.className = 'group-title'; titleEl.innerText = groupData.title;
                 titleEl.onpointerdown = (e) => {
-                    if (titleEl.classList.contains('editing')) return;
+                    if (isDeleteMode || titleEl.classList.contains('editing')) return;
                     handleManualDragStart(e, folderName, container);
                 };
                 header.appendChild(titleEl);
@@ -1701,6 +1865,20 @@
 
         function filterAgents() { saveScroll(); renderMenu(search.value); restoreScroll(); }
 
+        function toggleGroupSelection(folderName, isChecked) {
+            const group = groups[folderName];
+            if (!group) return;
+            if (isChecked) selectedGroups.add(folderName);
+            else selectedGroups.delete(folderName);
+            
+            Object.keys(group.agents).forEach(agentName => {
+                const key = selKey(folderName, agentName);
+                if (isChecked) deleteSelections.add(key);
+                else deleteSelections.delete(key);
+            });
+            renderMenu(search.value);
+            updateDeleteCount();
+        }
         
         async function openKeyboardMove(fromFolder, agentName) {
             const allGroups = Object.keys(groups).sort();
@@ -2004,39 +2182,66 @@
 
         function enterDeleteMode() {
             isDeleteMode = true;
-            document.querySelector('.del-btn').style.display = 'none';
-            document.querySelector('.cancel-del-btn').style.display = 'flex';
-            document.getElementById('bulk-move-btn').style.display = 'flex';
-            document.getElementById('confirm-del-btn').style.display = 'flex';
-            menu.classList.add('delete-mode'); updateDeleteCount();
+            document.getElementById('standard-bar').style.transform = 'translateY(-100%)';
+            document.getElementById('standard-bar').style.opacity = '0';
+            const selBar = document.getElementById('selection-bar');
+            selBar.style.display = 'flex';
+            setTimeout(() => selBar.classList.add('active'), 10);
+            
+            menu.classList.add('delete-mode'); 
+            updateDeleteCount();
             a11yAnnounce('Delete mode activated. Select agents to delete or move.');
         }
 
         function cancelDeleteMode() {
-            isDeleteMode = false; deleteSelections.clear();
-            document.querySelector('.del-btn').style.display = 'flex';
-            document.querySelector('.cancel-del-btn').style.display = 'none';
-            document.getElementById('bulk-move-btn').style.display = 'none';
-            document.getElementById('confirm-del-btn').style.display = 'none';
+            isDeleteMode = false; 
+            deleteSelections.clear();
+            selectedGroups.clear();
+            
+            const selBar = document.getElementById('selection-bar');
+            selBar.classList.remove('active');
+            setTimeout(() => selBar.style.display = 'none', 300);
+            
+            document.getElementById('standard-bar').style.transform = 'translateY(0)';
+            document.getElementById('standard-bar').style.opacity = '1';
+            
             menu.classList.remove('delete-mode');
             a11yAnnounce('Delete mode cancelled.');
         }
 
         async function confirmDeleteMode() {
             const sel = Array.from(deleteSelections).map(k => { const i = k.indexOf('||'); return { g: k.substring(0, i), a: k.substring(i + 2) }; });
-            if (sel.length === 0) { showToast("NO AGENTS SELECTED", "info"); return; }
-            if (await showConfirm(`Move ${sel.length} agents to Recycle Bin?`, "Confirm Delete")) {
-                api('recycle-delete-agents', 'POST', { agents: sel }).then(() => { deleteSelections.clear(); syncFromBridge(); cancelDeleteMode(); showToast("AGENTS MOVED TO RECYCLE BIN", "success"); updateBinBadge(); });
+            const gSel = Array.from(selectedGroups);
+            if (sel.length === 0 && gSel.length === 0) { showToast("NO ITEMS SELECTED", "info"); return; }
+            
+            const msg = (sel.length > 0 && gSel.length > 0) 
+                ? `Move ${sel.length} agents and ${gSel.length} groups to Recycle Bin?`
+                : (gSel.length > 0 ? `Move ${gSel.length} groups to Recycle Bin?` : `Move ${sel.length} agents to Recycle Bin?`);
+
+            if (await showConfirm(msg, "Confirm Delete")) {
+                const promises = [];
+                if (sel.length > 0) promises.push(api('recycle-delete-agents', 'POST', { agents: sel }));
+                gSel.forEach(folder => promises.push(api('recycle-delete-group', 'POST', { folder })));
+                
+                Promise.all(promises).then(() => { 
+                    deleteSelections.clear(); 
+                    selectedGroups.clear();
+                    syncFromBridge(); 
+                    cancelDeleteMode(); 
+                    showToast("ITEMS MOVED TO RECYCLE BIN", "success"); 
+                    updateBinBadge(); 
+                });
             }
         }
         function updateDeleteCount() {
-            const c = deleteSelections.size, b = document.getElementById('del-count');
+            const c = deleteSelections.size + selectedGroups.size, b = document.getElementById('del-count');
             const delBtn = document.getElementById('confirm-del-btn');
-            const moveBtn = document.getElementById('bulk-move-btn');
             if (b) b.innerText = c;
-            if (delBtn) { if (c === 0) delBtn.classList.add('disabled'); else delBtn.classList.remove('disabled'); }
-            if (moveBtn) { if (c === 0) moveBtn.classList.add('disabled'); else moveBtn.classList.remove('disabled'); }
-            a11yAnnounce(c + ' agents selected');
+            if (delBtn) {
+                if (c === 0) delBtn.style.display = 'none';
+                else delBtn.style.display = 'flex';
+            }
+            a11yAnnounce(c + ' items selected');
         }
 
         function openBulkMove() {
