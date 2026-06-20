@@ -222,15 +222,15 @@
         .group-container.group-dragging { opacity: 0.1; transform: scale(0.95); }
 
         .drag-ghost {
-            position: fixed;
-            pointer-events: none;
-            z-index: 10000;
-            opacity: 0.9;
+            position: fixed !important;
+            pointer-events: none !important;
+            z-index: 10000 !important;
+            opacity: 0.9 !important;
             box-shadow: 0 35px 70px rgba(0,0,0,0.7), 0 0 30px rgba(88, 166, 255, 0.3);
             transform: scale(1.06);
             backdrop-filter: blur(8px);
             border: 2px solid var(--blue);
-            transition: none;
+            transition: none !important;
         }
 
         .group-placeholder {
@@ -1060,6 +1060,20 @@
         </div>
     </div>
 
+    <div id="collision-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="collision-modal-title">
+        <div class="modal-card">
+            <h3 id="collision-modal-title">Collision Detected</h3>
+            <p id="collision-modal-text">An item with this name already exists.</p>
+            <div class="modal-actions" style="justify-content: space-between;">
+                <button id="collision-modal-cancel" class="wiz-cancel">Cancel</button>
+                <div>
+                    <button id="collision-modal-rename" class="wiz-save" style="background: var(--blue);">Keep Both</button>
+                    <button id="collision-modal-overwrite" class="wiz-save" style="background: #e74c3c;">Overwrite</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="alert-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="alert-modal-title">
         <div class="modal-card">
             <h3 id="alert-modal-title">Attention</h3>
@@ -1277,6 +1291,32 @@
 
                 yes.onclick = () => cleanup(true);
                 no.onclick = () => cleanup(false);
+            });
+        }
+
+        async function showCollisionPrompt(message) {
+            return new Promise((resolve) => {
+                const overlay = document.getElementById('collision-modal-overlay');
+                document.getElementById('collision-modal-text').innerText = message;
+                overlay.style.display = 'flex';
+                setTimeout(() => overlay.classList.add('visible'), 10);
+                trapFocusIn(overlay);
+
+                const overwriteBtn = document.getElementById('collision-modal-overwrite');
+                const renameBtn = document.getElementById('collision-modal-rename');
+                const cancelBtn = document.getElementById('collision-modal-cancel');
+
+                const cleanup = (val) => {
+                    overlay.classList.remove('visible');
+                    setTimeout(() => overlay.style.display = 'none', 200);
+                    overwriteBtn.onclick = null; renameBtn.onclick = null; cancelBtn.onclick = null;
+                    releaseFocusTrap(overlay);
+                    resolve(val);
+                };
+
+                overwriteBtn.onclick = () => cleanup('overwrite');
+                renameBtn.onclick = () => cleanup('rename');
+                cancelBtn.onclick = () => cleanup('');
             });
         }
 
@@ -2056,7 +2096,13 @@
             box.onscroll = () => { if (gutter) gutter.scrollTop = box.scrollTop; };
             box.onkeydown = (e) => {
                 if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveEdit(); }
-                if (e.key === 'Escape') { e.preventDefault(); stopEdit(); }
+                if (e.key === 'Escape') { 
+                    const searchOverlay = document.getElementById('search-overlay');
+                    if (searchOverlay && searchOverlay.classList.contains('visible')) {
+                        e.preventDefault(); e.stopPropagation(); closeSearch(); return;
+                    }
+                    e.preventDefault(); stopEdit(); 
+                }
             };
         }
 
@@ -2361,7 +2407,7 @@
             const loader = document.getElementById('recycle-loader');
             const textEl = document.getElementById('recycle-loader-text');
             if (loader && textEl) {
-                textEl.innerText = text;
+                textEl.innerHTML = `<div style="font-size:15px; font-weight:600; color:var(--text);">${text}</div><div id="recycle-loader-steps" style="text-align:left; margin-top:12px; font-weight:normal; font-size:13px; color:var(--text-muted); line-height:1.6; max-width: 250px; margin-left: auto; margin-right: auto;"></div>`;
                 loader.classList.add('visible');
             }
         }
@@ -2370,74 +2416,133 @@
             if (loader) loader.classList.remove('visible');
         }
 
-        async function restoreBinItem(binPath, btnElement) {
-            showRecycleLoader('Restoring...');
+        function addRecycleLoaderStep(stepText) {
+            const stepsEl = document.getElementById('recycle-loader-steps');
+            if (stepsEl) {
+                const step = document.createElement('div');
+                step.innerHTML = `<span style="display:inline-block; width:20px;">⏳</span>${stepText}`;
+                stepsEl.appendChild(step);
+                return step;
+            }
+            return null;
+        }
+
+        function markRecycleLoaderStepComplete(stepEl, success = true) {
+            if (stepEl) {
+                stepEl.innerHTML = stepEl.innerHTML.replace('⏳', success ? '<span style="color:#2ecc71;">✓</span>' : '<span style="color:#e74c3c;">❌</span>');
+            }
+        }
+
+        async function restoreBinItem(binPath, btnElement, collisionAction = '') {
+            showRecycleLoader('Restoring Item...');
+            let step1 = addRecycleLoaderStep('Sending restore command...');
             try {
-                const res = await api('recycle-restore', 'POST', { bin_path: binPath });
+                const res = await api('recycle-restore', 'POST', { bin_path: binPath, collision_action: collisionAction });
                 if (res && res.status === 'success') {
+                    markRecycleLoaderStepComplete(step1, true);
+                    
+                    let step2 = addRecycleLoaderStep('Verifying file system changes...');
                     if (await verifyRecycleAction('restore', binPath)) {
+                        markRecycleLoaderStepComplete(step2, true);
+                        
+                        let step3 = addRecycleLoaderStep('Refreshing workspace data...');
                         showToast('ITEM RESTORED SUCCESSFULLY', 'success');
                         await refreshRecycleBinList();
                         await syncFromBridge();
                         updateBinBadge();
+                        markRecycleLoaderStepComplete(step3, true);
                     } else {
+                        markRecycleLoaderStepComplete(step2, false);
                         showToast('RESTORE VERIFICATION FAILED', 'warning');
                         await refreshRecycleBinList();
                     }
+                } else if (res && res.status === 'collision') {
+                    markRecycleLoaderStepComplete(step1, false);
+                    hideRecycleLoader();
+                    const action = await showCollisionPrompt(res.message);
+                    if (action) {
+                        return restoreBinItem(binPath, btnElement, action);
+                    }
                 } else { 
+                    markRecycleLoaderStepComplete(step1, false);
                     showToast(res ? res.message || 'RESTORE FAILED' : 'RESTORE FAILED', 'error'); 
                 }
             } catch (e) {
+                markRecycleLoaderStepComplete(step1, false);
                 showToast('RESTORE FAILED', 'error');
             } finally {
-                hideRecycleLoader();
+                setTimeout(() => hideRecycleLoader(), 600);
             }
         }
 
         async function purgeBinItem(binPath, btnElement) {
             if (!await showConfirm('Permanently delete this item? This cannot be undone.', 'Permanent Delete')) return;
-            showRecycleLoader('Deleting...');
+            showRecycleLoader('Deleting Item Forever...');
+            let step1 = addRecycleLoaderStep('Sending delete command...');
             try {
                 const res = await api('recycle-purge', 'POST', { bin_path: binPath });
                 if (res && res.status === 'success') {
+                    markRecycleLoaderStepComplete(step1, true);
+                    
+                    let step2 = addRecycleLoaderStep('Verifying permanent deletion...');
                     if (await verifyRecycleAction('purge', binPath)) {
+                        markRecycleLoaderStepComplete(step2, true);
+                        
+                        let step3 = addRecycleLoaderStep('Updating interface...');
                         showToast('PERMANENTLY DELETED', 'success');
                         await refreshRecycleBinList();
                         updateBinBadge();
+                        markRecycleLoaderStepComplete(step3, true);
                     } else {
+                        markRecycleLoaderStepComplete(step2, false);
                         showToast('DELETION VERIFICATION FAILED', 'warning');
                         await refreshRecycleBinList();
                     }
                 } else { 
+                    markRecycleLoaderStepComplete(step1, false);
                     showToast(res ? res.message || 'PURGE FAILED' : 'PURGE FAILED', 'error'); 
                 }
             } catch (e) {
+                markRecycleLoaderStepComplete(step1, false);
                 showToast('PURGE FAILED', 'error');
             } finally {
-                hideRecycleLoader();
+                setTimeout(() => hideRecycleLoader(), 600);
             }
         }
 
         async function purgeAllBinItems() {
             if (!await showConfirm('Permanently delete ALL recycle bin items? This cannot be undone.', 'Purge All')) return;
-            showRecycleLoader('Purging all items...');
+            showRecycleLoader('Emptying Recycle Bin...');
+            let step1 = addRecycleLoaderStep('Sending empty command...');
             try {
                 const res = await api('recycle-purge-all', 'POST');
                 if (res && res.status === 'success') {
+                    markRecycleLoaderStepComplete(step1, true);
+                    
+                    let step2 = addRecycleLoaderStep('Verifying deletion...');
                     if (await verifyRecycleAction('purge-all')) {
+                        markRecycleLoaderStepComplete(step2, true);
+                        
+                        let step3 = addRecycleLoaderStep('Updating interface...');
                         showToast('RECYCLE BIN EMPTIED', 'success');
                         await refreshRecycleBinList();
                         updateBinBadge();
                         closeRecycleBin();
+                        markRecycleLoaderStepComplete(step3, true);
                     } else {
+                        markRecycleLoaderStepComplete(step2, false);
                         showToast('PURGE VERIFICATION FAILED: Some items remained', 'warning');
                         await refreshRecycleBinList();
                     }
-                } else { showToast(res ? res.message || 'PURGE FAILED' : 'PURGE FAILED', 'error'); }
+                } else { 
+                    markRecycleLoaderStepComplete(step1, false);
+                    showToast(res ? res.message || 'PURGE FAILED' : 'PURGE FAILED', 'error'); 
+                }
             } catch (e) {
+                markRecycleLoaderStepComplete(step1, false);
                 showToast('PURGE FAILED', 'error');
             } finally {
-                hideRecycleLoader();
+                setTimeout(() => hideRecycleLoader(), 600);
             }
         }
 
@@ -2512,7 +2617,7 @@
             }
             
             const regex = getSearchRegex(term);
-            const text = box.innerText;
+            const text = box.textContent;
             searchMatches = [];
             let match;
             while ((match = regex.exec(text)) !== null) {
@@ -2695,17 +2800,18 @@
                 e.preventDefault();
                 if (e.shiftKey) findNext(-1); else findNext(1);
             }
-            if (e.key === 'Escape') closeSearch();
+            if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeSearch(); }
         }
 
         function handleReplaceKey(e) {
             if (e.key === 'Enter') { e.preventDefault(); replaceCurrent(); }
+            if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeSearch(); }
         }
 
         window.addEventListener('keydown', (e) => {
             if (e.ctrlKey || e.metaKey) {
-                if (e.key === 'f') { e.preventDefault(); openSearch(false); }
-                if (e.key === 'h') { e.preventDefault(); openSearch(true); }
+                if (e.code === 'KeyF' || e.key.toLowerCase() === 'f') { e.preventDefault(); openSearch(false); }
+                if (e.code === 'KeyH' || e.key.toLowerCase() === 'h') { e.preventDefault(); openSearch(true); }
                 if (e.key === 'w' && view.style.display === 'flex') {
                     e.preventDefault();
                     const lineStr = window.prompt("Jump to line number:");

@@ -70,78 +70,6 @@ C. Atomic Move Operations:
 ===============================================================================
 5. FRONTEND DESIGN LANGUAGE
 ===============================================================================
-# AI Agent Prompt Controller - Architectural Manual
-# Version: 2.0.0 (Self-Organizing Edition)
-# Date: May 6, 2026
-
-===============================================================================
-1. CORE ARCHITECTURE (3-FILE ROOT STRATEGY)
-===============================================================================
-The project is designed for maximum portability and zero-clutter. The root 
-directory contains only 3 permanent files.
-
-ROOT/
-├── AI Agent Prompts.html   # Monolithic Frontend (Vanilla JS/CSS)
-├── Install.bat             # Master Setup & Dependency Installer
-├── project_structure.txt   # This Manual (Architectural Source of Truth)
-└── bridge.py               # Sequence-Aware Flask Backend
-
-All data is isolated within a single root-level directory:
-└── AI Agent Prompts/       # Physical Persistence Layer
-
-===============================================================================
-2. PHYSICAL DATA PERSISTENCE (SEQUENTIAL SCHEMA)
-===============================================================================
-Groups are stored as physical directories using a strict sequential pattern. 
-This sequence is the "Source of Truth" for the UI order.
-
-Schema: "GroupX - [Title]"
-Example:
-├── Group1 - [GENERAL]
-├── Group2 - [BUG DETECTOR]
-└── Group3 - [Fortnite]
-
-RULES:
-- [GENERAL] Priority: The "GENERAL" title is hard-locked to always be Group 1.
-- Gapless Sequence: The backend automatically re-indexes all folders (1, 2, 3...) 
-  whenever a group is created, moved, or deleted. There are never gaps.
-- Character Safety: Forbidden Windows characters (< > : " / \ | ? *) are 
-  automatically replaced with underscores (_) to prevent Error 123.
-
-===============================================================================
-3. AUTOMATED LIFECYCLE MANAGEMENT
-===============================================================================
-The system operates autonomously with zero manual maintenance required.
-
-A. Persistent Scaffolding:
-   - Group folders are preserved even when empty to maintain organizational 
-     structure and user metadata.
-   - Deletion of groups is an explicit, user-initiated action via the UI.
-   - Triggered by: Moving the last agent out, or direct file deletion.
-
-B. Atomic "Mirror Sync":
-   - Uses a high-speed Watchdog observer to monitor the disk.
-   - Any change made directly to folders/files is reflected in the UI within 
-     0.5 seconds (bidirectional sync).
-
-C. Atomic Move Operations:
-   - Drag-and-drop actions use a dedicated backend `/api/move` endpoint.
-   - Relocations are performed as a single disk move (`shutil.move`), 
-     eliminating duplicates and ensuring data integrity.
-
-===============================================================================
-4. SYSTEM OPERATION & STARTUP
-===============================================================================
-- Network: Runs on http://127.0.0.1:5589.
-- Visibility: Operates invisibly via 'pythonw.exe'.
-- Persistence: Startup is managed via a VBS bridge located in:
-  %LOCALAPPDATA%\AIAgentController\silent_start.vbs
-- Installer: 'Install.bat' handles dependency checking, port clearing, 
-  bridge.py extraction, and Windows Startup shortcut creation.
-
-===============================================================================
-5. FRONTEND DESIGN LANGUAGE
-===============================================================================
 - Visuals: 3D "Forward Indentation" effect with CSS gradients and deep shadows.
 - Layout: Responsive Grid with dynamic card sizing (175px - 400px).
 - Interaction: Inline group renaming, real-time toast notifications, 
@@ -162,6 +90,12 @@ C. Atomic Move Operations:
 5. Free External AI Prompt Reviewer: Add a dedicated "AI REVIEW" button to the prompt screen that automatically injects the current prompt into a highly specific evaluation instruction set and opens it anonymously in ChatGPT for a free, zero-auth review.
 
 6. Smart Flex-Wrap Dashboard Layout: Overhaul the dashboard layout to use a dynamic Flexbox flow instead of rigid grid columns. Allow each group to shrink-wrap its own width (min 220px, max 350px) while maintaining exactly 30px lateral padding. Ensure groups flow densely left-to-right, force long text to wrap cleanly at 350px, and strictly ban agent cards from sitting side-by-side within a group.
+
+7. Prompt Version History & Safe Restoration: Ensure that editing a prompt saves a rollback version to the recycle bin (30-day retention). Restoring prompts must intelligently handle naming collisions by prompting for an Overwrite or Rename, and overwriting must safely recycle the newer active prompt.
+
+8. Enhanced Recycle Bin Visual Feedback: Introduce a phased, step-by-step loading overlay during recycle bin operations (Restore, Delete, Purge All) to provide the user with clear, synchronous feedback (e.g., "Sending command...", "Verifying changes...") so the application never appears frozen.
+
+9. Native Drag & Drop Fidelity & Keyboard Agnosticism: Ensure the drag-and-drop ghost element tracks the cursor perfectly across all contexts by enforcing strict CSS positioning hierarchy. Keyboard shortcuts (Ctrl+F, Ctrl+H) must use layout-agnostic `e.code` to function reliably across international keyboard layouts (e.g., Hebrew).
 
 ===============================================================================
 7. PRODUCT SPECIFICATIONS
@@ -301,3 +235,39 @@ C. Atomic Move Operations:
 - Main behavior: Toggling "Delete Mode" transforms all agent cards into selectable checkboxes.
 - UI/UX behavior: The dashboard turns red. Users click cards to queue them for deletion. A floating action bar tracks the selection count and provides a final "Delete Selected" confirmation.
 - System behavior: Submits an array of `{group, agent}` objects to `/api/recycle-delete-agents` for batch processing.
+
+### 11. Prompt Version History & Safe Restoration
+- Purpose: Provide a seamless roll-back plan for edited prompts and handle restore collisions safely.
+- Main behavior: 
+  - Editing an existing prompt sends the original version to the `[RECYCLE BIN]` with a timestamp before saving the new version.
+  - Restoring a file that shares a name with an existing active prompt triggers a "Collision Modal" offering Overwrite or Rename actions.
+  - Overwriting an active prompt will automatically recycle the active prompt before completing the restore.
+- System behavior: 
+  - `bridge.py` utilizes the `move_to_recycle_bin` helper during edit operations.
+  - The `/api/recycle-restore` endpoint returns a `409 Conflict` if the destination path already exists, passing `collision=True`.
+- Acceptance Criteria:
+  1. Old versions of edited prompts are safely retained in the Recycle Bin for 30 days.
+  2. The system never blindly overwrites during a restore without explicit user confirmation.
+
+### 12. Enhanced Recycle Bin Visual Feedback
+- Purpose: Eliminate confusing freezes or silent UI states during asynchronous file operations.
+- Main behavior: Replaces the generic "Working..." text with a dynamic, multi-phase loading spinner that explicitly details the background process in simplified English.
+- UI/UX behavior:
+  - Phases include: "Sending command...", "Verifying file system changes...", and "Refreshing workspace data...".
+  - Each step dynamically transitions from an hourglass icon (`⏳`) to a success checkmark (`✓`) as the API and Watchdog resolve.
+  - The overlay naturally lingers for an additional 600ms upon completion to ensure readability before dismissing.
+- Acceptance Criteria:
+  1. Recycle Bin operations clearly communicate progress to the user synchronously.
+  2. The application never appears to hang silently.
+
+### 13. Native Drag & Drop Fidelity & Keyboard Agnosticism
+- Purpose: Ensure flawless interaction fidelity during drag operations and keyboard shortcuts across all user environments.
+- Main behavior: 
+  - The `drag-ghost` element dynamically tracks the mouse cursor without animation lag or layout-induced offset errors.
+  - Keyboard event listeners rely on hardware-level physical keys rather than logical mapped characters.
+- Logic Details: 
+  - CSS `position: fixed !important;` and `transition: none !important;` are strictly enforced on `.drag-ghost` to override conflicting `.agent-card` transition cascades.
+  - JavaScript event listeners use `e.code` (e.g., `KeyF`, `KeyH`) rather than `e.key` to ensure shortcuts trigger consistently regardless of the OS keyboard language layout (e.g., English vs. Hebrew).
+- Acceptance Criteria:
+  1. The drag ghost strictly adheres to the cursor without delay or offset.
+  2. `Ctrl+F` and `Ctrl+H` operate flawlessly regardless of active keyboard language.

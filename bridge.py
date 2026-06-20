@@ -40,16 +40,25 @@ except OSError:
 log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 log_file = os.path.join(LOG_DIR, 'bridge.log')
 
+import sys
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, 'w')
+if sys.stderr is None:
+    sys.stderr = open(os.path.join(LOG_DIR, 'bridge_stderr.log'), 'a')
 
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(log_formatter)
+handlers_list = []
+if sys.stderr is not None:
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(log_formatter)
+    handlers_list.append(console_handler)
 
 
 from logging.handlers import RotatingFileHandler
 file_handler = RotatingFileHandler(log_file, maxBytes=5 * 1024 * 1024, backupCount=1)
 file_handler.setFormatter(log_formatter)
+handlers_list.append(file_handler)
 
-logging.basicConfig(level=logging.INFO, handlers=[console_handler, file_handler])
+logging.basicConfig(level=logging.INFO, handlers=handlers_list)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
@@ -550,6 +559,36 @@ def save_agent():
                     else:
                         os.remove(group_prompt_file)
             
+            
+            target_to_backup = None
+            original_item_name = name
+            if old_name:
+                old_p = os.path.join(base, clean_filename(old_name))
+                if os.path.exists(old_p):
+                    target_to_backup = old_p
+                    original_item_name = old_name
+            else:
+                curr_p = os.path.join(base, name)
+                if os.path.exists(curr_p):
+                    target_to_backup = curr_p
+            
+            if target_to_backup and os.path.exists(os.path.join(target_to_backup, 'prompt.txt')):
+                do_backup = False
+                if old_name and old_name != name:
+                    do_backup = True
+                else:
+                    with open(os.path.join(target_to_backup, 'prompt.txt'), 'r', encoding='utf-8') as f:
+                        if f.read() != content:
+                            do_backup = True
+                if do_backup:
+                    import tempfile
+                    temp_dir = tempfile.mkdtemp()
+                    backup_src = os.path.join(temp_dir, os.path.basename(target_to_backup))
+                    shutil.copytree(target_to_backup, backup_src)
+                    move_to_recycle_bin(backup_src, original_item_name, 'agent', group_folder)
+                    try: os.rmdir(temp_dir)
+                    except: pass
+
             if old_name and old_name != name:
                 old_p = os.path.join(base, clean_filename(old_name))
                 if os.path.exists(old_p): shutil.move(old_p, os.path.join(base, name))
@@ -807,7 +846,6 @@ def recycle_restore():
                 except OSError: pass
                 shutil.move(full_bin, target_path)
             else:
-
                 target_group = None
                 if original_group:
 
@@ -829,9 +867,21 @@ def recycle_restore():
                 if not target_group:
                     return jsonify({'status': 'error', 'message': 'No target group found for restore'}), 400
 
-                target_dir = os.path.join(DATA_DIR, target_group, clean_filename(item_name))
+                base_target = clean_filename(item_name)
+                target_dir = os.path.join(DATA_DIR, target_group, base_target)
+                
+                collision_action = req.get('collision_action', '')
                 if os.path.exists(target_dir):
-                    return jsonify({'status': 'error', 'message': f'An agent named "{item_name}" already exists'}), 409
+                    if collision_action == 'overwrite':
+                        move_to_recycle_bin(target_dir, base_target, item_type, target_group)
+                    elif collision_action == 'rename':
+                        counter = 1
+                        while os.path.exists(target_dir):
+                            target_dir = os.path.join(DATA_DIR, target_group, f"{base_target}_Restored{counter}")
+                            counter += 1
+                    else:
+                        return jsonify({'status': 'collision', 'message': f'An agent named "{item_name}" already exists in the target group. Do you want to Overwrite it or Keep Both?'}), 409
+
                 try: os.remove(meta_path)
                 except OSError: pass
                 shutil.move(full_bin, target_dir)

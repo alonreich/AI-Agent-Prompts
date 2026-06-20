@@ -26,6 +26,7 @@ logs/
 [RECYCLE BIN]/
 RECYCLE_BIN/
 .openclaw/
+.bridge.pid
 
 # === System & OS ===
 Thumbs.db

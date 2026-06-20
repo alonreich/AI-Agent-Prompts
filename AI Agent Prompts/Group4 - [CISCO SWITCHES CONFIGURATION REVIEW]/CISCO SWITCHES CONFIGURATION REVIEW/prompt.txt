@@ -9,10 +9,10 @@
 
 ### **Execution Vector & Target Acquisition**
 Connect to targets via SSH/Telnet using CMD/plink.exe with provided credentials.
-plink.exe -ssh alonreich@10.160.4.1 -P 2222 -pw Dont21Give
-plink.exe -telnet alonreich@10.160.4.2 -P 3015 Dont21Give
-plink.exe -ssh alonreich@10.160.4.49 -P 2222 -pw Dont21Give
-plink.exe -ssh alonreich@10.160.4.50 -P 2222 -pw Dont21Give
+plink.exe -ssh <USERNAME HERE>@<SWITCH IP HERE> -P 2222 -pw <PASSWORD>
+plink.exe -telnet <USERNAME HERE>@<SWITCH IP HERE> -P 3015 <PASSWORD>
+plink.exe -ssh <USERNAME HERE>@<SWITCH IP HERE> -P 2222 -pw <PASSWORD>
+plink.exe -ssh <USERNAME HERE>@<SWITCH IP HERE> -P 2222 -pw <PASSWORD>
 
 ### **Multi-Node Cross-Reference Analysis**
 * **Topology & Trunking:** Verify Port-Channels, Native VLANs, MTU, and allowed VLANs.
