@@ -197,7 +197,7 @@
             border-radius: var(--radius-lg);
             padding: 12px 30px 15px 30px;
             min-height: 80px;
-            transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.3s, border-color 0.3s, opacity 0.3s;
+            transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1), box-shadow 0.3s, border-color 0.3s, opacity 0.3s;
             position: relative;
             cursor: default;
             width: fit-content;
@@ -219,7 +219,7 @@
             background: rgba(88, 166, 255, 0.08);
             box-shadow: 0 0 0 2px var(--blue), var(--shadow-lg);
         }
-        .group-container.group-dragging { opacity: 0.1; transform: scale(0.95); }
+        .group-container.group-dragging { display: none !important; }
 
         .drag-ghost {
             position: fixed !important;
@@ -237,7 +237,7 @@
             background: rgba(88, 166, 255, 0.05);
             border: 2px dashed var(--blue);
             border-radius: var(--radius-lg);
-            transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+            transition: all 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
             height: 100%;
             min-height: 150px;
         }
@@ -1240,7 +1240,7 @@
                         c.style.transition = 'none';
                         c.style.transform = `translate(${dx}px, ${dy}px)`;
                         c.offsetHeight;
-                        c.style.transition = 'transform 0.4s cubic-bezier(0.2, 0, 0, 1)';
+                        c.style.transition = 'transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1)';
                         c.style.transform = '';
                     }
                 });
@@ -1380,7 +1380,8 @@
                 const res = await fetch(url, {
                     method: method,
                     headers: { 'Content-Type': 'application/json' },
-                    body: body ? JSON.stringify(body) : null
+                    body: body ? JSON.stringify(body) : null,
+                    cache: 'no-store'
                 });
                 return await res.json();
             } catch (e) { return null; }
@@ -1415,6 +1416,7 @@
         async function cancelDrag() {
             if (activeGroupDrag) {
                 const folder = activeGroupDrag;
+                activeGroupDrag = null;
                 const original = document.querySelector(`.group-container[data-folder="${folder}"]`);
                 if (original && groupOriginalParent) {
                     flip(menu, () => {
@@ -1425,6 +1427,7 @@
                 } else { cleanupDragState(); }
             } else if (agentDragStarted) {
                 const sourceCard = agentSourceCard;
+                agentDragStarted = false;
                 if (sourceCard && agentOriginalParent) {
                     flip(agentOriginalParent, () => {
                         agentOriginalParent.insertBefore(sourceCard, agentOriginalNextSibling);
@@ -1440,7 +1443,7 @@
             if (!ghost || !targetEl) { cleanupDragState(); return; }
             isAnimating = true;
             const rect = targetEl.getBoundingClientRect();
-            ghost.style.transition = 'all 0.4s cubic-bezier(0.2, 0, 0, 1)';
+            ghost.style.transition = 'all 0.6s cubic-bezier(0.25, 0.1, 0.25, 1)';
             ghost.style.left = rect.left + 'px';
             ghost.style.top = rect.top + 'px';
             ghost.style.transform = 'scale(1)';
@@ -1449,7 +1452,7 @@
                 cleanupDragState();
                 isAnimating = false;
                 syncFromBridge();
-            }, 400);
+            }, 600);
         }
 
         function cleanupDragState() {
@@ -1538,17 +1541,17 @@
             } else {
                 const original = document.querySelector(`.group-container[data-folder="${folder}"]`);
                 if (original) {
+                    activeGroupDrag = null;
                     flip(menu, () => {
                         menu.insertBefore(original, groupPlaceholder);
+                        if (groupPlaceholder) { groupPlaceholder.remove(); groupPlaceholder = null; }
                         original.classList.remove('group-dragging');
                     });
                     const folders = Array.from(menu.querySelectorAll('.group-container:not(.drag-ghost)'))
                                         .map(el => el.dataset.folder).filter(f => f);
                     animateGhostTo(original);
-                    await api('save-order', 'POST', { order: folders });
-                    
+                    api('save-order', 'POST', { order: folders });
                     a11yAnnounce(`Group ${groups[folder] ? groups[folder].title : folder} reordered.`);
-                    syncFromBridge();
                 } else { cleanupDragState(); }
             }
         }
@@ -1661,22 +1664,20 @@
                 const elem = document.elementFromPoint(e.clientX, e.clientY);
                 const targetGroup = elem ? elem.closest('.group-container') : null;
                 if (targetGroup && targetGroup.dataset.folder !== fromGroup) {
-                    const res = await api('move', 'POST', { from: fromGroup, to: targetGroup.dataset.folder, name: agent });
-                    if (res && res.status === 'success') {
-                        showToast(`MOVED ${agent}`, "success");
-                        
-                        a11yAnnounce(`Agent ${agent} moved to ${groups[targetGroup.dataset.folder].title}.`);
-                        animateGhostTo(sourceCard);
-                        await syncFromBridge();
-                    } else { showToast("MOVE FAILED", "error"); cancelDrag(); }
+                    agentDragStarted = false;
+                    api('move', 'POST', { from: fromGroup, to: targetGroup.dataset.folder, name: agent }).then(res => {
+                        if (res && res.status === 'success') {
+                            showToast(`MOVED ${agent}`, "success");
+                            a11yAnnounce(`Agent ${agent} moved to ${groups[targetGroup.dataset.folder].title}.`);
+                        } else { showToast("MOVE FAILED", "error"); syncFromBridge(); }
+                    });
+                    animateGhostTo(sourceCard);
                 } else {
-
+                    agentDragStarted = false;
                     animateGhostTo(sourceCard);
                     setTimeout(() => { 
                         if (!overTrash) {
-                            
                             a11yAnnounce(`Agent ${agent} moved within its group.`);
-                            syncFromBridge(); 
                         }
                     }, 400);
                 }
@@ -1702,7 +1703,10 @@
 
         function startEventStream() {
             if (activeEventSource) { activeEventSource.close(); activeEventSource = null; }
-            activeEventSource = new EventSource('http://127.0.0.1:5589/events');
+            const baseUrl = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') 
+                            ? `${window.location.protocol}//${window.location.host}` 
+                            : 'http://127.0.0.1:5589';
+            activeEventSource = new EventSource(`${baseUrl}/events?t=${Date.now()}`);
             activeEventSource.onmessage = (e) => {
                 if (e.data === 'sync') {
                     if (isAnimating || isGroupDragging || agentDragStarted) return;
@@ -2761,36 +2765,21 @@
             if (!box.classList.contains('editing')) startEdit();
             
             const replacement = document.getElementById('search-replace').value;
-            currentSearchIdx = 0;
+            const term = document.getElementById('search-find').value;
+            const regex = getSearchRegex(term);
+            if (!regex) return;
             
-            while (searchMatches.length > 0) {
-                const m = searchMatches[0];
-                const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null, false);
-                let node = walker.nextNode();
-                let charCount = 0;
-                let startNode, endNode, startOffset, endOffset;
-                
-                while (node && charCount + node.length <= m.index) { charCount += node.length; node = walker.nextNode(); }
-                if (node) { startNode = node; startOffset = m.index - charCount; }
-                
-                while (node && charCount + node.length < m.index + m.length) { charCount += node.length; node = walker.nextNode(); }
-                if (node) { endNode = node; endOffset = (m.index + m.length) - charCount; }
-                
-                if (startNode && endNode) {
-                    const range = document.createRange();
-                    range.setStart(startNode, startOffset);
-                    range.setEnd(endNode, endOffset);
-                    const sel = window.getSelection();
-                    sel.removeAllRanges();
-                    sel.addRange(range);
-                    
-                    document.execCommand('insertText', false, replacement);
-                    updateSearchStats();
-                } else {
-                    break; // Safety escape
-                }
-            }
+            const newText = box.innerText.replace(regex, replacement);
             
+            const sel = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(box);
+            sel.removeAllRanges();
+            sel.addRange(range);
+            
+            document.execCommand('insertText', false, newText);
+            
+            updateSearchStats();
             closeSearch();
             showToast("REPLACED ALL OCCURRENCES", "success");
         }

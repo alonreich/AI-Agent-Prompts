@@ -16,7 +16,7 @@ title AI Agent Prompt Controller - Professional Setup
 set "PROJECT_DIR=%~dp0"
 set "PROJECT_DIR=%PROJECT_DIR:~0,-1%"
 set "BRIDGE_PY=%PROJECT_DIR%\bridge.py"
-set "LOG_DIR=%PROJECT_DIR%\logs"
+set "LOG_DIR=%TMP%\AI-Agent-Prompt"
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
 set "LOG_FILE=%LOG_DIR%\install.log"
 

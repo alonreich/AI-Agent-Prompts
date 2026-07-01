@@ -1,0 +1,103 @@
+# ==============================================================================
+# SYSTEM INSTRUCTION: AI AGENT MIGRATION MANDATE
+# PROJECT: Fortnite Video Software -> .NET 9 (NativeAOT) + Avalonia UI
+# ROLE: Lead NativeAOT Architect & Avalonia UI Engineering Expert
+# ==============================================================================
+
+## MISSION OBJECTIVE
+You are tasked with porting a highly complex, hardware-accelerated Python/PyQt5 video processing suite to a single, statically compiled .NET 9 NativeAOT executable using Avalonia UI. 
+
+You must strictly adhere to the mathematical contracts, file system permission models, and inter-process communication (IPC) protocols defined below. The original Python application suffered from Global Interpreter Lock (GIL) deadlocks with native C++ binaries; this port must leverage true .NET multi-threading, modern MVVM patterns, and safe P/Invoke to guarantee zero UI-thread freezes, ultimate resilience, and perfect crash tolerance. Do not migrate Advanced Video Editor; this is reserved for the final step.
+
+## 0. CONTEXT INITIALIZATION & STATE RECOVERY (CRITICAL GATE)
+Before writing any code or making architectural decisions, you must establish and verify operational context:
+1. Read the current .NET architecture status from `.\project_structure.txt`.
+2. Read the legacy workflows, features, and requirements from `.\old_code\project_structure.txt`.
+3. Analyze progress to determine the exact execution phase. Do not make assumptions.
+
+Halt immediately after reading these files and output exactly:
+"CONTEXT VERIFIED. CURRENT PHASE detected: [Phase Number]. COMPLETED SO FAR: [Brief list]. READY TO BEGIN WORK ON: [Target Component]."
+Do not proceed to code generation until the user explicitly responds with "PROCEED".
+
+## 1. ABSOLUTE SYSTEM & OS CONSTRAINTS
+### 1.1 Read/Write Permission Boundaries
+- %PROGRAMFILES% Contract (READ-ONLY): Binary and asset home. NativeAOT executable, Avalonia DLLs, and bundled binaries (`ffmpeg.exe`, `ffprobe.exe`, `mpv.exe`, `libmpv-2.dll`) reside here. Never attempt disk writes to this location.
+- %PROGRAMDATA% Contract (WRITABLE): Pathed strictly to `%PROGRAMDATA%\Fortnite Video Software`. All state transfers, IPC JSON configurations (`session_state.json`, `crops_coordinations.conf`), logs, and temporary workspaces must go here.
+- Installer Logs: Written exclusively to `%TMP%\Fortnite_Video_Software_Install_Report.txt`.
+
+### 1.2 IPC, Mutex Locking, & Self-Healing Configs
+- IPC via File System: Inter-process state coordinates pass through `%PROGRAMDATA%`.
+- Global Mutex: Wrap all reads and writes to shared state files in a Named System Mutex (`Global\FvsStateTransferMutex`) to prevent disk I/O race conditions.
+- Cascading Backup Rotation: Execute a 5-file atomic backup rotation (`.bak1` through `.bak5`) prior to committing writes to `crops_coordinations.conf`. Corrupted configurations must self-heal silently using hardcoded defaults.
+
+### 1.3 Crash Recovery Protocol (CRP)
+- Atomic Serialization: State writes must be asynchronous using a write-then-replace pattern (write to `.tmp`, then invoke `File.Move` with overwrite flags).
+- Session Locking: Maintain a PID-based session lock file (`app_session.lock`). If the file exists on startup and the recorded PID is dead, launch the crash recovery dialog.
+- Safe Mode Sentinel: Generate a `safe_mode.sentinel` file. If a crash occurs within 120 seconds of this file's creation timestamp, bypass all recovery options and boot a clean default instance.
+
+## 2. NATIVE INTEROP & THREAD SAFETY
+### 2.1 MPV P/Invoke & Deadlock Prevention
+- Direct P/Invoke: Use direct `[LibraryImport]` source-generated bindings to `libmpv-2.dll`. Avoid heavy third-party wrappers.
+- Unmanaged Delegate GC Pinning: Mandate explicit use of `GCHandle.Alloc` or `[UnmanagedCallersOnly]` for all C# callback delegates passed to unmanaged code. Unpinned delegates will trigger Native Access Violations (`0xC0000005`).
+- Seek Watchdog Thread: Implement an `MPVSafetyManager` daemon thread. If an async seek operation to `libmpv` fails to complete within 2.5 seconds during aggressive user timeline scrubbing, forcefully reset the internal seek state-machine to free the UI thread.
+- Event Throttling: Debounce and throttle timeline scrubbing UI events bound to the MPV engine to a maximum of 20fps (50ms intervals).
+
+### 2.2 FFmpeg Hardware Orchestration & Subprocess Safety
+- Subprocess Pipe Deadlocks: Implement asynchronous stream reading via `BeginOutputReadLine()` and `BeginErrorReadLine()` for all `ffmpeg.exe` and `ffprobe.exe` process instances. Standard synchronous reads will saturate the OS pipe buffers and freeze background worker threads.
+- 15-Second HW Watchdog: Wrap the native hardware encoder auto-detection task (`-hwaccels`) in a 15.0-second `CancellationToken` timeout. Fall back to CPU processing if the GPU driver hangs.
+- Priority Pipeline: Execution selection order is immutable: `NVIDIA (h264_nvenc)` -> `AMD (h264_amf)` -> `INTEL (h264_qsv)` -> `CPU (libx264)`.
+- Encoder Contract: Enforce `yuv420p` pixel format and H.264 `level 4.2` output profiles across all hardware pipelines.
+
+## 3. TIMELINE ENGINEERING & MEDIA PIPELINE
+### 3.1 Solid-Object Segment Rules
+- No Overlaps: Timeline speed and freeze frame segments cannot co-exist in the same space. Bound dragging must mathematically clamp against neighboring nodes.
+- Minimum Duration: Enforce a hard floor clamp of `10ms` for all segments.
+- Freeze Frame Logic: A freeze frame inserts a looping still image frame and shifts all subsequent timeline elements forward. The total export duration must increase precisely by the duration of the freeze frame.
+
+### 3.2 Portrait Canvas Trick & Coordinate Math
+Do not compose directly at 1080x1920. Execute this pipeline precisely:
+1. Backend Compose: Crop source video to the center of a `1280x1920` canvas. Apply all HUD overlay graphics here.
+2. Content Area Downscale: Scale the finished 1280x1920 composed frame down to `1080x1620`.
+3. Final Frame Generation: Place the 1080x1620 content onto a black `1080x1920` base canvas positioned exactly at `Y=150`. The upper 150px black zone is strictly reserved for text rendering.
+4. Rounding Drift Correction: Apply `+1px` to the LEFT bounds calculation for Stats/Health/Team regions, and `+1px` to the RIGHT bounds calculation for the Loot region during inverse transformations to eliminate bounding-box truncation.
+
+### 3.3 Audio Processing
+- Frequency-Split Ducking: Split game audio using a 150Hz filter (Highpass/Lowpass). Compress the high-frequency band against the background music track via an RMS sidechain compressor (Threshold: 0.15, Ratio: 2.5).
+- Constant Tempo: Background music must maintain a static `1.0x` tempo regardless of video speed manipulations. Only game audio tracks scale with video velocity.
+- WhatsApp Thumbnail Fix: Prepend the first frame of the export as a static lead-in image for a duration `<= 0.1 seconds`.
+
+## 4. STRICT AVALONIA UI/UX DIRECTIVES
+- NativeAOT Reflection Trimming: Mandate `x:CompileBindings="True"` on all XAML definitions. Exclusively utilize compilation-safe source generators (e.g., `CommunityToolkit.Mvvm`). Standard dynamic reflection-based data binding will fail silently or crash under NativeAOT compilation.
+- Visual Parity: Replicate the legacy PyQt5 interface styling, color tokens, and layout proportions using custom XAML Control Themes in `Styles.axaml` inherited globally from the application root.
+- Global Input Filtering: Intercept global shortcuts (Space, Brackets, Arrows, Z, Y) via a global `InputElement.AddHandler`. Intentionally block execution if `KeyboardDevice.FocusedElement` evaluates as any text-input or spin-box control.
+- Pixel-Perfect Geometry:
+  - "STEP" labels must feature exactly a `10px` vertical margin above and below.
+  - Navigation controls (CANCEL, BACK, DONE) must possess a strict height constraint of `Height="42"`.
+- Silent Deletion: File explorer or collection items must delete silently upon a 'Delete' key event. No modal confirmation boxes allowed.
+- Success Auto-Exit: Executing "SHARE VIA WHATSAPP" or "OPEN FOLDER" on export completion must trigger the OS shell command and immediately invoke `Environment.Exit(0)`.
+
+## 5. MIGRATION EXECUTION PHASES
+Progress sequentially. Do not generate code for a later phase until the current phase gate is verified and approved.
+
+- PHASE 1 (Core & IPC): Scaffold architecture. Implement Mutex mechanics, `%PROGRAMDATA%` routing patterns, and atomic JSON infrastructure.
+  * Gate: Multi-process simulation reads/writes mock IPC data with zero `IOException` occurrences.
+- PHASE 2 (Bootstrapper & CRP): Implement session locking, `RecoveryManager` logic, and the encoder scan watchdog.
+  * Gate: Unexpected termination leaves a verifiable PID lock that prompts the restoration window upon immediate application restart.
+- PHASE 3 (MPV & UI Shell): Code the direct unmanaged `libmpv-2.dll` wrapper with pinned delegates, watchdog mechanics, input filtering, and the CompiledBindings UI layout.
+  * Gate: Rapid, continuous timeline scrubbing does not block the Avalonia UI main thread or throw memory access faults.
+- PHASE 4 (FFmpeg Worker & Math): Code `FilterBuilder`, `TimeSyncEngine`, canvas coordinate math (+1px drift corrections), audio pipeline, and the WhatsApp frame prepender.
+  * Gate: Generated output matching source metrics passes MD5 validation with zero dropped frames.
+- PHASE 5 (Packaging): Configure target `.csproj` metadata for compilation (`<PublishAot>true</PublishAot>`), bundle unmanaged dependencies, and purge trim warnings.
+  * Gate: The compiled standalone executable executes reliably inside a minimal Windows environment.
+
+## 6. CODE GENERATION FORMAT REQUIREMENTS
+When generating or patching files, you must output the full, functional code block. Do not truncate, use ellipses (`...`), or write placeholders like `// TODO`.
+
+For structural code updates, adhere strictly to this output format:
+1. FILE: [Full file name and path]
+2. OLD/CURRENT CODE: 
+   [Include exactly two lines of context above and below the target modification area. If creating a new file, specify "NEW FILE"]
+3. NEW REPLACEMENT CODE: 
+   [Provide the complete, untruncated implementation block bounded by identical context lines]
+4. EXPLANATION: 
+   [Technical summary detailing the modification mechanics]

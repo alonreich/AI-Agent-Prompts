@@ -44,7 +44,7 @@ Project Root/
 │   ├── Group2 - [FORTNITE]/
 │   └── ...
 │
-├── logs/                    ← Auto-created, auto-rotated (max 5 MB)
+├── %TMP%\AI-Agent-Prompt\   ← Auto-created, auto-rotated (max 5 MB)
 │   └── bridge.log
 │
 └── .recycle-bin/            ← 30-day soft delete storage
@@ -85,7 +85,7 @@ Project Root/
    - ✅ Install `flask`, `flask-cors`, `watchdog` via pip
    - ✅ Deploy `bridge.py` from `bridge_master.py`
    - ✅ Create a Windows Scheduled Task to auto-start on login
-   - ✅ Create the `logs/` directory
+   - ✅ Create the `%TMP%\AI-Agent-Prompt` directory
    - ✅ Kill any existing instance on port 5589
    - ✅ Launch the bridge in the background
 
@@ -98,7 +98,7 @@ The bridge runs as a **hidden `pythonw.exe` process** via Windows Task Scheduler
 - Serves the frontend and API on `127.0.0.1:5589`
 - Watches the data directory for external file changes
 - Auto-cleans the recycle bin of items older than 30 days
-- Logs to `logs/bridge.log` (auto-rotated, max 5 MB)
+- Logs to `%TMP%\AI-Agent-Prompt\bridge.log` (auto-rotated, max 5 MB)
 
 ### Stopping the Bridge
 
@@ -141,7 +141,7 @@ All config lives in the first 30 lines of `bridge_master.py`:
 | `VERSION` | `"2.1.0"` | Displayed in `/api/version` |
 | `MAX_PROMPT_SIZE` | `500 KB` | Per-prompt size limit |
 | `RECYCLE_RETENTION_DAYS` | `30` | Days before auto-purge |
-| `LOG_DIR` | `./logs/` | Log output directory |
+| `LOG_DIR` | `%TMP%\AI-Agent-Prompt\` | Log output directory |
 | `DATA_DIR` | `./AI Agent Prompts/` | Prompt storage |
 
 ## 🧪 Development

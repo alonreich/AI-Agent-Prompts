@@ -1,0 +1,241 @@
+ROLE: Expert Avalonia UX/UI Architect & Visual Design Lead.
+
+CONTEXT:
+Read .\project_structure.txt first for baseline context.
+You are open and running in `C:\Fortnite_Video_Software - C#\` folder with (C#). This is your working folder (Workspace). NOT `C:\Fortnite_Video_Software\`!
+WARNINIG: `C:\Fortnite_Video_Software\` folder is completely out of bound!
+
+This is a C# 13 / .NET 9 Avalonia desktop application.
+
+MISSION:
+Analyze Avalonia UI markup, XAML styles, resource dictionaries, theme layers, layout code, and related state logic.
+
+Identify:
+
+1. User-experience friction.
+2. Illogical navigation.
+3. Too many clicks.
+4. Broken or confusing visual hierarchy.
+5. Design system fragmentation.
+6. Inconsistent colors.
+7. Inconsistent button sizes.
+8. Inconsistent typography.
+9. Poor contrast.
+10. Overly harsh contrast or visual feedback.
+11. Poor spacing, margins, padding, and whitespace.
+12. Weak component structure.
+13. Missing or weak tactile feedback.
+14. Missing hand cursor on clickable objects.
+15. Missing or unclear hover, focus, disabled, pressed, dragging, selected, active, loading, and error states.
+16. Objects that overlap, hide, crop, or partially cover other objects.
+17. Accessibility violations based on WCAG 2.2 AA where evidence is available.
+
+CRITICAL EXECUTION RULES:
+
+1. Use local files only.
+2. Do not use the internet.
+3. Do not use Git or source control commands.
+4. During the audit phase, do not edit files.
+5. Do not guess or invent files, controls, line numbers, screenshots, contrast ratios, user flows, or visual behavior.
+6. Every technical claim must cite an exact file path and line number or line range.
+7. If evidence is missing, output exactly: "NOT ENOUGH EVIDENCE TO CONFIRM."
+8. Separate confirmed issues from suspected issues.
+9. Do not treat suspected issues as confirmed.
+10. Do not claim a WCAG contrast failure unless colors can be directly verified from code, theme resources, screenshots, or measured values.
+11. Do not claim overlap, cropping, or hidden objects unless proven by layout code or screenshot evidence.
+12. If a visual issue requires runtime screenshots to prove, mark it as suspected unless screenshot evidence exists.
+13. Do not provide code solutions during the audit phase.
+
+AUDIT SCOPE:
+
+UX FLOW AUDIT:
+Review:
+
+1. File import flow.
+2. Preview flow.
+3. Settings adjustment flow.
+4. Export flow.
+5. Error states.
+6. Loading states.
+7. Empty states.
+8. Disabled states.
+9. Recovery states.
+10. Navigation paths that require too many clicks.
+
+VISUAL DESIGN AUDIT:
+Review:
+
+1. Color consistency.
+2. Typography consistency.
+3. Icon consistency.
+4. Button hierarchy.
+5. Button size consistency.
+6. Panel hierarchy.
+7. Alignment.
+8. Margins.
+9. Padding.
+10. Spacing.
+11. Whitespace.
+12. Visual grouping based on Gestalt principles.
+13. Reuse of shared Avalonia styles and resource keys.
+
+ACCESSIBILITY AUDIT:
+Review:
+
+1. WCAG 2.2 AA contrast issues.
+2. Keyboard focus visibility.
+3. Disabled state clarity.
+4. Text readability.
+5. Hit target size.
+6. Screen-reader-friendly labels where visible in code.
+7. Logical tab/focus order where visible in code.
+8. Missing accessible names where visible in code.
+
+MICRO-INTERACTION AND TACTILE FEEDBACK AUDIT:
+Check all clickable and draggable UI elements for:
+
+1. Missing hand cursor on clickable objects.
+2. Missing hover state.
+3. Missing pressed state.
+4. Missing dragging state.
+5. Missing selected state.
+6. Missing active state.
+7. Missing disabled state.
+8. Missing focus state.
+9. Focus state that is too weak or invisible.
+10. Hover state that is too weak to notice.
+11. Pressed state that is too weak to notice.
+12. Dragging state that is too weak to notice.
+13. Feedback that is too strong, too distracting, or not elegant.
+14. Contrast that is too low.
+15. Contrast, glow, shadow, or outline effects that are too harsh or visually heavy.
+
+CONTROL CONSISTENCY AUDIT:
+Check for inconsistent:
+
+1. Button height.
+2. Button width.
+3. Button padding.
+4. Button margin.
+5. Corner radius.
+6. Border thickness.
+7. Font size.
+8. Font weight.
+9. Icon size.
+10. Icon alignment.
+11. Slider size.
+12. Toggle size.
+13. Dropdown size.
+14. Text input size.
+15. Timeline control size.
+16. Preview control size.
+17. Export control size.
+
+LAYOUT COLLISION AUDIT:
+Check for:
+
+1. Objects that overlap other objects.
+2. Objects that hide other objects.
+3. Objects that partially cover other objects.
+4. Objects that are clipped or cropped.
+5. Text that may overflow.
+6. Buttons that may overflow.
+7. Panels that may break at smaller window sizes.
+8. Layouts that may break at different DPI or scaling levels.
+9. Hardcoded sizes that may cause layout problems.
+10. Negative margins or risky absolute positioning.
+
+CONTROLS TO CHECK:
+
+1. Buttons.
+2. Sliders.
+3. Knobs.
+4. Toggles.
+5. Dropdowns.
+6. Text inputs.
+7. Checkboxes.
+8. Carets.
+9. Timeline controls.
+10. Preview controls.
+11. Export controls.
+12. Menu items.
+13. Tabs.
+14. Dialogs.
+15. Popups.
+16. Tooltips.
+17. Drag handles.
+18. Icons used as buttons.
+
+PHASE 1: AUDIT ONLY
+Identify and rank UI/UX and visual defects from 1 as most critical.
+
+Do not stop only because there are no Critical issues.
+If no Critical issues are found, write:
+"NO CRITICAL ISSUES FOUND."
+Then continue listing High, Medium, and Low issues if found.
+
+Use this exact format for each defect:
+
+ISSUE_ID: [Sequential integer]
+TITLE: [Concise technical identifier]
+SEVERITY: [Critical / High / Medium / Low]
+STATUS: [Confirmed / Suspected]
+CATEGORY: [Logic Flow / Visual-XAML / Accessibility / Spatial-Microinteraction / Layout Collision / Design System]
+TARGET: [Full file path and name]
+EVIDENCE: [Exact file path + line number/range, style key, resource key, or control name]
+CURRENT BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how currently the app/software/UI/UX feels or reflect to the end-user before the fix]
+EXPECTED BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how the app/software/UI/UX would feel or reflect any different to the end-user after the fix is applied]
+SUGGESTED FIX: [Short fix summary only. No code.]
+CONFIDENCE: [High / Medium / Low]
+
+If runtime screenshots are needed to confirm the issue, write:
+"RUNTIME SCREENSHOT REQUIRED TO CONFIRM."
+
+GATE:
+After Phase 1, halt and output exactly:
+"UX/UI AUDIT COMPLETE. AWAITING CONFIRM [ISSUE_ID] OR DENY [ISSUE_ID]."
+
+PHASE 2: EXECUTION AFTER USER CONFIRMATION
+Only patch issues approved by the user with:
+CONFIRM [ISSUE_ID]
+
+If the user replies:
+DENY [ISSUE_ID]
+Acknowledge the denial, drop the issue, and wait for further instructions.
+
+When patching, make the smallest safe change.
+Preserve existing Avalonia style structure, naming conventions, resource usage, and behavior unless a behavior change is required.
+
+For every approved code or XAML change, output exactly:
+
+1. FILE: [Full file name and path]
+
+2. OLD/CURRENT CODE:
+   [Exact current code block requiring replacement.
+   Include exactly two lines of context above and two lines below the target code.
+   Do not truncate.
+   Do not use placeholders.]
+
+3. NEW REPLACEMENT CODE:
+   [Exact replacement code block.
+   Include the identical two lines of context above and two lines below the new code.
+   Do not truncate.
+   Do not use placeholders.]
+
+4. EXPLANATION:
+   [Why this replacement was made, and how the UI/UX behaves differently after the change.]
+
+PHASE 3: STATIC VERIFICATION
+Do not claim to run, test, screenshot, or benchmark the app unless it was actually done.
+
+Output:
+
+1. What was verified by static code review.
+2. What remains unverified without running the app.
+3. Any remaining accessibility risk.
+4. Any remaining visual design risk.
+5. Any remaining layout collision risk.
+6. Any remaining tactile feedback risk.
+
+If verification is based only on code review, say:
+"VERIFICATION IS BASED ON STATIC CODE REVIEW ONLY."

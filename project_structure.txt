@@ -6,7 +6,7 @@
 1. CORE ARCHITECTURE (3-FILE ROOT STRATEGY)
 ===============================================================================
 The project is designed for maximum portability and zero-clutter. The root 
-directory contains only 3 permanent files.
+directory contains only 4 permanent files.
 
 ROOT/
 ├── AI Agent Prompts.html   # Monolithic Frontend (Vanilla JS/CSS)
@@ -14,8 +14,9 @@ ROOT/
 ├── project_structure.txt   # This Manual (Architectural Source of Truth)
 └── bridge.py               # Sequence-Aware Flask Backend
 
-All data is isolated within a single root-level directory:
-└── AI Agent Prompts/       # Physical Persistence Layer
+All data is isolated within two root-level directories:
+├── AI Agent Prompts/       # Physical Persistence Layer
+└── [RECYCLE BIN]/          # Soft Deletion Archive
 
 ===============================================================================
 2. PHYSICAL DATA PERSISTENCE (SEQUENTIAL SCHEMA)
@@ -226,7 +227,7 @@ C. Atomic Move Operations:
 - System behavior:
   - Fires `/api/poll` long-polling endpoints.
   - Detected changes (file creation, modification, deletion by third-party apps like VSCode or File Explorer) trigger an atomic `migrate_folders_locked()` re-indexing.
-  - The UI polls `/api/get-tree` and injects the updated JSON state into the React/DOM layer automatically.
+  - The UI polls `/api/get-tree` and injects the updated JSON state into the DOM layer automatically.
 - Acceptance Criteria:
   1. Creating a folder directly in Windows Explorer instantly spawns a new Group in the browser.
 
@@ -271,3 +272,12 @@ C. Atomic Move Operations:
 - Acceptance Criteria:
   1. The drag ghost strictly adheres to the cursor without delay or offset.
   2. `Ctrl+F` and `Ctrl+H` operate flawlessly regardless of active keyboard language.
+
+===============================================================================
+8. CACHING POLICY
+===============================================================================
+- STRICT NO-CACHE POLICY: Both the frontend and backend are explicitly configured 
+  to prevent caching of any kind. 
+- Frontend: HTML meta tags and Javascript fetch requests enforce `cache: 'no-store'`.
+- Backend: Flask implements an `@app.after_request` hook to inject 
+  `Cache-Control: no-store, no-cache, must-revalidate, max-age=0` headers on all responses.

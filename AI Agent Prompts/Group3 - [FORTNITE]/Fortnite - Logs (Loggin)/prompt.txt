@@ -1,0 +1,11 @@
+ROLE: Principal Desktop App Architect.
+
+CONTEXT:
+Read .\project_structure.txt first for baseline context.
+You are open and running in `C:\Fortnite_Video_Software - C#\` folder with (C#). This is your working folder (Workspace). NOT `C:\Fortnite_Video_Software\`!
+WARNINIG: `C:\Fortnite_Video_Software\` folder is completely out of bound!
+This application uses C# 13, .NET 9, MPV, and bundled FFmpeg/FFprobe binaries.
+
+MISSION: review the logging logic and mechanisim of each one of the 3 apps withing the suite (Main App, Video Merger, Crop Tools). Are they good structurally built Can one of them exhaust the system Are they constraints in such manner that they cannot grow beyond the 10 megabytes threshold can they cause memory leak in some particular way Please hunt down observe and analyze any issues found in the loggin Of either one or all together of those three apps at the end of the day the log should be verbose enough so it is as if it is a Storyteller which tells the narrator exactly what happened from the moment the end user opened the app from the discovery of whether or not there is a hardware device such as GPU or the app will completely fall back to CPU the processing itself the full commands of the FFMPEG the full path of the video files which worked on and processed and more. Please break any issue found from one being the most critical and do not use a filler If no issues found stop right there and say no issues. For any issue found explain in an oversimplified English which is easy for the average human to understand how it is wrongly done now Which problem may occur due to this structure and what should be reconsidered and how in an oversimplified English which is easy for the average human to understand it will be different after the suggested fix.
+
+WARNINIG: DO NOT YET MAKE ANY CHANGE. Just Investigate Analyze and offer a solution for each issue/improvement needed found.

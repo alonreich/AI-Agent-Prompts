@@ -1,0 +1,12 @@
+Update .\project_structure.txt to reflect the absolute current state of the project.
+
+Audit the session context and modified files. Discard all historical context, previous states, and session changelogs. Document only the active, up-to-date architecture, logic, and decisions. Be precise but concise to prevent token exhaustion.
+
+Format the output with these exact markdown headings:
+1. High-Level Architecture
+2. Current Core Logic & Features (Detail the active state, data flow, and API contracts)
+3. Active Architectural Decisions (Decision, Rationale, Tradeoffs)
+4. Updated File Tree (Exact path and a one-sentence description of its active responsibility)
+5. Known Limitations & TODOs for the Next AI Agent
+
+Output the exact full replacement text for .\project_structure.txt. Prioritize a pristine, current architectural snapshot over tracking what changed during this session.

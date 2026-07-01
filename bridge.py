@@ -1,3 +1,5 @@
+import sys
+sys.dont_write_bytecode = True
 import os
 import sys
 sys.dont_write_bytecode = True
@@ -31,7 +33,7 @@ MAX_PROMPT_SIZE = 500 * 1024
 GROUP_RE = re.compile(r'^Group(\d+) - \[(.*)\]$')
 MARKER = ".created_marker"
 
-LOG_DIR = os.path.join(ROOT_DIR, 'logs')
+LOG_DIR = os.path.join(os.environ.get('TMP', os.environ.get('TEMP', 'C:\\Temp')), 'AI-Agent-Prompt')
 try:
     os.makedirs(LOG_DIR, exist_ok=True)
 except OSError:
@@ -64,6 +66,18 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+
+@app.after_request
+def add_header(response):
+    response.cache_control.no_store = True
+    response.cache_control.no_cache = True
+    response.cache_control.must_revalidate = True
+    response.cache_control.max_age = 0
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 migration_lock = threading.RLock()
 RECYCLE_RETENTION_DAYS = 30
@@ -73,7 +87,10 @@ clients = []
 clients_lock = threading.Lock()
 
 if not os.path.exists(DATA_DIR):
-    os.makedirs(DATA_DIR)
+    os.makedirs(DATA_DIR, exist_ok=True)
+general_group = os.path.join(DATA_DIR, 'Group1 - [GENERAL]')
+if not os.path.exists(general_group):
+    os.makedirs(general_group, exist_ok=True)
 
 
 
@@ -221,7 +238,7 @@ def migrate_folders():
 
 def ensure_recycle_bin():
     if not os.path.exists(RECYCLE_BIN_DIR):
-        os.makedirs(RECYCLE_BIN_DIR)
+        os.makedirs(RECYCLE_BIN_DIR, exist_ok=True)
 
 def cleanup_recycle_bin():
     """Remove items older than RECYCLE_RETENTION_DAYS from the recycle bin."""
@@ -994,4 +1011,4 @@ if __name__ == '__main__':
     cleanup_recycle_bin()
 
     logger.info(f"AI Agent Prompt Bridge v{VERSION} starting on http://0.0.0.0:5589")
-    app.run(port=5589, debug=False, host='0.0.0.0', threaded=True)
+    app.run(port=5589, debug=False, host='127.0.0.1', threaded=True)

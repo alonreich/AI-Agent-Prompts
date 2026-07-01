@@ -1,7 +1,0 @@
-Analyze the provided .\project_structure.txt file for internal logical inconsistencies, contradictory statements, and architectural flaws. Next, cross-reference this documentation against the provided code files.
-
-Identify any discrepancies between the documented architecture and the actual code logic. For each issue found, format your response exactly as follows:
-
-Issue: [Plain English explanation of the exact discrepancy or internal contradiction]Resolution: [Plain English explanation of why the proposed solution is correct]Target: [Explicitly state if the fix applies to project_structure.txt or name the specific code file]
-
-DO NOT USE FILLER. If absolutely no inconsistencies or discrepancies are found across the entire context, halt and output exactly: "No Discrepancies Found!"

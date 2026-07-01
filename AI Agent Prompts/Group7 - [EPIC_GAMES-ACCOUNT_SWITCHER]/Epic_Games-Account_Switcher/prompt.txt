@@ -24,9 +24,8 @@ TITLE: [Concise technical identifier]
 TARGET: [File path + name]
 RACE CONDITION PROOF: [Cite missing WaitForExit or missing File Lock check + Line Numbers]
 DEFECT: [Technical description of the session invalidation]
-CURRENT BEHAVIOR: [Oversimplified English explanation]
-EXPECTED BEHAVIOR: [Oversimplified English explanation]
-
+CURRENT BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how currently the app/software/UI/UX feels or reflect to the end-user before the fix]
+EXPECTED BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how the app/software/UI/UX would feel or reflect any different to the end-user after the fix is applied]
 WAIT FOR EXPLICIT USER CONFIRMATION BEFORE EXECUTING PHASE 2.
 
 PHASE 2: EXECUTION

@@ -1,0 +1,132 @@
+ROLE: Principal C# 13 / Avalonia UI Integration Lead & Pixel-Perfect Video Math Architect.
+
+CONTEXT: Read .\project_structure.txt file.
+You are open and running in `C:\Fortnite_Video_Software - C#\` folder with (C#). This is your working folder (Workspace). NOT `C:\Fortnite_Video_Software\`!
+WARNINIG: `C:\Fortnite_Video_Software\` folder is completely out of bound!
+
+
+LOCAL EXECUTION ONLY:
+* Do not use Git.
+* Do not run git commands.
+* Do not interact with any source control system.
+
+OUT OF BOUNDS:
+* Do not read, edit, or modify anything inside the `Advanced Video Editor` app (out of the 4 apps in this suite)
+* Do not read, edit, or modify anything inside the `Video Merger` app (out of the 4 apps in this suite)
+
+MISSION:
+Review the Crop Tools app integration layer.
+The app is built with:
+* C# 13
+* Avalonia UI
+The goal of Crop Tools is to create a perfect 1:1 pixel-to-pixel mask overlay for converting an original landscape video into a portrait video.
+Do not edit code yet.
+First, inspect the code and report defects only.
+I will review the defect list and approve or reject each item before any code changes.
+
+CORE VIDEO GEOMETRY:
+The app must support the Canvas Trick.
+Final portrait canvas:
+* Width: 1080 px
+* Height: 1920 px
+Reserved text area:
+* Top 150 px are reserved for text.
+* No gameplay mask content should enter this top 150 px text area.
+Content area:
+* Width: 1080 px
+* Height: 1620 px
+* Starts at X = 0
+* Starts at Y = 150
+* Ends at Y = 1770
+Backend composition:
+* Width: 1280 px
+* Height: 1920 px
+Important FOV rule:
+* The visible gameplay FOV is not based on 1080 px width.
+* The gameplay FOV is based on 1280 px width.
+* The 1280 px backend is zoomed out and scaled down to fit the 1080 px content width.
+* This creates black padding/void areas at the top and bottom of the portrait output.
+* The mask overlay must match this geometry exactly.
+CANVAS TRICK CONTRACT:
+* Compose backend at 1280x1920.
+* Scale backend down to 1080x1620 content area.
+* Place the scaled result at Y = 150 on the final 1080x1920 canvas.
+* Preserve exact pixel mapping.
+* Do not alter this contract.
+PIXEL-PERFECT MASK CONTRACT:
+* The mask overlay must align 1:1 with final output pixels.
+* No half-pixel placement.
+* No blurry scaling.
+* No floating-point drift.
+* No hidden rounding differences between preview and export.
+* Preview coordinates and export coordinates must match exactly.
+* Avalonia UI preview must reflect the final rendered video geometry exactly.
+DRIFT PROTECTION:
+* Enforce the +1px rounding bias/drift protection for HUD elements.
+* Map, Stats, and Health must bias +1px LEFT.
+* Loot must bias +1px RIGHT.
+* Do not alter this round-trip contract.
+STRICT RULES:
+1. Do not guess.
+2. Do not invent missing files, classes, methods, behavior, or requirements.
+3. If a file is missing or unclear, say so.
+4. Cite the exact file and method/class where each issue appears.
+5. Only report issues that are supported by code evidence.
+6. Do not suggest changes outside the allowed scope.
+7. Preserve existing public APIs unless a defect proves they must change.
+8. Prefer minimal, safe fixes over large rewrites.
+9. Do not change UI behavior unless required by a confirmed defect.
+10. Do not remove code unless it is clearly unused, broken, duplicated, or harmful.
+11. Do not use normal float/double math for final pixel geometry.
+12. Do not allow preview/export math to diverge.
+
+TECHNICAL REQUIREMENTS:
+1. Math Accuracy:
+   * Bitrate, frame rate, size handling, scaling, mask placement, and screen placement must be exact.
+   * Maximum frame rate is 60 FPS.
+   * Avoid floating-point drift.
+   * Use integer math, decimal, rational math, or fixed-point logic where needed.
+   * Final pixel positions must resolve to exact integers.
+2. Avalonia UI Accuracy:
+   * Preview must show the same geometry used during export.
+   * UI scaling must not change the real mask coordinates.
+   * DPI scaling must not break pixel-perfect placement.
+   * Drag handles must snap to exact output pixels.
+   * Mask edges must stay sharp.
+3. Performance:
+   * Keep the Avalonia UI responsive.
+   * Do not block the UI thread with video processing.
+   * Use async/background work safely where needed.
+   * Prevent unhandled Crop Tools errors.
+4. Pipeline Audit:
+   * Find dead code.
+   * Find stale callbacks.
+   * Find module-seam bugs.
+   * Find preview/export mismatch.
+   * Find pixel rounding bugs.
+   * Find unsafe error handling.
+   * Find pipeline stutters.
+5. Code Hygiene:
+   * Remove redundant code only after approval.
+   * Remove commented-out dead code only after approval.
+   * Keep or add short, useful documentation for complex math.
+   * Do not add TODO, temporary, placeholder, or vague comments.
+
+OUTPUT RULES:
+Rank issues by severity, starting with 1 as the most critical.
+Cut filler.
+Stop after the major pipeline issues are exposed.
+Use this exact format for each defect:
+ISSUE_ID: [Sequential integer starting from 1]
+TITLE: [Short technical name]
+SEVERITY: [Critical / High / Medium / Low]
+TARGET: [Exact file path and file name]
+LOCATION: [Class/method/section name]
+DEFECT: [Short technical description of the issue]
+CODE EVIDENCE: [Exact code behavior or pattern proving the issue]
+CURRENT BEHAVIOR: [Simple explanation of what the user experiences before the fix]
+EXPECTED BEHAVIOR: [Simple explanation of what the user experiences after the fix]
+RISK IF NOT FIXED: [Simple explanation of what can go wrong]
+SUGGESTED FIX: [Short safe fix description]
+Do not provide code changes yet.
+Wait for my approval after the defect list.
