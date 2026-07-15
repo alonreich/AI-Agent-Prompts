@@ -1,12 +1,16 @@
-Update .\project_structure.txt to reflect the absolute current state of the project.
+TASK: Incrementally update .\project_structure.txt based ONLY on the changes and feature developments made during this specific session.
 
-Audit the session context and modified files. Discard all historical context, previous states, and session changelogs. Document only the active, up-to-date architecture, logic, and decisions. Be precise but concise to prevent token exhaustion.
+CRITICAL DIRECTIVE: DO NOT rewrite, restructure, or refactor the entire file. You must preserve all existing documentation perfectly.
+You are strictly permitted to ADD missing information or MODIFY specifically outdated logic that was altered during this session.
 
-Format the output with these exact markdown headings:
-1. High-Level Architecture
-2. Current Core Logic & Features (Detail the active state, data flow, and API contracts)
-3. Active Architectural Decisions (Decision, Rationale, Tradeoffs)
-4. Updated File Tree (Exact path and a one-sentence description of its active responsibility)
-5. Known Limitations & TODOs for the Next AI Agent
+EXECUTION STEPS:
+1. Analyze the session history. Identify all newly added features, UI/menu adjustments, and logic alterations (affecting both end-users and administrators).
+2. Cross-reference these changes with the current .\project_structure.txt to identify what is now missing or inaccurate.
+3. Output ONLY the targeted additions and precise modifications required to synchronize the document with the current state.
 
-Output the exact full replacement text for .\project_structure.txt. Prioritize a pristine, current architectural snapshot over tracking what changed during this session.
+OUTPUT FORMAT:
+You must provide a comprehensive, explicit changelog for my review. Do not skip any changes. Use the following strict replacement format for every single modification or addition:
+
+1. FILE: .\project_structure.txt
+2. OLD/CURRENT TEXT: [Exact current text block requiring replacement.]
+3. NEW REPLACEMENT UPDATED TEXT: [Exact replacement/modification or added text block.]

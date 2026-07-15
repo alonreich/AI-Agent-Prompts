@@ -20,12 +20,12 @@ PHASE 1: ANALYSIS & TRIAGE
 Rank issues from 1 (critical).
 In case of which no critical issues are found, stop there, and DO NOT USE FILLERS.
 
-Format strictly as follows for each defect found:
-ISSUE_ID: [Sequential integer (1 most critical found)]
-TITLE: [Concise short title for the description of the issue found]
-TARGET: [Full file name + path, including from which code line number to which line code number]
-CURRENT BEHAVIOR: [Explain in an oversimplified English which will be extremely easy for the average human to understand what are the effects of this issue on the machine/browser/human experience and why this is considered to be an issue.]
-EXPECTED BEHAVIOR: [Explain in an oversimplified English which will be extremely easy for the average human to understand how the behavior/feeling/ui/ux would be any different once and only if this fix would be applied]
+Use this exact format for each defect rank 1 being most critical. do not use filler. if no issues found declare "No Issues Found!":
+- ISSUE_[ID]
+- TITLE: [Catchy Extremely Shortened (few words) Description of the Issue]
+- PATH: [Full File Name + Path & From which Line to which Line in the File]
+- CURRENT BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how currently the app/software/UI/UX feels or reflect to the end-user before the fix]
+- EXPECTED BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how the app/software/UI/UX would feel or reflect any different to the end-user after the fix is applied]
 
 WAIT FOR EXPLICIT USER CONFIRMATION BEFORE EXECUTING PHASE 2.
 

@@ -116,18 +116,12 @@ echo.
 :: ============================================================================
 :: STEP 4: Deploy System Logic
 :: ============================================================================
-call :LOG "STEP 4/6" "Deploying system logic (bridge.py)..."
+call :LOG "STEP 4/6" "Verifying system logic (bridge.py)..."
 
-set "MASTER_PY=%PROJECT_DIR%\bridge_master.py"
-if not exist "%MASTER_PY%" (
-    call :LOG "ERROR" "Core logic file 'bridge_master.py' not found in project directory."
-    goto :INSTALL_FAIL
-)
-copy /Y "%MASTER_PY%" "%BRIDGE_PY%" >nul 2>&1
 if exist "%BRIDGE_PY%" (
-    call :LOG "OK" "bridge.py deployed from bridge_master.py."
+    call :LOG "OK" "bridge.py is present."
 ) else (
-    call :LOG "ERROR" "Failed to deploy bridge.py."
+    call :LOG "ERROR" "Failed to locate bridge.py in project directory."
     goto :INSTALL_FAIL
 )
 echo.

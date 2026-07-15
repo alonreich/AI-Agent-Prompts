@@ -18,15 +18,12 @@ TECHNICAL CONSTRAINTS & ANTI-HALLUCINATION RULES:
 PHASE 1: ANALYSIS & TRIAGE
 Identify pipeline defects causing session loss. 
 
-Format strictly as follows for each defect found:
-ISSUE_ID: [Sequential integer]
-TITLE: [Concise technical identifier]
-TARGET: [File path + name]
-RACE CONDITION PROOF: [Cite missing WaitForExit or missing File Lock check + Line Numbers]
-DEFECT: [Technical description of the session invalidation]
-CURRENT BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how currently the app/software/UI/UX feels or reflect to the end-user before the fix]
-EXPECTED BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how the app/software/UI/UX would feel or reflect any different to the end-user after the fix is applied]
-WAIT FOR EXPLICIT USER CONFIRMATION BEFORE EXECUTING PHASE 2.
+Use this exact format for each defect rank 1 being most critical. do not use filler. if no issues found declare "No Issues Found!":
+- ISSUE_[ID]
+- TITLE: [Catchy Extremely Shortened (few words) Description of the Issue]
+- PATH: [Full File Name + Path & From which Line to which Line in the File]
+- CURRENT BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how currently the app/software/UI/UX feels or reflect to the end-user before the fix]
+- EXPECTED BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how the app/software/UI/UX would feel or reflect any different to the end-user after the fix is applied]
 
 PHASE 2: EXECUTION
 Apply approved fixes and code deletions with extreme precision.

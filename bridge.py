@@ -21,7 +21,7 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(ROOT_DIR, 'AI Agent Prompts')
 RECYCLE_BIN_DIR = os.path.join(ROOT_DIR, '[RECYCLE BIN]')
 HTML_FILE = os.path.join(ROOT_DIR, 'AI Agent Prompts.html')
-PID_FILE = os.path.join(ROOT_DIR, '.bridge.pid')
+PID_FILE = os.path.join(os.environ.get('TMP', os.environ.get('TEMP', 'C:\\Temp')), 'AI-Agent-Prompt', '.bridge.pid')
 
 
 VERSION = "2.1.0"

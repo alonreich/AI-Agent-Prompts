@@ -19,13 +19,12 @@ TECHNICAL CONSTRAINTS:
 2. VERBOSE LOGGING: Maintain a detailed `install_log.txt` capturing every factual deletion/modification.
 
 STEP 1: ARTIFACT & JUNK MAPPING
-Perform a strict, filler-free audit of the codebase to identify every persistent footprint. Do not hallucinate. Halt after this step. Output exactly this format:
-ISSUE_ID: [Sequential Integer]
-COMPONENT: [Installer / Uninstaller / Upgrader]
-CODE EVIDENCE: [File Path + Line Number of registry/file creation]
-DEFECT: [Technical description of residue/failure]
-CURRENT BEHAVIOR: [What the user sees / what junk remains]
-EXPECTED BEHAVIOR: [How the new process will visibly handle and wipe it]
+Use this exact format for each defect rank 1 being most critical. do not use filler. if no issues found declare "No Issues Found!":
+- ISSUE_[ID]
+- TITLE: [Catchy Extremely Shortened (few words) Description of the Issue]
+- PATH: [Full File Name + Path & From which Line to which Line in the File]
+- CURRENT BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how currently the app/software/UI/UX feels or reflect to the end-user before the fix]
+- EXPECTED BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how the app/software/UI/UX would feel or reflect any different to the end-user after the fix is applied]
 
 STEP 2: SELECTIVE EXECUTION
 Wait for the user to provide a list of approved ISSUE_IDs (e.g., "3, 5, 6"). Upon receipt, generate the exact refactored deployment code to resolve those specific issues.

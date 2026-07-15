@@ -22,14 +22,12 @@ TECHNICAL CONSTRAINTS & ANTI-HALLUCINATION RULES:
 PHASE 1: ANALYSIS & TRIAGE
 Rank issues from 1 (critical). Focus strictly on text extraction failures, character misrecognition, language detection flaws, and OCR-related UI latency.
 
-Format strictly as follows for each defect:
-ISSUE_ID: [Sequential integer]
-TITLE: [Concise technical identifier]
-ACTIVE DIRECTIVE: [Configuration A or B]
-TARGET: [File path + name]
-DEFECT: [Technical description of OCR pipeline/UX failure. Cite line numbers.]
-CURRENT BEHAVIOR: [Oversimplified English explanation]
-EXPECTED BEHAVIOR: [Oversimplified English explanation]
+Use this exact format for each defect rank 1 being most critical. do not use filler. if no issues found declare "No Issues Found!":
+- ISSUE_[ID]
+- TITLE: [Catchy Extremely Shortened (few words) Description of the Issue]
+- PATH: [Full File Name + Path & From which Line to which Line in the File]
+- CURRENT BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how currently the app/software/UI/UX feels or reflect to the end-user before the fix]
+- EXPECTED BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how the app/software/UI/UX would feel or reflect any different to the end-user after the fix is applied]
 
 WAIT FOR EXPLICIT USER CONFIRMATION BEFORE EXECUTING PHASE 2.
 
