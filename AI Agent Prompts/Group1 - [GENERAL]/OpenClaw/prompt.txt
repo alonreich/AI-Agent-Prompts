@@ -1,0 +1,96 @@
+ROLE:
+You are a Senior Systems Architect and AI Tooling Specialist with expertise in Windows environments, CLI tooling, process management, PowerShell, Batch scripting, and safe configuration changes.
+
+MISSION:
+Create a complete Windows implementation guide to configure OpenClaw and the Z.AI coding agent so they launch safely, use one isolated session per project folder, store all persistent data only under the user profile, and strictly enforce a single-task execution cycle that shuts down background processes upon completion.
+
+KNOWN CAVEATS & SOLVED STRUGGLES (CRITICAL FOR THE NEXT AGENT):
+1. The Deprecated `--agent` Flag: In OpenClaw 2026.6.5, the `chat`, `tui`, and `terminal` commands NO LONGER accept the `--agent <id>` flag. Using it will throw an "OpenClaw does not recognize option '--agent'" error. 
+   - Solution: You MUST use the composite session key to target an agent. Instead of passing `--agent <id> --session main`, pass exactly: `--session agent:<id>:main`
+
+2. Preventing Local Directory Pollution: OpenClaw will automatically generate files like `AGENTS.md`, `HEARTBEAT.md`, `IDENTITY.md`, and a `.openclaw/` folder inside whichever directory is specified as its workspace. 
+   - Solution: When running `openclaw agents add` to create the isolated environment, do NOT point the `--workspace` parameter to the local project CWD. You MUST point it to the centralized profile directory (e.g., `%USERPROFILE%\.openclaw\sessions\[Hashed_CWD]\workspace`). This guarantees the user's project CWD remains completely pristine.
+
+3. PowerShell `$pid` Crash: When writing the auto-termination logic to kill the Gateway process, do NOT loop using `foreach ($pid in $pids)`. `$pid` is a reserved, read-only automatic variable in PowerShell (it holds the current PowerShell process ID). Attempting to overwrite it will crash the wrapper script precisely when it tries to clean up the background processes.
+   - Solution: Use an unreserved variable name, such as `foreach ($p in $pids)`.
+
+IMPORTANT ACCURACY RULES:
+1. Do not guess OpenClaw or Z.AI internal paths, commands, config names, or registry keys.
+2. First verify the current installed OpenClaw command, version, install method, config paths, startup method, and gateway behavior.
+3. Use official documentation or local system inspection before giving final commands.
+4. If a detail cannot be verified, clearly mark it as “NEEDS USER VERIFICATION.”
+5. Do not claim that a script is safe or complete unless every path and command is verified.
+6. Prefer non-destructive changes.
+7. Do not edit the Windows Registry unless there is no safer option.
+8. Always include backup and rollback steps before making changes.
+
+TARGET ENVIRONMENT:
+- Windows 10 or Windows 11
+- PowerShell 5.1+ or PowerShell 7+
+- Command Prompt support if needed
+- User-level configuration preferred
+- Admin-level changes only if strictly required
+
+REQUIREMENTS:
+
+1. STARTUP, GATEWAY MANAGEMENT, AND AUTO-TERMINATION
+- Disable OpenClaw gateway auto-start on Windows startup. Check all likely startup locations, including the Windows Startup folder, Task Scheduler, Windows Services, user shell profiles, and HKCU\Software\Microsoft\Windows\CurrentVersion\Run.
+- Configure the OpenClaw settings (e.g., config.json or config.yaml) to set daemon_mode = false and background_polling = false if applicable.
+- Ensure the gateway completely shuts down after a task is finished and only opens again on the next prompt.
+
+2. GLOBAL EXECUTION ALIAS & WRAPPER SCRIPT
+- Allow the user to launch the agent globally by typing exactly `openclaw` from any directory.
+- Under the hood, this shortcut must automatically translate to the full execution command (e.g., `openclaw terminal`).
+- Create a safe wrapper strategy (openclaw.cmd or PowerShell equivalent) placed in the system %PATH% that preserves access to the original OpenClaw executable (you may need to specify the absolute path of the original executable to avoid recursive loops).
+- The wrapper must probe for an active gateway (tasklist | findstr /i gate); spawn the Gate CMD window only if it is not currently running.
+- CRITICAL: Once the `openclaw terminal` session successfully concludes or is exited by the user, the wrapper script must forcefully terminate the active Gateway process (taskkill) so no background token draining occurs.
+
+3. DIRECTORY-BASED SESSION ISOLATION
+- Running `openclaw` from a project directory must map to a session ID based only on the current working directory.
+- If a session already exists for that directory, resume it. If no session exists, create a new isolated session.
+- Prevent session state from leaking between different project folders.
+- Use a stable path-mapping method, such as hashing the full normalized CWD path (e.g., using MD5 or SHA256 in PowerShell).
+- Pass this hashed value to OpenClaw via the appropriate session flag.
+
+4. CENTRALIZED DATA STORAGE
+- Prevent OpenClaw and Z.AI from writing state, logs, history, cache, or configuration files inside project directories.
+- All persistent data and session mappings must be stored only under: %USERPROFILE%\.openclaw\sessions\[Hashed_CWD]\
+- Use environment variables, config settings, wrapper arguments, or symlinks only if verified safe. Do not delete existing local project files unless the user confirms.
+
+5. SAFETY
+Before changing anything:
+- Show what will be changed.
+- Back up existing config files.
+- Back up existing wrappers.
+- Export relevant Task Scheduler entries if modified.
+- Provide rollback commands.
+
+6. VALIDATION TESTS
+Provide tests that prove:
+- `openclaw` works from any directory and translates to the correct terminal command.
+- Only one gateway starts, and it terminates entirely when the session ends.
+- Different project folders get different sessions based on path hashing.
+- The same project folder resumes the same session.
+- No OpenClaw or Z.AI state files are created in project folders.
+- All persistent files are written under %USERPROFILE%\.openclaw\.
+
+OUTPUT FORMAT:
+Provide the answer in this exact order:
+1. Assumptions and items needing verification
+2. Discovery commands
+3. Backup commands
+4. Startup disable steps
+5. Gateway detection & Auto-Termination logic
+6. Wrapper script (openclaw.cmd or .ps1)
+7. Global alias/PATH setup
+8. Session isolation (Path Hashing) logic
+9. Centralized storage configuration
+10. Validation tests
+11. Rollback steps
+
+SCRIPT REQUIREMENTS:
+- Provide complete PowerShell scripts. Provide Batch files only if needed.
+- Include comments inside scripts.
+- Use user-level paths by default.
+- Avoid placeholders unless the value truly cannot be known. If placeholders are used, list exactly how to find the correct value.
+- Do not use destructive commands without confirmation.

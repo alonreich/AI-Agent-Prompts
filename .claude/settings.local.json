@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(timeout 8 python bridge.py)",
+      "Bash(py -0p)",
+      "Bash(python -c \"import sys; print\\(sys.executable\\)\")",
+      "Bash(python -m pip list)",
+      "Bash(py -3.14 -m pip list)",
+      "Bash(python -m pip install watchdog)",
+      "Bash(python -c \"import flask, flask_cors, watchdog; print\\('IMPORTS-OK'\\)\")",
+      "PowerShell(Start-Process -FilePath \"pythonw.exe\" -ArgumentList \"`\"C:\\\\OneDrive - Bynet Data Communications Ltd\\\\AI\\\\bridge.py`\"\" -WindowStyle Hidden; Start-Sleep -Seconds 5; try { $p = Invoke-RestMethod -Uri 'http://127.0.0.1:5589/api/ping' -TimeoutSec 5; \"PING: \" + \\($p | ConvertTo-Json -Compress\\) } catch { \"PING FAILED: $\\($_.Exception.Message\\)\" })",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1:5589/api/data)",
+      "Bash(curl -s -w \"\\\\nHTTP %{http_code}\\\\n\" -X POST http://127.0.0.1:5589/api/save-order -H \"Origin: https://evil.example.com\" -H \"Content-Type: application/json\" -d '{\"order\":[]}')",
+      "Bash(curl -s -w \"\\\\nHTTP %{http_code}\\\\n\" -X POST http://127.0.0.1:5589/api/save-order -H \"Origin: http://127.0.0.1:5589\" -H \"Content-Type: application/json\" -d '{\"order\":[]}')",
+      "Bash(curl -s -w \"\\\\nHTTP %{http_code}\\\\n\" -X POST http://127.0.0.1:5589/api/recycle-purge-all -H \"Origin: https://evil.example.com\" -H \"Content-Type: text/plain\" -d '{}')",
+      "Bash(python bridge.py)",
+      "Bash(echo \"EXIT-CODE: $?\")",
+      "Bash(curl -s -m 3 http://127.0.0.1:5589/api/ping)",
+      "Bash(grep -n \"choice /c 12\\\\|C:\\\\\\\\\\\\\\\\AI-Agent-Prompt\\\\|robocopy\" Install.bat)",
+      "Read(//c/Users/alonreich/.claude/projects/C--OneDrive---Bynet-Data-Communications-Ltd-AI/memory//**)",
+      "Read(//c/Users/alonreich/.claude/projects/C--OneDrive---Bynet-Data-Communications-Ltd-AI/memory/**)",
+      "Bash(python -m py_compile bridge.py)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" -m 3 http://127.0.0.1:5589/api/data)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" -m 3 -X POST http://127.0.0.1:5589/api/save-order -H \"Origin: https://evil.example.com\" -H \"Content-Type: application/json\" -d '{\"order\":[]}')",
+      "Bash(rm -rf __pycache__)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('bridge.py', encoding='utf-8'\\).read\\(\\)\\); print\\('SYNTAX-OK, no cache written'\\)\")",
+      "Bash(curl -s -m 3 -o /dev/null http://127.0.0.1:5589/api/data)",
+      "Bash(net session *)",
+      "Bash(cmd //c Install.bat)",
+      "Bash(cmd //c \".\\\\\\\\Install.bat\")",
+      "Bash(unix2dos Install.bat UnInstall.bat)"
+    ]
+  }
+}

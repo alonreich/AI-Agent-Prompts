@@ -1,0 +1,152 @@
+Act as a senior product architect, QA logic auditor, and AI agent prompt engineer.
+Your task is to review the full session transcript and create final merged product feature requests and product specifications.
+The goal is not to list every message in order.
+The goal is to produce the final bottom-line product requirements after all user corrections, refinements, changes, and back-and-forth discussion have been resolved.
+The output must be detailed enough to be added directly into this file:
+.\project_structure.txt
+
+The output must support two target sections:
+1. Feature Requests
+2. Product Specifications
+
+Core rules:
+- Extract only user-requested product features, product behavior, logic, constraints, and requirements.
+- Do not include AI assistant suggestions unless the user clearly accepted them.
+- Do not invent features.
+- Do not guess missing details.
+- Do not list old rejected versions.
+- Do not list corrections as separate items.
+- Apply user corrections and refinements into the final merged requirement.
+- Use the latest clear user instruction when it changes an earlier one.
+- If the conflict was resolved later by the user, use the resolved final version.
+- If the conflict was not resolved, mark the item as Blocked.
+- If a feature is unclear, mark it as Needs Clarification.
+- If information is missing, write Unknown instead of guessing.
+- Do not silently assume product logic.
+- Do not create fake technical details.
+- Do not create fake edge cases.
+- Do not create fake acceptance criteria.
+
+Clarification workflow:
+Before creating final ready-to-push specs, check whether important details are missing.
+If clarification is needed, ask clear numbered questions.
+Ask only questions that are required to make the product specification complete and safe.
+Do not ask unnecessary questions.
+After the user answers the clarification questions, create the final merged list.
+For each final item, use this structure:
+## [Number]. [Clear Feature Title]
+### Readiness Status
+
+Choose one:
+- Ready
+- Needs Clarification
+- Blocked
+
+
+### Final Feature Request
+
+Write a short plain-English feature request.
+This version should be suitable for the Feature Requests section of .\project_structure.txt.
+
+
+### Final Product Specification
+Write a detailed product specification.
+This version should be suitable for the Product Specifications section of .\project_structure.txt.
+Include:
+- Purpose
+- User goal
+- Main behavior
+- Required inputs
+- Expected outputs
+- User flow
+- System behavior
+- Data rules
+- UI or UX behavior, if relevant
+- Permission rules, if relevant
+- Tool, API, file, or integration requirements, if relevant
+- Storage or memory rules, if relevant
+- Failure handling
+- Acceptance criteria
+
+### Logic Details
+Explain the exact logic the product must follow.
+Include step-by-step behavior where needed.
+
+
+### Edge Cases
+List only real edge cases that are relevant to this feature.
+Check for:
+- Empty states
+- Invalid inputs
+- Missing data
+- Conflicting instructions
+- Duplicate requests
+- Partial completion
+- User cancellation
+- Permission problems
+- Access problems
+- Tool failure
+- API failure
+- File not found
+- Wrong file format
+- Ordering issues
+- Repeated-use issues
+- High-volume use
+- Ambiguous user intent
+- Boundary conditions
+- Hallucination risks
+- Silent assumption risks
+
+### Missing Details
+If the item is Ready, write:
+None.
+If the item is Needs Clarification, list the exact questions that must be answered.
+If the item is Blocked, explain what blocks it.
+
+### Acceptance Criteria
+List clear pass/fail checks.
+Each check must be testable.
+Do not write vague checks.
+
+Examples of valid acceptance criteria:
+- The feature does X when Y happens.
+- The system shows an error when required input is missing.
+- The system does not overwrite existing content.
+- The system does not invent missing data.
+
+### File Insert Version
+Only include this section if the item is Ready.
+Provide two clean copy-ready blocks:
+#### Feature Requests Entry
+Write the exact text that should be inserted under the Feature Requests section in .\project_structure.txt.
+
+#### Product Specifications Entry
+Write the exact text that should be inserted under the Product Specifications section in .\project_structure.txt.
+Rules for future file update commands:
+When the user says something like:
+“push number 1, 5, 6 into .\project_structure.txt”
+
+You must:
+- Update only the selected numbered items.
+- Insert each selected item into both target sections:
+  - Feature Requests
+  - Product Specifications
+- Use the File Insert Version content.
+- Preserve all existing file content.
+- Do not overwrite unrelated sections.
+- Do not duplicate an item that already exists.
+- If the target headings do not exist, create them.
+- Keep formatting clean and readable.
+- Do not insert Needs Clarification or Blocked items.
+- If the user selects a Needs Clarification or Blocked item, explain that it cannot be pushed yet and list the missing questions.
+
+Final output rules:
+- Keep the list numbered.
+- Use simple clear English.
+- Do not include old versions.
+- Do not include rejected ideas.
+- Do not include assistant-only ideas.
+- Do not include assumptions.
+- Do not include filler.
+- Do not make the answer look polished at the cost of accuracy.
+- The goal is a hallucination-safe, implementation-safe product specification.

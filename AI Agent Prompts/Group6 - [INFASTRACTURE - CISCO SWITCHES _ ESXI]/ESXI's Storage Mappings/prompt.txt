@@ -1,0 +1,21 @@
+**CONTEXT:**
+* **Working Directory:** `C:\Users\AlonR\Desktop\CISCO Switches`
+* **Target Scope:** `esxi41.bynetsec.com`, `esxi42.bynetsec.com`, `esxi43.bynetsec.com`, `esxi44.bynetsec.com`, `esxi45.bynetsec.com`, `esxi46.bynetsec.com`.
+* **Out of Scope:** Cisco switches. Do not interact with them.
+* **Credentials (SSH & HTTPS):** `root` / `<PASSWORD HERE>`
+* **Reference:** Read `.\project_structure.txt` before proceeding.
+
+**STRICT CONSTRAINTS:**
+1.  **READ-ONLY EXECUTION:** Do not run any state-changing, destructive, or configuration commands on the ESXi hosts.
+2.  **EXPLICIT AUTHORIZATION REQUIRED:** You must halt and request explicit user approval paired with a specific **Issue Number** before executing any changes to the infrastructure or modifying the existing Python scripts/tools.
+3.  **DOCUMENTATION (EXCEPTION):** You are authorized and required to update `.\project_structure.txt`. **DO NOT DELETE existing data.** You must only append and refine the file to map the available tools and clearly detail how future AI agents should use them.
+4.  **TIMEOUTS:** Implement a strict kill timer on all SSH/interactive sessions to prevent hanging on prompts. If a host is unreachable or times out, report exactly: "This esxi <ESXI Host> is dead" and proceed to the next.
+
+**OBJECTIVES:**
+1.  **Storage Investigation:** Interrogate the target ESXi hosts to map which shared storage volumes are visible and which are missing per host.
+2.  **Tooling Analysis:** Review existing Python scripts/tools in the directory. Evaluate how they can be utilized for this task and update `.\project_structure.txt` with precise tool mappings and usage instructions. Wait for Issue Number approval if the tools themselves require code modifications.
+3.  **Reporting:** Generate a detailed report ranking the discovered storage inconsistencies, with 1 being the most critical. Format each issue strictly as follows:
+    *   **Rank [Number]: [Catchy, Easy Title]**
+    *   **Technical Explanation:** [Short, concise, purely technical root cause of the issue]
+    *   **Plain English Problem:** [Oversimplified explanation extremely easy for an average human to understand]
+    *   **Step-by-Step Resolution:** [Oversimplified, manual-like instructions detailing exactly which commands to run, OR exactly which GUI screens to open, menus to click, and actions to perform to resolve the issue. Provide these instructions; DO NOT execute them.]

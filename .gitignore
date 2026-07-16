@@ -1,0 +1,34 @@
+# === Python & Environment ===
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# === IDEs & Editors ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# === Project Specific ===
+logs/
+*.log
+.recycle-bin/
+[RECYCLE BIN]/
+RECYCLE_BIN/
+.openclaw/
+.bridge.pid
+.claude/settings.local.json'
+
+# === System & OS ===
+Thumbs.db
+desktop.ini
