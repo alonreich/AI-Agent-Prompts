@@ -1681,16 +1681,17 @@
         }
 
         let bridgeVersion = '';
+        let hasEverConnected = false;
         async function checkBridge() {
             const data = await api('ping');
             if (data && data.status === 'ok') {
-                isBridgeOnline = true; connectionFailures = 0;
+                isBridgeOnline = true; connectionFailures = 0; hasEverConnected = true;
                 if (data.version && data.version !== bridgeVersion) bridgeVersion = data.version;
                 statusEl.innerText = `BRIDGE: ONLINE v${bridgeVersion}`; statusEl.classList.add('online');
                 offlineOverlay.style.display = 'none'; activeMenu.style.display = 'block';
             } else {
                 connectionFailures++; isBridgeOnline = false;
-                if (connectionFailures >= MAX_FAILURES) {
+                if (connectionFailures >= MAX_FAILURES || !hasEverConnected) {
                     statusEl.innerText = "BRIDGE: OFFLINE"; statusEl.classList.remove('online');
                     offlineOverlay.style.display = 'flex'; activeMenu.style.display = 'none';
                 }
