@@ -30,6 +30,8 @@
             --danger: #da3633;
             --danger-hover: #f85149;
             --success: #238636;
+            --success-hover: #36b84a;
+            --secondary-hover: #3d444d;
             --info: #58a6ff;
             --warning: #9e6a03;
             --group-bg-top: #223656;     
@@ -55,37 +57,12 @@
         #menu-container { display: flex; flex-direction: column; min-height: 100vh; padding: 18px 26px; box-sizing: border-box; align-items: center; position: relative; }
 
         
-        .btn {
-            padding: 0 16px;
-            height: 40px;
-            border-radius: var(--radius-md);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 13px;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            box-sizing: border-box;
-            white-space: nowrap;
-            outline: none;
-            border: 1px solid transparent;
-            text-decoration: none;
-            user-select: none;
-            gap: 8px;
-        }
-        .btn:active { transform: scale(0.98); }
-        .btn .btn-icon {
-            width: 18px;
-            height: 18px;
-            fill: currentColor;
-        }
-
-        .btn-primary, .add-btn, .group-btn, .copy-btn, .save-btn { 
+        .add-btn, .group-btn, .copy-btn, .save-btn {
             background: var(--blue);
             color: #0c162c;
             border: none;
         }
-        .btn-primary:hover, .add-btn:hover, .group-btn:hover, .copy-btn:hover, .save-btn:hover { 
+        .add-btn:hover, .group-btn:hover, .copy-btn:hover, .save-btn:hover {
             background: var(--blue-hover);
         }
         
@@ -110,7 +87,7 @@
         }
 
         .btn-success, .title-save-btn, .wiz-save { background: var(--success); color: #fff; border: none; }
-        .btn-success:hover, .title-save-btn:hover, .wiz-save:hover { background: #36b84a; }
+        .btn-success:hover, .title-save-btn:hover, .wiz-save:hover { background: var(--success-hover); }
 
         .confirm-del-btn {
             background: var(--danger); color: #fff; border: none; display: none;
@@ -176,15 +153,7 @@
         #search-box { width: 100%; background: var(--bg-light); border: 1px solid var(--border); color: #fff; padding: 10px 16px 10px 40px; border-radius: var(--radius-md); font-size: 14px; outline: none; transition: all 0.2s; box-sizing: border-box; height: 42px; }
         #search-box:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15); }
 
-        .recycle-bin-btn { 
-            background: transparent; border: 1px solid var(--border); color: var(--gold); 
-            height: 40px; width: 40px; padding: 0; border-radius: var(--radius-md);
-            display: flex; align-items: center; justify-content: center; position: relative;
-        }
-        .recycle-bin-btn:hover { background: rgba(255, 195, 40, 0.1); border-color: var(--gold); }
-        .recycle-bin-btn .bin-badge { position: absolute; top: -5px; right: -5px; background: var(--gold); color: #000; font-size: 10px; font-weight: 800; padding: 2px 5px; border-radius: var(--radius-pill); }
 
-        
         #main-menu { 
             width: 100%; 
             display: flex; 
@@ -306,8 +275,8 @@
         .group-rename-btn { border: none; cursor: pointer; padding: 3px 10px; border-radius: 3px; font-weight: 700; font-size: 14px; display: none; align-items: center; transition: 0.2s; line-height: 1; }
         .group-rename-save { background: var(--success); color: #fff; }
         .group-rename-cancel { background: var(--border); color: #fff; }
-        .group-rename-save:hover { background: #36b84a; }
-        .group-rename-cancel:hover { background: #3d444d; }
+        .group-rename-save:hover { background: var(--success-hover); }
+        .group-rename-cancel:hover { background: var(--secondary-hover); }
 
         #global-trash-zone {
             position: fixed; bottom: 40px; right: 40px; width: 140px; height: 140px;
@@ -412,12 +381,12 @@
         .nav-arrow:hover + .nav-cross-hint { opacity: 0.8; }
 
         .back-btn { background: var(--border); color: var(--text); border: 1px solid transparent; border-radius: var(--radius-sm); cursor: pointer; font-weight: 500; font-size: 12px; transition: 0.2s; }
-        .back-btn:hover { background: #3d444d; border-color: #8b949e; }
+        .back-btn:hover { background: var(--secondary-hover); border-color: #8b949e; }
 
         .title-save-btn, .title-cancel-btn { background: var(--success); color: #fff; border: none; padding: 6px 16px; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600; font-size: 12px; display: none; align-items: center; transition: 0.2s; }
         .title-cancel-btn { background: var(--border); }
-        .title-save-btn:hover { background: #36b84a; }
-        .title-cancel-btn:hover { background: #3d444d; }
+        .title-save-btn:hover { background: var(--success-hover); }
+        .title-cancel-btn:hover { background: var(--secondary-hover); }
 
         .edit-title-btn, .delete-agent-btn { 
             background: none !important; border: none !important; cursor: pointer; 
@@ -552,8 +521,8 @@
         .save-btn { background: var(--success); color: #fff; }
         .cancel-btn { background: transparent; border: 1px solid var(--border); color: var(--text); }
 
-        .save-btn:hover { background: #36b84a; }
-        .cancel-btn:hover { background: #3d444d; }
+        .save-btn:hover { background: var(--success-hover); }
+        .cancel-btn:hover { background: var(--secondary-hover); }
 
         #wizard-overlay, #group-create-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -588,7 +557,7 @@
         .toast {
             position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
             background: var(--blue); color: #fff; padding: 12px 24px; border-radius: var(--radius-pill);
-            font-size: 13px; font-weight: 600; z-index: 3000; display: block; opacity: 0;
+            font-size: 13px; font-weight: 600; z-index: 10010; display: block; opacity: 0;
             box-shadow: var(--shadow-lg); transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
         }
         .toast.visible { transform: translateX(-50%) translateY(0); opacity: 1; }
@@ -598,9 +567,13 @@
         .toast.info { background: var(--info); }
 
         .wiz-save { background: var(--success); color: #fff; border: none; font-weight: 600; padding: 10px 24px; border-radius: var(--radius-sm); cursor: pointer; transition: 0.2s; font-size: 13px; }
-        .wiz-save:hover { background: #36b84a; }
+        .wiz-save:hover { background: var(--success-hover); }
         .wiz-cancel { background: var(--border); color: var(--text); border: 1px solid transparent; padding: 10px 24px; border-radius: var(--radius-sm); cursor: pointer; transition: 0.2s; font-weight: 600; font-size: 13px; }
-        .wiz-cancel:hover { background: #3d444d; }
+        .wiz-cancel:hover { background: var(--secondary-hover); }
+        .wiz-primary { background: var(--blue); color: #0c162c; border: none; font-weight: 600; padding: 10px 24px; border-radius: var(--radius-sm); cursor: pointer; transition: 0.2s; font-size: 13px; }
+        .wiz-primary:hover { background: var(--blue-hover); }
+        .wiz-danger { background: var(--danger); color: #fff; border: none; font-weight: 600; padding: 10px 24px; border-radius: var(--radius-sm); cursor: pointer; transition: 0.2s; font-size: 13px; }
+        .wiz-danger:hover { background: var(--danger-hover); }
 
         
         .bridge-status { position: fixed; bottom: 15px; right: 15px; font-size: 11px; font-weight: 600; color: var(--text-dim); background: var(--bg-light); padding: 4px 10px; border-radius: var(--radius-pill); border: 1px solid var(--border); z-index: 100; }
@@ -653,6 +626,8 @@
         .modal-overlay.visible .modal-card { transform: scale(1); }
         .modal-card h3 { margin-top: 0; color: var(--blue); font-size: 1.2rem; margin-bottom: 15px; }
         .modal-card p { color: var(--text); font-size: 14px; line-height: 1.5; margin-bottom: 25px; }
+        .modal-card select { width: 100%; background: var(--bg-light); border: 1px solid var(--border); color: var(--gold); padding: 12px; border-radius: var(--radius-sm); font-family: inherit; outline: none; box-sizing: border-box; transition: all 0.2s; margin-bottom: 20px; }
+        .modal-card select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15); }
         .modal-actions { display: flex; justify-content: center; gap: 12px; }
 
         
@@ -739,7 +714,7 @@
         .recycle-item {
             display: flex; align-items: center; justify-content: space-between;
             padding: 8px 12px; border-radius: var(--radius-sm); transition: 0.15s;
-            border: 1px solid transparent; margin-bottom: 4px; cursor: pointer;
+            border: 1px solid transparent; margin-bottom: 4px;
         }
         .recycle-item:hover { background: rgba(88, 166, 255, 0.05); border-color: var(--border); }
         .recycle-item-info { flex: 1; min-width: 0; }
@@ -766,7 +741,7 @@
             background: var(--border); color: var(--text); border: none; padding: 8px 20px;
             border-radius: var(--radius-sm); cursor: pointer; font-weight: 600; font-size: 12px; transition: 0.2s;
         }
-        .recycle-close-btn:hover { background: #3d444d; }
+        .recycle-close-btn:hover { background: var(--secondary-hover); }
         .recycle-purge-all-btn {
             background: rgba(255, 140, 137, 0.1); color: var(--error); border: 1px solid rgba(255, 140, 137, 0.3);
             padding: 8px 16px; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600; font-size: 12px; transition: 0.2s;
@@ -859,8 +834,6 @@
         <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></symbol>
         <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></symbol>
         <symbol id="icon-cancel" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></symbol>
-        <symbol id="icon-cancel" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></symbol>
-        <symbol id="icon-cancel" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></symbol>
         <symbol id="icon-recycle" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" opacity=".3"/><path d="M7 10l5 5 5-5z"/></symbol>
         <symbol id="icon-bin-full" viewBox="0 0 24 24"><path d="M16 9h-2.1l-1.9-3.4c-.2-.4-.6-.6-1-.6s-.8.2-1 .6L8.1 9H6c-1.1 0-2 .9-2 2v9c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-9c0-1.1-.9-2-2-2zm-6-2l1.7 3H8.3L10 7zm8 13H6v-9h12v9z"/></symbol>
         <symbol id="icon-edit" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></symbol>
@@ -941,6 +914,9 @@
                     <div class="control-center"></div>
                     
                     <div class="control-right">
+                        <button class="btn btn-outline" id="bulk-move-btn" onclick="openBulkMove()" aria-label="Move selected agents to another group">
+                            MOVE SELECTED
+                        </button>
                         <button class="btn btn-danger-outline" id="confirm-del-btn" style="display: none;" onclick="confirmDeleteMode()">
                             <svg aria-hidden="true"><use href="#icon-trash"/></svg>
                             DELETE
@@ -1039,7 +1015,7 @@
                 <div class="field-error">Prompt content is required</div>
             </div>
             <div class="wizard-actions">
-                <button class="wiz-save" onclick="saveNewAgent()">CREATE</button>
+                <button class="wiz-save" id="wiz-create-btn" onclick="saveNewAgent()">CREATE</button>
                 <button class="wiz-cancel" onclick="closeWizard()">CANCEL</button>
             </div>
         </div>
@@ -1052,7 +1028,7 @@
             <label for="bulk-move-select" class="sr-only" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0">Destination group</label>
             <select id="bulk-move-select" aria-label="Destination group"></select>
             <div class="modal-actions">
-                <button class="wiz-save" onclick="confirmBulkMove()">MOVE NOW</button>
+                <button class="wiz-save" id="bulk-move-confirm-btn" onclick="confirmBulkMove()">MOVE NOW</button>
                 <button class="wiz-cancel" onclick="closeBulkMove()">CANCEL</button>
             </div>
         </div>
@@ -1075,9 +1051,9 @@
             <p id="collision-modal-text">An item with this name already exists.</p>
             <div class="modal-actions" style="justify-content: space-between;">
                 <button id="collision-modal-cancel" class="wiz-cancel">Cancel</button>
-                <div>
-                    <button id="collision-modal-rename" class="wiz-save" style="background: var(--blue);">Keep Both</button>
-                    <button id="collision-modal-overwrite" class="wiz-save" style="background: #e74c3c;">Overwrite</button>
+                <div style="display: flex; gap: 8px;">
+                    <button id="collision-modal-rename" class="wiz-primary">Keep Both</button>
+                    <button id="collision-modal-overwrite" class="wiz-danger">Overwrite</button>
                 </div>
             </div>
         </div>
@@ -1102,7 +1078,7 @@
                 <div class="field-error">Group name is required</div>
             </div>
             <div class="wizard-actions">
-                <button class="wiz-save" onclick="saveNewGroup()">CREATE GROUP</button>
+                <button class="wiz-save" id="grp-create-btn" onclick="saveNewGroup()">CREATE GROUP</button>
                 <button class="wiz-cancel" onclick="closeGroupCreate()">CANCEL</button>
             </div>
         </div>
@@ -1139,7 +1115,7 @@
 
         document.addEventListener('click', function(e) {
             
-            if (e.target.closest('button, [onclick], [role="button"], .agent-card, .recycle-item')) {
+            if (e.target.closest('button, [onclick], [role="button"], .agent-card')) {
                 if (!e.target.closest('[disabled], .disabled')) {
                     playClickSound();
                 }
@@ -1700,11 +1676,6 @@
                 } else {
                     agentDragStarted = false;
                     animateGhostTo(sourceCard);
-                    setTimeout(() => { 
-                        if (!overTrash) {
-                            a11yAnnounce(`Agent ${agent} moved within its group.`);
-                        }
-                    }, 400);
                 }
             }
         }
@@ -1870,8 +1841,10 @@
                     if (a.length !== b.length) return a.length - b.length;
                     return a.localeCompare(b);
                 }).forEach(agentName => {
-                    const card = document.createElement('button'); card.className = 'agent-card';
+                    const card = document.createElement('div'); card.className = 'agent-card';
                     card.dataset.folder = folderName; card.dataset.agent = agentName;
+                    card.setAttribute('role', 'button');
+                    card.setAttribute('tabindex', '0');
                     card.setAttribute('aria-label', agentName + ' prompt');
                     
                     card.onkeydown = (e) => {
@@ -1879,9 +1852,8 @@
                             e.preventDefault();
                             if (!isDeleteMode) showPrompt(folderName, agentName);
                         }
-                        if (e.key === 'Delete' || (e.shiftKey && e.key === 'm')) {
+                        if (e.shiftKey && e.code === 'KeyM') {
                             e.preventDefault();
-                            if (!e.shiftKey) return;
                             openKeyboardMove(folderName, agentName);
                         }
                     };
@@ -1932,7 +1904,11 @@
             if (isDeleteMode) menu.classList.add('delete-mode');
         }
 
-        function filterAgents() { saveScroll(); renderMenu(search.value); restoreScroll(); }
+        let filterDebounceTimer = null;
+        function filterAgents() {
+            clearTimeout(filterDebounceTimer);
+            filterDebounceTimer = setTimeout(() => { saveScroll(); renderMenu(search.value); restoreScroll(); }, 150);
+        }
 
         function toggleGroupSelection(folderName, isChecked) {
             const group = groups[folderName];
@@ -2034,7 +2010,11 @@
         async function saveNewGroup() {
             const name = document.getElementById('grp-name').value.trim();
             if (!name) { document.getElementById('grp-name-field').classList.add('has-error'); return; }
+            const btn = document.getElementById('grp-create-btn');
+            const originalText = btn.innerText;
+            btn.innerText = "CREATING..."; btn.disabled = true;
             const res = await api('create-group', 'POST', { name: name });
+            btn.innerText = originalText; btn.disabled = false;
             if (res && res.status === 'success') {
                 showToast(`CREATED GROUP: ${name}`, "success");
                 closeGroupCreate();
@@ -2065,7 +2045,8 @@
         }
 
         function showMenu() {
-            const hasRealChanges = (box.classList.contains('editing') && box.innerText !== groups[currentGroup].agents[currentAgent]) ||
+            const storedPrompt = groups[currentGroup]?.agents?.[currentAgent];
+            const hasRealChanges = (box.classList.contains('editing') && box.innerText !== storedPrompt) ||
                                    (document.getElementById('title-save-btn').style.display === 'flex' && title.innerText !== currentAgent);
             if (hasRealChanges) {
                 showConfirm('Discard unsaved changes?', "Unsaved Changes").then(res => {
@@ -2093,7 +2074,8 @@
         function navigateAgent(dir) {
             const list = buildGroupAgentsList(), idx = list.findIndex(i => i.f === currentGroup && i.a === currentAgent);
             const newIdx = idx + dir; if (newIdx < 0 || newIdx >= list.length) return;
-            const hasRealChanges = (box.classList.contains('editing') && box.innerText !== groups[currentGroup].agents[currentAgent]) ||
+            const storedPrompt = groups[currentGroup]?.agents?.[currentAgent];
+            const hasRealChanges = (box.classList.contains('editing') && box.innerText !== storedPrompt) ||
                                    (document.getElementById('title-save-btn').style.display === 'flex' && title.innerText !== currentAgent);
             if (hasRealChanges) {
                 showConfirm('Discard unsaved changes?', "Unsaved Changes").then(res => {
@@ -2245,7 +2227,11 @@
             if (!c) { document.getElementById('wiz-prompt-field').classList.add('has-error'); err = true; }
             if (err) return;
             if (groups[f]?.agents?.hasOwnProperty(n) && !(await showConfirm(`Overwrite existing agent "${n}"?`, "Overwrite Agent"))) return;
+            const btn = document.getElementById('wiz-create-btn');
+            const originalText = btn.innerText;
+            btn.innerText = "CREATING..."; btn.disabled = true;
             const res = await api('save', 'POST', { group: f, name: n, content: c });
+            btn.innerText = originalText; btn.disabled = false;
             if (res && res.status === 'success') { showToast("AGENT CREATED", "success"); closeWizard(); await syncFromBridge(); }
             else showToast("CREATE FAILED", "error");
         }
@@ -2324,7 +2310,7 @@
 
         function openBulkMove() {
             const c = deleteSelections.size;
-            if (c === 0) return;
+            if (c === 0) { showToast("NO AGENTS SELECTED", "info"); return; }
             const overlay = document.getElementById('bulk-move-overlay');
             document.getElementById('bulk-move-text').innerText = `Select a destination group for ${c} agents:`;
             const sel = document.getElementById('bulk-move-select');
@@ -2350,7 +2336,11 @@
             const target = document.getElementById('bulk-move-select').value;
             const sel = Array.from(deleteSelections).map(k => { const i = k.indexOf('||'); return { g: k.substring(0, i), a: k.substring(i + 2) }; });
             if (!target || sel.length === 0) return;
+            const btn = document.getElementById('bulk-move-confirm-btn');
+            const originalText = btn.innerText;
+            btn.innerText = "MOVING..."; btn.disabled = true;
             const res = await api('bulk-move', 'POST', { agents: sel, to: target });
+            btn.innerText = originalText; btn.disabled = false;
             if (res && res.status === 'success') {
                 showToast(`MOVED ${sel.length} AGENTS`, "success");
                 deleteSelections.clear();
@@ -2394,24 +2384,33 @@
                     if (!grouped[g]) grouped[g] = [];
                     grouped[g].push(item);
                 });
-                let html = '';
+                list.innerHTML = '';
+                const frag = document.createDocumentFragment();
                 Object.keys(grouped).sort().forEach(groupName => {
-                    html += '<div class="recycle-group-header">' + escapeHtml(groupName) + '</div>';
+                    const header = document.createElement('div');
+                    header.className = 'recycle-group-header'; header.textContent = groupName;
+                    frag.appendChild(header);
                     grouped[groupName].forEach(item => {
                         const daysLeft = Math.max(0, 30 - Math.floor((Date.now()/1000 - item.deleted_at) / 86400));
                         const typeLabel = item.type === 'group' ? 'Group' : 'Agent';
-                        html += '<div class="recycle-item">';
-                        html += '<div class="recycle-item-info">';
-                        html += '<div class="recycle-item-name">' + escapeHtml(item.name) + '</div>';
-                        html += '<div class="recycle-item-meta">' + typeLabel + ' · ' + daysLeft + ' days remaining</div>';
-                        html += '</div>';
-                        html += '<div class="recycle-item-actions">';
-                        html += '<button class="recycle-restore-btn" onclick="restoreBinItem(\'' + escapeHtml(item.bin_path) + '\', this)">Restore</button>';
-                        html += '<button class="recycle-purge-btn" onclick="purgeBinItem(\'' + escapeHtml(item.bin_path) + '\', this)">Delete Forever</button>';
-                        html += '</div></div>';
+                        const row = document.createElement('div'); row.className = 'recycle-item';
+                        const info = document.createElement('div'); info.className = 'recycle-item-info';
+                        const nameEl = document.createElement('div'); nameEl.className = 'recycle-item-name'; nameEl.textContent = item.name;
+                        const metaEl = document.createElement('div'); metaEl.className = 'recycle-item-meta'; metaEl.textContent = typeLabel + ' · ' + daysLeft + ' days remaining';
+                        info.appendChild(nameEl); info.appendChild(metaEl);
+                        const actions = document.createElement('div'); actions.className = 'recycle-item-actions';
+                        const restoreBtn = document.createElement('button');
+                        restoreBtn.className = 'recycle-restore-btn'; restoreBtn.textContent = 'Restore';
+                        restoreBtn.addEventListener('click', () => restoreBinItem(item.bin_path, restoreBtn));
+                        const purgeBtn = document.createElement('button');
+                        purgeBtn.className = 'recycle-purge-btn'; purgeBtn.textContent = 'Delete Forever';
+                        purgeBtn.addEventListener('click', () => purgeBinItem(item.bin_path, purgeBtn));
+                        actions.appendChild(restoreBtn); actions.appendChild(purgeBtn);
+                        row.appendChild(info); row.appendChild(actions);
+                        frag.appendChild(row);
                     });
                 });
-                list.innerHTML = html;
+                list.appendChild(frag);
             } catch (e) {
                 list.innerHTML = '<div class="recycle-empty">Failed to load recycle bin</div>';
             }
@@ -2439,7 +2438,7 @@
             const loader = document.getElementById('recycle-loader');
             const textEl = document.getElementById('recycle-loader-text');
             if (loader && textEl) {
-                textEl.innerHTML = `<div style="font-size:15px; font-weight:600; color:var(--text);">${text}</div><div id="recycle-loader-steps" style="text-align:left; margin-top:12px; font-weight:normal; font-size:13px; color:var(--text-muted); line-height:1.6; max-width: 250px; margin-left: auto; margin-right: auto;"></div>`;
+                textEl.innerHTML = `<div style="font-size:15px; font-weight:600; color:var(--text);">${text}</div><div id="recycle-loader-steps" style="text-align:left; margin-top:12px; font-weight:normal; font-size:13px; color:var(--text-dim); line-height:1.6; max-width: 250px; margin-left: auto; margin-right: auto;"></div>`;
                 loader.classList.add('visible');
             }
         }
@@ -2827,16 +2826,22 @@
 
         window.addEventListener('keydown', (e) => {
             if (e.ctrlKey || e.metaKey) {
-                if (e.code === 'KeyF' || e.key.toLowerCase() === 'f') { e.preventDefault(); openSearch(false); }
-                if (e.code === 'KeyH' || e.key.toLowerCase() === 'h') { e.preventDefault(); openSearch(true); }
+                if (e.code === 'KeyF' || e.key.toLowerCase() === 'f') {
+                    e.preventDefault();
+                    if (view.style.display === 'flex') { openSearch(false); }
+                    else { search.focus(); search.select(); }
+                }
+                if (e.code === 'KeyH' || e.key.toLowerCase() === 'h') {
+                    if (view.style.display === 'flex') { e.preventDefault(); openSearch(true); }
+                }
                 if (e.key === 'w' && view.style.display === 'flex') {
                     e.preventDefault();
                     const lineStr = window.prompt("Jump to line number:");
                     if (lineStr) {
                         const line = parseInt(lineStr, 10);
                         if (!isNaN(line) && line > 0) {
-
-                            const targetTop = (line - 1) * 24;
+                            const lineHeight = parseFloat(getComputedStyle(box).lineHeight) || 24;
+                            const targetTop = (line - 1) * lineHeight;
                             box.scrollTo({ top: targetTop, behavior: 'smooth' });
                         }
                     }
@@ -2882,9 +2887,7 @@
             </div>
         </div>
     </div>
-            </div>
-        </div>
-    </div>
 
+<!-- build: ux-audit-fixes 2026-07-17 -->
 </body>
 </html>

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # === Python & Environment ===
 __pycache__/
 *.py[cod]
@@ -33,39 +32,3 @@ RECYCLE_BIN/
 # === System & OS ===
 Thumbs.db
 desktop.ini
-||||||| empty tree
-=======
-# === Python & Environment ===
-__pycache__/
-*.py[cod]
-*$py.class
-.env
-.venv
-env/
-venv/
-ENV/
-build/
-dist/
-*.egg-info/
-
-# === IDEs & Editors ===
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-
-# === Project Specific ===
-logs/
-*.log
-.recycle-bin/
-[RECYCLE BIN]/
-RECYCLE_BIN/
-.openclaw/
-.bridge.pid
-
-# === System & OS ===
-Thumbs.db
-desktop.ini
->>>>>>> 3a03bc770aee6a4b1edc5765b6f2137bba639bcf
