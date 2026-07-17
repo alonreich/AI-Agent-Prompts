@@ -267,18 +267,42 @@ if exist "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\AIAgentPromptB
 
 :: Note: full interpreter path (no PATH dependency at logon), standard user
 :: privileges (the bridge only reads/writes the user's own prompt folder).
-call :LOG "INFO" "Creating Task Scheduler job (runs at logon, standard privileges)..."
-schtasks /create /tn "%TASK_NAME%" /tr "\"%PYTHONW_EXE%\" \"%BRIDGE_PY%\"" /sc onlogon /f >>"%LOG_FILE%" 2>&1
+:: ATTEMPT 1 - Hardened registration via the PowerShell ScheduledTasks module.
+:: Classic 'schtasks /create' defaults silently break boot persistence:
+::   - the task will NOT start while the machine is on battery power (laptops)
+::   - the task is force-killed after 72 hours (default ExecutionTimeLimit)
+:: The settings below disable both, fire missed logon triggers when the system
+:: becomes available, and auto-restart the bridge up to 3 times on crash.
+call :LOG "INFO" "Creating hardened Task Scheduler job (runs at logon, standard privileges)..."
+set "AIB_PYW=%PYTHONW_EXE%"
+set "AIB_BRIDGE=%BRIDGE_PY%"
+set "AIB_DIR=%PROJECT_DIR%"
+set "AIB_TASK=%TASK_NAME%"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$q=[char]34; $u=$env:USERDOMAIN+'\'+$env:USERNAME; $a=New-ScheduledTaskAction -Execute $env:AIB_PYW -Argument ($q+$env:AIB_BRIDGE+$q) -WorkingDirectory $env:AIB_DIR; $t=New-ScheduledTaskTrigger -AtLogOn -User $u; $s=New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1); $p=New-ScheduledTaskPrincipal -UserId $u -LogonType Interactive -RunLevel Limited; Register-ScheduledTask -TaskName $env:AIB_TASK -Action $a -Trigger $t -Settings $s -Principal $p -Force | Out-Null" >>"%LOG_FILE%" 2>&1
 
 :: Probe: confirm the task really exists before trusting it for next boot
 schtasks /query /tn "%TASK_NAME%" >nul 2>&1
 if %errorLevel% equ 0 (
-    call :LOG "OK" "Task Scheduler job '%TASK_NAME%' created and verified."
-    call :LOG "INFO" "The bridge will auto-start on Windows login and run in the background."
+    call :LOG "OK" "Hardened Task Scheduler job '%TASK_NAME%' created and verified."
+    call :LOG "INFO" "Battery-safe, no 72h kill limit, auto-restarts on crash, standard privileges."
     set "PERSISTENCE_MODE=task"
-) else (
-    call :LOG "WARNING" "Failed to create Task Scheduler job. This can happen on some systems."
-    call :LOG "INFO" "Falling back to creating a shortcut in the Startup folder..."
+    goto :PERSIST_DONE
+)
+
+:: ATTEMPT 2 - Classic schtasks (older systems without the ScheduledTasks module)
+call :LOG "WARNING" "PowerShell task registration failed. Trying classic schtasks..."
+schtasks /create /tn "%TASK_NAME%" /tr "\"%PYTHONW_EXE%\" \"%BRIDGE_PY%\"" /sc onlogon /f >>"%LOG_FILE%" 2>&1
+schtasks /query /tn "%TASK_NAME%" >nul 2>&1
+if %errorLevel% equ 0 (
+    call :LOG "OK" "Task Scheduler job '%TASK_NAME%' created via classic schtasks."
+    call :LOG "INFO" "Note: classic mode may pause the bridge on battery power."
+    set "PERSISTENCE_MODE=task"
+    goto :PERSIST_DONE
+)
+
+:: ATTEMPT 3 - VBS launcher + Startup folder shortcut (works everywhere)
+call :LOG "WARNING" "Failed to create any Task Scheduler job. This can happen on some systems."
+call :LOG "INFO" "Falling back to creating a shortcut in the Startup folder..."
 
     set "LOCAL_AUTO_START=%LOCALAPPDATA%\AIAgentPromptController"
     if not exist "!LOCAL_AUTO_START!" mkdir "!LOCAL_AUTO_START!"
@@ -303,7 +327,8 @@ if %errorLevel% equ 0 (
         call :LOG "ERROR" "Startup shortcut was not created. Persistence is NOT configured."
         goto :INSTALL_FAIL
     )
-)
+
+:PERSIST_DONE
 echo.
 
 :: ============================================================================
@@ -336,7 +361,16 @@ timeout /t 1 /nobreak >nul
 goto :HEALTH_LOOP
 
 :HEALTH_DATA
-call :LOG "OK" "Backend is alive and answering on port 5589."
+set "BRIDGE_PID="
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr /r /c:":5589 .*LISTENING"') do set "BRIDGE_PID=%%a"
+if defined BRIDGE_PID (
+    call :LOG "OK" "Backend is alive and answering on port 5589 (PID: %BRIDGE_PID%)."
+    >"%LOG_DIR%\bridge.pid" echo %BRIDGE_PID%
+    call :LOG "INFO" "PID recorded to: %LOG_DIR%\bridge.pid"
+) else (
+    call :LOG "OK" "Backend is alive and answering on port 5589."
+    call :LOG "WARNING" "Listening PID could not be resolved from netstat."
+)
 call :LOG "INFO" "Verifying the backend serves prompt data (/api/data)..."
 powershell -NoProfile -Command "try { $r = Invoke-WebRequest -Uri '%BRIDGE_URL%/api/data' -TimeoutSec 5 -UseBasicParsing; if ($r.StatusCode -eq 200) { exit 0 }; exit 1 } catch { exit 1 }" >nul 2>&1
 if %errorLevel% neq 0 (
