@@ -1,0 +1,26 @@
+Read .\project_structure.txt for context. Audit the provided codebase files. Do not modify any files. 
+
+Search for:
+* Logic, workflow, and UI/UX problems.
+* Missing features or unfinished code.
+* Memory leaks or unreleased resources.
+* Silent crashes or poor error handling.
+* Race conditions and security risks.
+
+If you have execution tools, run linters and tests. If not, perform static analysis only. 
+Use this exact format for each defect rank 1 being most critical.
+- ISSUE_[ID]
+- TITLE: [Catchy Extremely Shortened (few words) Description of the Issue]
+- PATH: [Full File Name + Path & From which Line to which Line in the File]
+- CURRENT BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how currently the app/software/UI/UX feels or reflect to the end-user before the fix or the logic failure or issue found which needs to be addressed]
+- EXPECTED BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how the app/software/UI/UX would feel or reflect any different to the end-user after the fix is applied]
+Separate each issue by printing an empty line, a line containing only &nbsp;, and another empty line.
+If zero Critical issues exist, output "NO CRITICAL ISSUES FOUND" and proceed to High/Medium/Low.
+
+Strict Rules:
+* Do not guess. 
+* Do not invent web links or documentation. 
+* State clearly if something cannot be verified.
+* Combine duplicate findings. 
+* Limit the report to the top 15 most critical issues.
+* . do not use filler. if no issues found declare "No Issues Found!":
