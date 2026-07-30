@@ -45,6 +45,14 @@
             --shadow-sm: 0 2px 4px rgba(0,0,0,0.15);
             --shadow-md: 0 4px 12px rgba(0,0,0,0.25);
             --shadow-lg: 0 8px 24px rgba(0,0,0,0.4);
+
+            --btn-secondary-bg: #3d4d63;
+            --btn-secondary-hover: #2d3b4d;
+            --agent-card-hover-bg: #262c36;
+            --edit-bg: rgb(35, 35, 35);
+            --edit-text: rgb(255, 190, 27);
+            --highlight-match-bg: #ffc328;
+            --highlight-current-bg: #ffeb3b;
         }
         body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
         ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -68,12 +76,12 @@
         
         
         .btn-secondary, .back-btn, .wiz-cancel, .cancel-btn, .cancel-del-btn, .title-cancel-btn { 
-            background: #3d4d63;
+            background: var(--btn-secondary-bg);
             color: var(--text);
             border: 1px solid var(--border);
         }
         .btn-secondary:hover, .back-btn:hover, .wiz-cancel:hover, .cancel-btn:hover, .cancel-del-btn:hover, .title-cancel-btn:hover { 
-            background: #2d3b4d; /* Darkened for WCAG contrast */
+            background: var(--btn-secondary-hover); /* Darkened for WCAG contrast */
             border-color: var(--text-dim);
         }
 
@@ -234,16 +242,22 @@
         #main-menu.delete-mode .group-title { cursor: default !important; }
         #main-menu.delete-mode .edit-group-icon, 
         #main-menu.delete-mode .delete-group-icon { opacity: 0 !important; pointer-events: none; }
+        .group-actions-wrap { position: absolute; right: -15px; display: flex; gap: 4px; align-items: center; opacity: 0; pointer-events: none; transition: 0.2s; }
+        .group-header:hover .group-actions-wrap, .group-header:hover .group-reset-icon { opacity: 1; pointer-events: auto; }
         
-        .group-drag-handle { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; cursor: pointer; opacity: 0.5; transition: 0.2s; touch-action: none; flex-shrink: 0; background: none; border: none; padding: 0; }
+        .group-drag-handle, .group-reset-icon { position: absolute; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; cursor: pointer; transition: 0.2s; background: none; border: none; padding: 0; z-index: 10; }
+        .group-drag-handle { left: -15px; width: 29px; height: 29px; touch-action: none; opacity: 0.5; }
+        .group-reset-icon { left: 24px; opacity: 0; pointer-events: none; background: rgba(0, 0, 0, 0.35); border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.15); }
         .group-drag-handle:hover { opacity: 0.8; }
-        .group-drag-handle:active { cursor: grabbing; transform: scale(0.9); }
-        .group-header:hover .group-drag-handle { opacity: 0.6; }
-        .group-drag-handle svg { width: 18px; height: 18px; fill: #fff; }
+        .group-reset-icon:hover { opacity: 1 !important; background: rgba(0, 0, 0, 0.6); border-color: rgba(255, 255, 255, 0.3); }
+        .group-drag-handle:active, .group-reset-icon:active { transform: translateY(-50%) scale(0.9); }
+        .group-drag-handle:active { cursor: grabbing; }
+        .group-container:hover .group-drag-handle { opacity: 0.6; }
+        .group-drag-handle svg { width: 22px; height: 22px; fill: #fff; }
+        .group-reset-icon svg { width: 18px; height: 18px; fill: #fff; color: #fff; }
 
-        
-        .group-header { display: flex; align-items: center; justify-content: center; margin-bottom: 7px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 5px; padding-top: 2px; position: relative; gap: 6px; }
-        .group-title { font-size: 14px; font-weight: 600; color: var(--gold); text-transform: uppercase; letter-spacing: 1.5px; margin: 0; outline: none; text-align: center; padding: 4px 15px; border-radius: var(--radius-sm); transition: 0.2s; cursor: pointer; user-select: none; }
+        .group-header { display: flex; align-items: center; justify-content: center; margin-bottom: 7px; border-bottom: 1px solid rgba(255, 255, 255, 0.2); padding: 2px 75px 5px 75px; position: relative; gap: 6px; }
+        .group-title { font-size: calc(14px - 1pt); font-weight: 600; color: var(--gold); text-transform: uppercase; letter-spacing: 1.5px; margin: 0; outline: none; text-align: center; padding: 4px 15px; border-radius: var(--radius-sm); transition: 0.2s; cursor: pointer; user-select: none; }
         .group-title:active { cursor: grabbing; }
         .group-title.editing { cursor: text; user-select: text; }
 
@@ -335,7 +349,7 @@
             cursor: pointer;
             transition: all 0.2s;
             box-sizing: border-box;
-            font-size: 13px;
+            font-size: calc(13px - 1pt);
             font-weight: 600;
             text-align: center;
             overflow: hidden;
@@ -354,7 +368,7 @@
             overflow-wrap: anywhere;
         }
         
-        .agent-card:hover { border-color: var(--gold-glow); background: #262c36; box-shadow: 0 0 10px var(--gold-glow); transform: translateY(-1px); }
+        .agent-card:hover { border-color: var(--gold-glow); background: var(--agent-card-hover-bg); box-shadow: 0 0 10px var(--gold-glow); transform: translateY(-1px); }
         .agent-card:active { transform: scale(0.97); }
         .agent-card.dragging { opacity: 0.4; border: 1px dashed var(--blue); }
 
@@ -413,12 +427,12 @@
             background: var(--bg-light); 
             border: 1px solid var(--border); 
             border-radius: var(--radius-md); 
-            overflow: hidden;
+            overflow: auto;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
         #prompt-box-wrap:hover:not(.editing-state) { border-color: var(--border-glow); }
-        #prompt-box-wrap.editing-state { border-color: var(--blue); box-shadow: 0 0 15px rgba(88, 166, 255, 0.1); background: rgb(35, 35, 35); }
-        #prompt-box-wrap.editing-state #prompt-box { color: rgb(255, 190, 27); }
+        #prompt-box-wrap.editing-state { border-color: var(--blue); box-shadow: 0 0 15px rgba(88, 166, 255, 0.1); background: var(--edit-bg); }
+        #prompt-box-wrap.editing-state #prompt-box { color: var(--edit-text); }
         #prompt-box-wrap::before {
             content: "EDIT MODE";
             position: absolute;
@@ -463,27 +477,22 @@
         #line-gutter {
             background: rgba(0, 0, 0, 0.2);
             color: #607d8b;
-            padding: 30px 0;
+            padding: 30px 12px 30px 0;
             text-align: right;
             font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
             font-size: 14px;
+            line-height: 24px;
+            white-space: pre;
             user-select: none;
             border-right: 1px solid var(--border);
             min-width: 50px;
             width: 50px;
-            overflow: hidden;
             pointer-events: none;
             box-sizing: border-box;
-        }
-
-        #line-gutter div {
-            padding-right: 12px;
-            height: 24px; 
-            line-height: 24px;
-            box-sizing: border-box;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
+            transition: padding-top 0.2s;
+            position: sticky;
+            left: 0;
+            z-index: 10;
         }
 
         #prompt-box { 
@@ -491,7 +500,6 @@
             color: var(--gold); 
             padding: 30px; 
             flex: 1; 
-            overflow: auto; 
             white-space: pre; 
             font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; 
             font-size: 14px; 
@@ -500,22 +508,34 @@
             background: transparent;
             border: none;
             transition: padding-top 0.2s;
+            box-sizing: border-box;
+            min-width: max-content;
         }
-        #prompt-box-wrap.search-active #prompt-box {
+        #prompt-box * {
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 24px !important;
+            font-size: 14px !important;
+            font-family: inherit !important;
+            background: transparent !important;
+            color: inherit !important;
+        }
+        #prompt-box-wrap.search-active #prompt-box,
+        #prompt-box-wrap.search-active #line-gutter {
             padding-top: 150px;
         }
         
         /* High-contrast highlight color for search matches */
         ::highlight(search-match) {
-            background-color: #ffc328; /* Solid gold for contrast */
+            background-color: var(--highlight-match-bg); /* Solid gold for contrast */
             color: #000; /* Dark text for WCAG compliance */
         }
         ::highlight(search-current) {
-            background-color: #ffeb3b;
+            background-color: var(--highlight-current-bg);
             color: #000;
         }
         #prompt-box::selection, #prompt-box *::selection {
-            background: #ffeb3b;
+            background: var(--highlight-current-bg);
             color: #000;
         }
 
@@ -799,6 +819,9 @@
             .recycle-card { width: 90vw; max-width: 600px; max-height: 80vh; padding: 20px; box-sizing: border-box; }
             #prompt-box { white-space: pre-wrap !important; } 
             #line-gutter { display: none; } 
+            .desktop-actions { display: none !important; position: absolute; top: 100%; right: 0; background: var(--card-bg); padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); flex-direction: column; z-index: 100; box-shadow: var(--shadow-md); margin-top: 5px; }
+            .desktop-actions.show { display: flex !important; }
+            .mobile-menu-btn { display: flex !important; align-items: center; justify-content: center; background: none; border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); width: 40px; height: 40px; cursor: pointer; }
         }
         @media (max-width: 480px) {
             #menu-container { padding: 15px 10px; }
@@ -948,17 +971,22 @@
                         </div>
                     </div>
                     
-                    <div class="control-right">
-                        <button class="reset-counters-btn" onclick="resetAllCopyTimestamps()" aria-label="Reset All Copy Timestamps" title="Reset All Copy Timestamps">
-                            <svg aria-hidden="true"><use href="#icon-counter"/></svg>
-                        </button>
-                        <button class="recycle-bin-btn" onclick="openRecycleBin()" aria-label="Open Recycle Bin" title="Open Recycle Bin">
-                            <svg aria-hidden="true"><use href="#icon-recycle"/></svg>
-                            <span class="bin-badge" id="bin-badge">0</span>
-                        </button>
-                        <button class="btn btn-ghost" onclick="enterDeleteMode()" aria-label="Enter Delete Mode">
-                            <svg aria-hidden="true"><use href="#icon-trash"/></svg>
-                            DELETE
+                    <div class="control-right" style="position: relative;">
+                        <div class="desktop-actions" style="display: flex; gap: 12px; align-items: center;">
+                            <button class="reset-counters-btn" onclick="resetAllCopyTimestamps()" aria-label="Reset All Copy Timestamps" title="Reset All Copy Timestamps">
+                                <svg aria-hidden="true"><use href="#icon-counter"/></svg>
+                            </button>
+                            <button class="recycle-bin-btn" onclick="openRecycleBin()" aria-label="Open Recycle Bin" title="Open Recycle Bin">
+                                <svg aria-hidden="true"><use href="#icon-recycle"/></svg>
+                                <span class="bin-badge" id="bin-badge">0</span>
+                            </button>
+                            <button class="btn btn-ghost" onclick="enterDeleteMode()" aria-label="Enter Delete Mode">
+                                <svg aria-hidden="true"><use href="#icon-trash"/></svg>
+                                DELETE
+                            </button>
+                        </div>
+                        <button class="mobile-menu-btn" onclick="document.querySelector('.desktop-actions').classList.toggle('show')" aria-label="More actions" style="display: none;">
+                            <svg viewBox="0 0 24 24" style="width: 24px; height: 24px; fill: currentColor;"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
                         </button>
                     </div>
                 </div>
@@ -1318,16 +1346,28 @@
             const firstRects = children.map(c => c.getBoundingClientRect());
             action();
             requestAnimationFrame(() => {
-                children.forEach((c, i) => {
+                const lastRects = children.map(c => c.getBoundingClientRect());
+                const deltas = children.map((c, i) => {
                     const firstRect = firstRects[i];
-                    if (!firstRect) return;
-                    const lastRect = c.getBoundingClientRect();
+                    if (!firstRect) return null;
+                    const lastRect = lastRects[i];
                     const dx = firstRect.left - lastRect.left;
                     const dy = firstRect.top - lastRect.top;
-                    if (dx || dy) {
+                    return (dx || dy) ? { dx, dy } : null;
+                });
+                
+                children.forEach((c, i) => {
+                    const delta = deltas[i];
+                    if (delta) {
                         c.style.transition = 'none';
-                        c.style.transform = `translate(${dx}px, ${dy}px)`;
-                        c.offsetHeight;
+                        c.style.transform = `translate(${delta.dx}px, ${delta.dy}px)`;
+                    }
+                });
+                
+                if (children.length > 0) children[0].offsetHeight;
+                
+                children.forEach((c, i) => {
+                    if (deltas[i]) {
                         c.style.transition = 'transform 0.3s ease';
                         c.style.transform = '';
                     }
@@ -1469,6 +1509,12 @@
         const promptBoxWrap = document.getElementById('prompt-box-wrap');
         const gutter = document.getElementById('line-gutter');
 
+        box.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const text = (e.originalEvent || e).clipboardData.getData('text/plain');
+            document.execCommand('insertText', false, text);
+        });
+
         
         let lineUpdateTimer = null;
         function scheduleUpdateLineNumbers() {
@@ -1478,43 +1524,25 @@
 
         function updateLineNumbers() {
             if (!gutter || !box) return;
-            const text = box.textContent || '';
+            const text = box.innerText || '';
             let count = 1;
             for (let i = 0; i < text.length; i++) {
                 if (text.charCodeAt(i) === 10) count++;
             }
 
-            const currentCount = gutter.children.length;
-            if (currentCount !== count) {
-                if (currentCount === 0) {
-                    const frag = document.createDocumentFragment();
-                    for (let i = 1; i <= count; i++) {
-                        const d = document.createElement('div');
-                        d.innerText = i;
-                        frag.appendChild(d);
-                    }
-                    gutter.innerHTML = '';
-                    gutter.appendChild(frag);
-                } else if (count > currentCount) {
-                    const frag = document.createDocumentFragment();
-                    for (let i = currentCount + 1; i <= count; i++) {
-                        const d = document.createElement('div');
-                        d.innerText = i;
-                        frag.appendChild(d);
-                    }
-                    gutter.appendChild(frag);
-                } else {
-                    let diff = currentCount - count;
-                    while (diff-- > 0 && gutter.lastChild) {
-                        gutter.removeChild(gutter.lastChild);
-                    }
+            if (gutter.dataset.count != count) {
+                let nums = '';
+                for (let i = 1; i <= count; i++) {
+                    nums += i + (i === count ? '' : '\n');
                 }
+                gutter.textContent = nums;
+                gutter.dataset.count = count;
             }
             syncGutterScroll();
         }
 
         function syncGutterScroll() {
-            if (gutter && box) gutter.scrollTop = box.scrollTop;
+            // Native scrolling now handles this perfectly via sticky gutter.
         }
 
         async function api(endpoint, method = 'GET', body = null) {
@@ -1978,13 +2006,16 @@
                 };
                 header.appendChild(titleEl);
 
+                const actionsWrap = document.createElement('div');
+                actionsWrap.className = 'group-actions-wrap';
+
                 const editIcon = document.createElement('button'); editIcon.className = 'edit-group-icon';
                 editIcon.setAttribute('aria-label', 'Rename ' + groupData.title + ' group');
                 editIcon.innerHTML = '<svg aria-hidden="true"><use href="#icon-edit"/></svg>';
                 editIcon.onclick = () => startRenameGroup(folderName, groupData.title, titleEl, header);
-                header.appendChild(editIcon);
+                actionsWrap.appendChild(editIcon);
 
-                const resetIcon = document.createElement('button'); resetIcon.className = 'edit-group-icon';
+                const resetIcon = document.createElement('button'); resetIcon.className = 'group-reset-icon';
                 resetIcon.setAttribute('aria-label', 'Reset Copy Timestamps for ' + groupData.title + ' group');
                 resetIcon.title = 'Reset Copy Timestamps';
                 resetIcon.innerHTML = '<svg aria-hidden="true"><use href="#icon-counter"/></svg>';
@@ -1996,9 +2027,10 @@
                     delIcon.setAttribute('aria-label', 'Delete ' + groupData.title + ' group');
                     delIcon.innerHTML = '<svg aria-hidden="true"><use href="#icon-trash"/></svg>';
                     delIcon.onclick = () => confirmDeleteGroup(folderName);
-                    header.appendChild(delIcon);
+                    actionsWrap.appendChild(delIcon);
                 }
                 if (groupData.title === "GENERAL") editIcon.style.display = 'none';
+                header.appendChild(actionsWrap);
                 container.appendChild(header);
 
                 const grid = document.createElement('div'); grid.className = 'group-grid';
@@ -2243,7 +2275,7 @@
         function showPrompt(folder, agent) {
             currentGroup = folder; currentAgent = agent; stopEdit(); cancelTitleEdit();
             document.getElementById('menu-container').style.display = 'none';
-            view.style.display = 'flex'; title.innerText = agent; box.innerText = groups[folder].agents[agent];
+            view.style.display = 'flex'; title.innerText = agent; box.textContent = groups[folder].agents[agent];
             updateLineNumbers();
             setPromptBoxEditing(false);
             updateNavArrows(); updateBreadcrumb(); updateEditorTimestamp();
@@ -2329,16 +2361,13 @@
             document.getElementById('save-btn').style.display = 'block'; document.getElementById('cancel-btn').style.display = 'block';
             promptBoxWrap.classList.add('editing-state');
             box.oninput = scheduleUpdateLineNumbers;
-            let scrollRAF = null;
-            box.onscroll = () => { 
-                if (scrollRAF) return;
-                scrollRAF = requestAnimationFrame(() => {
-                    if (gutter) gutter.scrollTop = box.scrollTop; 
-                    scrollRAF = null;
-                });
-            };
             box.onkeydown = (e) => {
-                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveEdit(); }
+                if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+                    e.preventDefault();
+                    document.execCommand('insertText', false, '\n');
+                    return;
+                }
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveEdit(); return; }
                 if (e.key === 'Escape') { 
                     const searchOverlay = document.getElementById('search-overlay');
                     if (searchOverlay && searchOverlay.classList.contains('visible')) {
@@ -2414,7 +2443,7 @@
             document.getElementById('delete-agent-btn').style.display = 'flex';
             promptBoxWrap.classList.remove('editing-state');
             if (currentAgent && groups[currentGroup]?.agents?.[currentAgent]) {
-                title.innerText = currentAgent; box.innerText = groups[currentGroup].agents[currentAgent];
+                title.innerText = currentAgent; box.textContent = groups[currentGroup].agents[currentAgent];
             }
             if (typeof updateEditorTimestamp === 'function') updateEditorTimestamp();
         }
@@ -3028,6 +3057,9 @@
                     box.scrollTo({ top, behavior: 'smooth' });
                 }
             }
+            
+            const term = document.getElementById('search-find').value;
+            a11yAnnounce(`Match ${currentSearchIdx + 1} of ${searchMatches.length} for "${term}"`);
         }
 
         function findNext(dir) {
