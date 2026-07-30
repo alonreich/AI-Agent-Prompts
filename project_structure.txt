@@ -120,6 +120,8 @@ C. Atomic Move Operations:
 
 9. Native Drag & Drop Fidelity & Keyboard Agnosticism: Ensure the drag-and-drop ghost element tracks the cursor perfectly across all contexts by enforcing strict CSS positioning hierarchy. Keyboard shortcuts (Ctrl+F, Ctrl+H) must use layout-agnostic `e.code` to function reliably across international keyboard layouts (e.g., Hebrew).
 
+10. Visual Copy Timestamp & Auto-Reset: Display a persistent visual date/time stamp around prompt cards and within the editor view indicating when a prompt was last copied to the clipboard. Automatically reset and remove this timestamp whenever the prompt text or title is modified or saved.
+
 ===============================================================================
 7. PRODUCT SPECIFICATIONS
 ===============================================================================
@@ -294,6 +296,21 @@ C. Atomic Move Operations:
 - Acceptance Criteria:
   1. The drag ghost strictly adheres to the cursor without delay or offset.
   2. `Ctrl+F` and `Ctrl+H` operate flawlessly regardless of active keyboard language.
+
+### 14. Visual Copy Timestamp & Auto-Reset
+- Purpose: Provide immediate visual indicator of when a prompt was last copied to the clipboard across both the dashboard and editor screens, while ensuring stale copy dates disappear once content changes.
+- Main behavior:
+  - Clicking either the dashboard card's quick-copy icon or the main "COPY PROMPT" button triggers an atomic `/api/record-copy` request to the backend.
+  - The backend writes a lightweight `copy_time.txt` timestamp file inside the target agent folder and broadcasts a sync event via the Watchdog observer.
+- UI/UX behavior:
+  - Dashboard cards and editor header display a subtle timestamp strictly formatted as `DD/MM HH:MM` directly beneath the agent title or in the navigation bar without any additional prefix text.
+  - The prompt view header displays the timestamp cleanly aligned on the right side of the top navigation bar.
+  - A small Reset Counters button positioned immediately to the left of the recycle bin down-arrow button allows users to globally reset and purge all copy timestamps across all prompts at once via `/api/reset-copy-times`.
+  - Editing and saving a prompt's text or renaming its title automatically purges the `copy_time.txt` file and resets the timestamp display.
+- Acceptance Criteria:
+  1. Copying via quick-copy button or main copy button immediately updates the UI with a date/time stamp.
+  2. Modifying and saving either the prompt text or title removes the timestamp.
+  3. Clicking the Reset Counters button next to the recycle bin prompts confirmation and purges all copy timestamps across the library.
 
 ===============================================================================
 8. CACHING POLICY

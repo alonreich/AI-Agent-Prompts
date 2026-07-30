@@ -130,8 +130,8 @@
         .btn-ghost { background: transparent; color: var(--text-dim); border: none; opacity: 0.7; }
         .btn-ghost:hover { opacity: 1; color: var(--text); background: rgba(255,255,255,0.05); }
 
-        .btn-danger-outline { background: transparent; color: var(--error); border: 1px solid rgba(255,140,137,0.3); }
-        .btn-danger-outline:hover { background: rgba(255,140,137,0.1); border-color: var(--error); }
+        .btn-danger-outline { background: transparent; color: var(--error); border: 1px solid color-mix(in srgb, var(--error) 30%, transparent); }
+        .btn-danger-outline:hover { background: color-mix(in srgb, var(--error) 10%, transparent); border-color: var(--error); }
 
         /* Contextual Selection Bar */
         .toolbar-wrapper { width: 100%; position: relative; height: 60px; margin-bottom: 20px; overflow: hidden; }
@@ -312,6 +312,7 @@
             background: none; margin: 10px auto 0 auto;
         }
         .add-agent-card:hover { border-color: var(--blue); color: var(--blue); background: rgba(88, 166, 255, 0.05); }
+        .add-agent-card:active { transform: scale(0.97); }
         .add-agent-card svg { width: 16px; height: 16px; fill: currentColor; }
 
         .empty-group-msg { width: 100%; color: var(--text-dim); font-size: 12px; font-style: italic; padding: 12px; text-align: center; }
@@ -498,7 +499,10 @@
             outline: none; 
             background: transparent;
             border: none;
-            transition: none;
+            transition: padding-top 0.2s;
+        }
+        #prompt-box-wrap.search-active #prompt-box {
+            padding-top: 150px;
         }
         
         /* High-contrast highlight color for search matches */
@@ -665,6 +669,16 @@
         .group-container:hover .group-color-bar { opacity: 1; }
 
         
+        .reset-counters-btn {
+            background: none; border: 1px solid var(--border); color: var(--blue);
+            min-width: 36px; width: 36px; height: 36px; max-width: 36px; max-height: 36px;
+            border-radius: var(--radius-sm); cursor: pointer; display: flex;
+            align-items: center; justify-content: center; transition: 0.2s;
+            position: relative; flex-shrink: 0; padding: 0;
+        }
+        .reset-counters-btn:hover { border-color: var(--blue); color: var(--blue); background: rgba(56, 189, 248, 0.1); box-shadow: 0 0 10px var(--border-glow); }
+        .reset-counters-btn svg { width: 18px; height: 18px; fill: currentColor; }
+
         .recycle-bin-btn {
             background: none; border: 1px solid var(--border); color: var(--gold);
             min-width: 36px; width: 36px; height: 36px; max-width: 36px; max-height: 36px;
@@ -824,7 +838,48 @@
 
         #prompt-box-wrap.editing-state .ai-review-btn { display: none; }#prompt-box-wrap.editing-state .edit-hint-btn { display: none; }
 
-        
+        .card-timestamp {
+            font-size: 10px;
+            color: var(--text-dim);
+            font-weight: 400;
+            margin-top: 3px;
+            pointer-events: none;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+        .editor-timestamp {
+            font-size: 11px;
+            color: var(--text-dim);
+            font-weight: 500;
+            margin-right: 15px;
+            white-space: nowrap;
+        }
+        .editor-timestamp:empty {
+            display: none;
+        }
+        /* Audit & UI Maintenance Styles */
+        .status-icon-success { color: var(--success); font-weight: 700; }
+        .status-icon-error { color: var(--danger); font-weight: 700; }
+        .recycle-loader-title { font-size: 15px; font-weight: 600; color: var(--text); }
+        .recycle-loader-steps-container { text-align: left; margin-top: 12px; font-weight: normal; font-size: 13px; color: var(--text-dim); line-height: 1.6; max-width: 250px; margin-left: auto; margin-right: auto; }
+        .recycle-step-icon { display: inline-block; width: 20px; }
+        .recycle-footer-actions { display: flex; gap: 8px; }
+        .recycle-loader-text { color: var(--text); font-weight: 600; font-size: 14px; margin-top: 10px; }
+        .offline-title { color: var(--error); margin-top: 0; }
+        .offline-subtitle { font-size: 13px; opacity: 0.7; color: var(--text-dim); }
+        .offline-action-wrap { margin: 25px 0; }
+        .offline-retry-btn { margin: 0 auto; padding: 12px 30px; }
+        .offline-fix-header { font-size: 14px; color: var(--blue); }
+        .offline-fix-list { text-align: left; font-size: 13px; display: inline-block; margin-bottom: 20px; color: var(--text-dim); }
+        .offline-debug-info { font-size: 10px; opacity: 0.4; border-top: 1px solid var(--border); padding-top: 15px; }
+        .agent-title-wrap { display: flex; align-items: center; flex: 1; margin: 0 15px; position: relative; }
+        .nav-breadcrumb { margin-right: 15px; margin-left: 0; }
+        .nav-agent-title { margin: 0; text-align: left; outline: none; }
+        .flex-spacer { flex: 1; }
+        .collision-modal-actions { justify-content: space-between; }
+        .collision-btn-group { display: flex; gap: 8px; }
     </style>
 </head>
 <body>
@@ -838,6 +893,7 @@
         <symbol id="icon-bin-full" viewBox="0 0 24 24"><path d="M16 9h-2.1l-1.9-3.4c-.2-.4-.6-.6-1-.6s-.8.2-1 .6L8.1 9H6c-1.1 0-2 .9-2 2v9c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-9c0-1.1-.9-2-2-2zm-6-2l1.7 3H8.3L10 7zm8 13H6v-9h12v9z"/></symbol>
         <symbol id="icon-edit" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></symbol>
         <symbol id="icon-copy" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></symbol>
+        <symbol id="icon-counter" viewBox="0 0 512 512"><path fill="currentColor" fill-rule="evenodd" d="M105.21 256c0-82.475 64.576-149.333 144.235-149.333c79.658 0 144.234 66.858 144.234 149.333v12.501l-26.642-27.584l-29.135 30.166l76.382 79.082l76.383-79.082l-29.136-30.166l-26.642 27.584V256c0-106.048-83.017-192-185.444-192C147.017 64 64 149.952 64 256s83.017 192 185.445 192c43.826 0 84.171-15.765 115.923-42.112l-25.777-33.301c-24.705 20.501-56.025 32.746-90.146 32.746c-79.659 0-144.235-66.858-144.235-149.333m129.457-43.833v129.166h42.666V170.667h-38.291l-56.625 33.25l18 29.625z" clip-rule="evenodd"/></symbol>
         <symbol id="icon-search" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></symbol>
         <symbol id="icon-drag" viewBox="0 0 24 24"><path d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></symbol>
         <symbol id="icon-logo" viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm0 3.45l8.15 14.1H3.85L12 5.45zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></symbol>
@@ -850,17 +906,17 @@
 
     <div id="bridge-offline-overlay">
         <div class="offline-card">
-            <h2 style="color: var(--error); margin-top: 0;">BRIDGE OFFLINE</h2>
+            <h2 class="offline-title">BRIDGE OFFLINE</h2>
             <p>The AI Agent Bridge backend is not responding.</p>
             <div class="spinner"></div>
-            <p style="font-size: 13px; opacity: 0.7; color: var(--text-dim);">This application requires the local Python server to operate.</p>
-            <div style="margin: 25px 0;"><button class="add-btn" style="margin: 0 auto; padding: 12px 30px;" onclick="checkBridge()">RETRY CONNECTION</button></div>
-            <p style="font-size: 14px; color: var(--blue);"><b>How to fix:</b></p>
-            <ul style="text-align: left; font-size: 13px; display: inline-block; margin-bottom: 20px; color: var(--text-dim);">
+            <p class="offline-subtitle">This application requires the local Python server to operate.</p>
+            <div class="offline-action-wrap"><button class="add-btn offline-retry-btn" onclick="checkBridge()">RETRY CONNECTION</button></div>
+            <p class="offline-fix-header"><b>How to fix:</b></p>
+            <ul class="offline-fix-list">
                 <li>Run <b>Install.bat</b> (recommended)</li>
                 <li>Or manually run <b>python bridge.py</b></li>
             </ul>
-            <div id="debug-info" style="font-size: 10px; opacity: 0.4; border-top: 1px solid var(--border); padding-top: 15px;">Target: http://127.0.0.1:5589/api/data</div>
+            <div id="debug-info" class="offline-debug-info">Target: http://127.0.0.1:5589/api/data</div>
         </div>
     </div>
 
@@ -893,6 +949,9 @@
                     </div>
                     
                     <div class="control-right">
+                        <button class="reset-counters-btn" onclick="resetAllCopyTimestamps()" aria-label="Reset All Copy Timestamps" title="Reset All Copy Timestamps">
+                            <svg aria-hidden="true"><use href="#icon-counter"/></svg>
+                        </button>
                         <button class="recycle-bin-btn" onclick="openRecycleBin()" aria-label="Open Recycle Bin" title="Open Recycle Bin">
                             <svg aria-hidden="true"><use href="#icon-recycle"/></svg>
                             <span class="bin-badge" id="bin-badge">0</span>
@@ -934,16 +993,17 @@
             <button class="back-btn" onclick="showMenu()"><span>←</span> RETURN</button>
             <button class="nav-arrow" id="prev-agent-btn" onclick="navigateAgent(-1)" aria-label="Previous agent">‹</button>
             <button class="nav-arrow" id="next-agent-btn" onclick="navigateAgent(1)" aria-label="Next agent">›</button>
-            <div class="agent-title-wrap" style="display: flex; align-items: center; flex: 1; margin: 0 15px; position: relative;">
-                <span id="agent-breadcrumb" class="breadcrumb" style="margin-right: 15px; margin-left: 0;"></span>
-                <h2 id="agent-title" style="margin: 0; text-align: left; outline: none;">Agent Name</h2>
+            <div class="agent-title-wrap">
+                <span id="agent-breadcrumb" class="breadcrumb nav-breadcrumb"></span>
+                <h2 id="agent-title" class="nav-agent-title">Agent Name</h2>
                 <button class="edit-title-btn" onclick="startEditTitle()" aria-label="Edit Agent Name">
                     <svg aria-hidden="true"><use href="#icon-edit"/></svg>
                 </button>
                 <button class="delete-agent-btn" id="delete-agent-btn" onclick="deleteCurrentAgent()" aria-label="Delete Agent">
                     <svg aria-hidden="true"><use href="#icon-trash"/></svg>
                 </button>
-                <div style="flex: 1;"></div>
+                <div class="flex-spacer"></div>
+                <span id="prompt-copy-timestamp" class="editor-timestamp"></span>
                 <button class="title-save-btn" id="title-save-btn" onmousedown="event.preventDefault()" onclick="saveTitleEdit()">SAVE</button>
                 <button class="title-cancel-btn" id="title-cancel-btn" onmousedown="event.preventDefault()" onclick="cancelTitleEdit()">CANCEL</button>
             </div>
@@ -1007,12 +1067,12 @@
                     <svg aria-hidden="true"><use href="#icon-warning"/></svg>
                     <span>An agent with this name already exists in the selected group. It will be overwritten.</span>
                 </div>
-                <div class="field-error">Agent name is required</div>
+                <div class="field-error" aria-live="polite">Agent name is required</div>
             </div>
             <div class="wizard-field" id="wiz-prompt-field">
                 <label for="wiz-prompt">System Prompt Content</label>
                 <textarea id="wiz-prompt" rows="10" placeholder="Paste prompt here..." aria-label="Prompt content"></textarea>
-                <div class="field-error">Prompt content is required</div>
+                <div class="field-error" aria-live="polite">Prompt content is required</div>
             </div>
             <div class="wizard-actions">
                 <button class="wiz-save" id="wiz-create-btn" onclick="saveNewAgent()">CREATE</button>
@@ -1049,9 +1109,9 @@
         <div class="modal-card">
             <h3 id="collision-modal-title">Collision Detected</h3>
             <p id="collision-modal-text">An item with this name already exists.</p>
-            <div class="modal-actions" style="justify-content: space-between;">
+            <div class="modal-actions collision-modal-actions">
                 <button id="collision-modal-cancel" class="wiz-cancel">Cancel</button>
-                <div style="display: flex; gap: 8px;">
+                <div class="collision-btn-group">
                     <button id="collision-modal-rename" class="wiz-primary">Keep Both</button>
                     <button id="collision-modal-overwrite" class="wiz-danger">Overwrite</button>
                 </div>
@@ -1075,11 +1135,44 @@
             <div class="wizard-field" id="grp-name-field">
                 <label for="grp-name">Group Name</label>
                 <input type="text" id="grp-name" placeholder="e.g. BUG DETECTOR" aria-label="Group name">
-                <div class="field-error">Group name is required</div>
+                <div class="field-error" aria-live="polite">Group name is required</div>
             </div>
             <div class="wizard-actions">
                 <button class="wiz-save" id="grp-create-btn" onclick="saveNewGroup()">CREATE GROUP</button>
                 <button class="wiz-cancel" onclick="closeGroupCreate()">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="select-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="select-modal-title">
+        <div class="modal-card">
+            <h3 id="select-modal-title">Select Destination</h3>
+            <p id="select-modal-text">Choose a target group:</p>
+            <label for="select-modal-dropdown" class="sr-only" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0">Target group</label>
+            <select id="select-modal-dropdown" aria-label="Target group"></select>
+            <div class="modal-actions">
+                <button class="wiz-save" id="select-modal-ok">OK</button>
+                <button class="wiz-cancel" id="select-modal-cancel">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="recycle-bin-overlay" role="dialog" aria-label="Recycle Bin">
+        <div class="recycle-card">
+            <h3><svg aria-hidden="true"><use href="#icon-trash"/></svg> Recycle Bin</h3>
+            <div class="recycle-subtitle">Deleted agents and groups are stored here for 30 days</div>
+            <div class="recycle-list" id="recycle-list"></div>
+            <div class="recycle-footer">
+                <span class="recycle-footer-info">Items older than 30 days are permanently deleted on restart</span>
+                <div class="recycle-footer-actions">
+                    <button class="recycle-purge-all-btn" onclick="purgeAllBinItems()" id="purge-all-btn" style="display:none;">Purge All</button>
+                    <button class="recycle-close-btn" onclick="closeRecycleBin()">Close</button>
+                </div>
+            </div>
+            
+            <div class="recycle-loading-overlay" id="recycle-loader">
+                <div class="spinner"></div>
+                <div id="recycle-loader-text" class="recycle-loader-text">Working...</div>
             </div>
         </div>
     </div>
@@ -1125,11 +1218,21 @@
         const FOCUSABLE_SELECTOR = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
         let focusTrapPrevious = null;
 
-        function trapFocusIn(overlayEl) {
+        function trapFocusIn(overlayEl, onEscape = null) {
             focusTrapPrevious = document.activeElement;
             const focusable = overlayEl.querySelectorAll(FOCUSABLE_SELECTOR);
             if (focusable.length) setTimeout(() => focusable[0].focus(), 50);
             overlayEl._focusTrapHandler = (e) => {
+                if (e.key === 'Escape' || e.key === 'Esc') {
+                    e.preventDefault();
+                    if (typeof onEscape === 'function') {
+                        onEscape();
+                    } else {
+                        const cancelBtn = overlayEl.querySelector('.wiz-cancel, .recycle-close-btn, #confirm-modal-no, #collision-modal-cancel, [onclick*="close"], button');
+                        if (cancelBtn) cancelBtn.click();
+                    }
+                    return;
+                }
                 if (e.key !== 'Tab') return;
                 const fl = Array.from(overlayEl.querySelectorAll(FOCUSABLE_SELECTOR)).filter(el => el.offsetParent !== null);
                 if (!fl.length) return;
@@ -1261,7 +1364,7 @@
                 document.getElementById('confirm-modal-text').innerText = message;
                 overlay.style.display = 'flex';
                 setTimeout(() => overlay.classList.add('visible'), 10);
-                trapFocusIn(overlay);
+                trapFocusIn(overlay, () => document.getElementById('confirm-modal-no').click());
 
                 const yes = document.getElementById('confirm-modal-yes');
                 const no = document.getElementById('confirm-modal-no');
@@ -1285,7 +1388,7 @@
                 document.getElementById('collision-modal-text').innerText = message;
                 overlay.style.display = 'flex';
                 setTimeout(() => overlay.classList.add('visible'), 10);
-                trapFocusIn(overlay);
+                trapFocusIn(overlay, () => document.getElementById('collision-modal-cancel').click());
 
                 const overwriteBtn = document.getElementById('collision-modal-overwrite');
                 const renameBtn = document.getElementById('collision-modal-rename');
@@ -1311,7 +1414,7 @@
             document.getElementById('alert-modal-text').innerText = message;
             overlay.style.display = 'flex';
             setTimeout(() => overlay.classList.add('visible'), 10);
-            trapFocusIn(overlay);
+            trapFocusIn(overlay, closeAlertModal);
         }
 
         function closeAlertModal() {
@@ -1319,6 +1422,38 @@
             overlay.classList.remove('visible');
             setTimeout(() => overlay.style.display = 'none', 200);
             releaseFocusTrap(overlay);
+        }
+
+        async function showSelectPrompt(titleText, messageText, options) {
+            return new Promise((resolve) => {
+                const overlay = document.getElementById('select-modal-overlay');
+                document.getElementById('select-modal-title').innerText = titleText;
+                document.getElementById('select-modal-text').innerText = messageText;
+                const sel = document.getElementById('select-modal-dropdown');
+                sel.innerHTML = '';
+                options.forEach(opt => {
+                    const o = document.createElement('option');
+                    o.value = opt.value; o.innerText = opt.label;
+                    sel.appendChild(o);
+                });
+                overlay.style.display = 'flex';
+                setTimeout(() => { overlay.classList.add('visible'); setTimeout(() => sel.focus(), 50); }, 10);
+                trapFocusIn(overlay, () => document.getElementById('select-modal-cancel').click());
+
+                const okBtn = document.getElementById('select-modal-ok');
+                const cancelBtn = document.getElementById('select-modal-cancel');
+
+                const cleanup = (val) => {
+                    overlay.classList.remove('visible');
+                    setTimeout(() => overlay.style.display = 'none', 200);
+                    okBtn.onclick = null; cancelBtn.onclick = null;
+                    releaseFocusTrap(overlay);
+                    resolve(val);
+                };
+
+                okBtn.onclick = () => cleanup(sel.value);
+                cancelBtn.onclick = () => cleanup(null);
+            });
         }
 
         const ILLEGAL_CHARS = /[<>:"\/\\|?*\x00-\x1F]/g;
@@ -1335,19 +1470,31 @@
         const gutter = document.getElementById('line-gutter');
 
         
+        let lineUpdateTimer = null;
+        function scheduleUpdateLineNumbers() {
+            if (lineUpdateTimer) clearTimeout(lineUpdateTimer);
+            lineUpdateTimer = setTimeout(updateLineNumbers, 60);
+        }
+
         function updateLineNumbers() {
             if (!gutter || !box) return;
-            const text = box.innerText;
-            const lines = text.split(/\r\n|\r|\n/);
-            const count = Math.max(1, lines.length);
-            
+            const text = box.textContent || '';
+            let count = 1;
+            for (let i = 0; i < text.length; i++) {
+                if (text.charCodeAt(i) === 10) count++;
+            }
 
             const currentCount = gutter.children.length;
             if (currentCount !== count) {
                 if (currentCount === 0) {
-                    let html = '';
-                    for (let i = 1; i <= count; i++) html += `<div>${i}</div>`;
-                    gutter.innerHTML = html;
+                    const frag = document.createDocumentFragment();
+                    for (let i = 1; i <= count; i++) {
+                        const d = document.createElement('div');
+                        d.innerText = i;
+                        frag.appendChild(d);
+                    }
+                    gutter.innerHTML = '';
+                    gutter.appendChild(frag);
                 } else if (count > currentCount) {
                     const frag = document.createDocumentFragment();
                     for (let i = currentCount + 1; i <= count; i++) {
@@ -1498,26 +1645,35 @@
             globalTrash.classList.add('active');
         }
 
+        let dragMoveRAF = null;
+        let lastClientX = 0, lastClientY = 0;
         function handleManualDragMove(e) {
             if (!activeGroupDrag) return;
-            groupGhost.style.left = (e.clientX - ghostOffsetX) + 'px';
-            groupGhost.style.top = (e.clientY - ghostOffsetY) + 'px';
+            lastClientX = e.clientX;
+            lastClientY = e.clientY;
+            
+            if (dragMoveRAF) return;
+            dragMoveRAF = requestAnimationFrame(() => {
+                dragMoveRAF = null;
+                groupGhost.style.left = (lastClientX - ghostOffsetX) + 'px';
+                groupGhost.style.top = (lastClientY - ghostOffsetY) + 'px';
 
-            const target = e.target.closest('.group-container');
-            if (target && target.dataset.folder !== activeGroupDrag && !target.classList.contains('group-dragging')) {
-                const rect = target.getBoundingClientRect();
-                const next = (e.clientX > rect.left + rect.width / 2);
-                flip(menu, () => {
-                    if (next) menu.insertBefore(groupPlaceholder, target.nextSibling);
-                    else menu.insertBefore(groupPlaceholder, target);
-                });
-            }
+                const target = document.elementFromPoint(lastClientX, lastClientY)?.closest('.group-container:not(.group-dragging)');
+                if (target && target.dataset.folder !== activeGroupDrag) {
+                    const rect = target.getBoundingClientRect();
+                    const next = (lastClientX > rect.left + rect.width / 2);
+                    flip(menu, () => {
+                        if (next) menu.insertBefore(groupPlaceholder, target.nextSibling);
+                        else menu.insertBefore(groupPlaceholder, target);
+                    });
+                }
 
-            const trashRect = globalTrash.getBoundingClientRect();
-            if (e.clientX > trashRect.left && e.clientX < trashRect.right &&
-                e.clientY > trashRect.top && e.clientY < trashRect.bottom) {
-                globalTrash.classList.add('drag-over');
-            } else { globalTrash.classList.remove('drag-over'); }
+                const trashRect = globalTrash.getBoundingClientRect();
+                if (lastClientX > trashRect.left && lastClientX < trashRect.right &&
+                    lastClientY > trashRect.top && lastClientY < trashRect.bottom) {
+                    globalTrash.classList.add('drag-over');
+                } else { globalTrash.classList.remove('drag-over'); }
+            });
         }
 
         async function handleManualDragUp(e) {
@@ -1735,6 +1891,7 @@
                         return true;
                     }
                     updateBreadcrumb();
+                    if (typeof updateEditorTimestamp === 'function') updateEditorTimestamp();
                 }
                 restoreScroll();
                 return true;
@@ -1827,6 +1984,13 @@
                 editIcon.onclick = () => startRenameGroup(folderName, groupData.title, titleEl, header);
                 header.appendChild(editIcon);
 
+                const resetIcon = document.createElement('button'); resetIcon.className = 'edit-group-icon';
+                resetIcon.setAttribute('aria-label', 'Reset Copy Timestamps for ' + groupData.title + ' group');
+                resetIcon.title = 'Reset Copy Timestamps';
+                resetIcon.innerHTML = '<svg aria-hidden="true"><use href="#icon-counter"/></svg>';
+                resetIcon.onclick = () => resetGroupCopyTimestamps(folderName);
+                header.appendChild(resetIcon);
+
                 if (groupData.title !== "GENERAL") {
                     const delIcon = document.createElement('button'); delIcon.className = 'delete-group-icon';
                     delIcon.setAttribute('aria-label', 'Delete ' + groupData.title + ' group');
@@ -1880,8 +2044,16 @@
                     cp.setAttribute('aria-label', 'Copy ' + agentName + ' prompt');
                     cp.innerHTML = '<svg aria-hidden="true"><use href="#icon-copy"/></svg>';
                     cp.onpointerdown = (e) => e.stopPropagation();
-                    cp.onclick = (e) => { e.stopPropagation(); copyToClipboard(groupAgents[agentName]); };
-                    card.appendChild(cp); grid.appendChild(card);
+                    cp.onclick = (e) => { e.stopPropagation(); copyToClipboard(groupAgents[agentName], folderName, agentName); };
+                    card.appendChild(cp);
+                    const copyTimeStr = groupData.copy_times?.[agentName];
+                    if (copyTimeStr) {
+                        const tsSpan = document.createElement('span');
+                        tsSpan.className = 'card-timestamp';
+                        tsSpan.innerText = formatCopyTime(copyTimeStr);
+                        card.appendChild(tsSpan);
+                    }
+                    grid.appendChild(card);
                 });
 
                 if (filteredAgents.length === 0 && !f) {
@@ -1908,7 +2080,43 @@
         let filterDebounceTimer = null;
         function filterAgents() {
             clearTimeout(filterDebounceTimer);
-            filterDebounceTimer = setTimeout(() => { saveScroll(); renderMenu(search.value); restoreScroll(); }, 150);
+            filterDebounceTimer = setTimeout(() => {
+                const f = search.value.toLowerCase();
+                const groups = document.querySelectorAll('.group-container');
+                groups.forEach(g => {
+                    let hasVisible = false;
+                    const cards = g.querySelectorAll('.agent-card');
+                    cards.forEach(c => {
+                        const name = c.dataset.agent.toLowerCase();
+                        if (name.includes(f)) {
+                            c.style.display = '';
+                            hasVisible = true;
+                        } else {
+                            c.style.display = 'none';
+                        }
+                    });
+                    const emptyMsg = g.querySelector('.empty-group-msg');
+                    if (emptyMsg) {
+                        if (cards.length === 0 && !f) emptyMsg.style.display = '';
+                        else emptyMsg.style.display = 'none';
+                    }
+                    if (!hasVisible && cards.length > 0 && f) g.style.display = 'none';
+                    else g.style.display = '';
+                });
+                let allEmpty = true;
+                groups.forEach(g => { if (g.style.display !== 'none') allEmpty = false; });
+                let emptyState = document.querySelector('.search-empty-state');
+                if (f && allEmpty) {
+                    if (!emptyState) {
+                        emptyState = document.createElement('div'); emptyState.className = 'search-empty-state';
+                        emptyState.innerHTML = '<h3>No agents match your search</h3><p>Try a different search term</p><button onclick="clearSearch()">Clear Search</button>';
+                        menu.appendChild(emptyState);
+                    }
+                    emptyState.style.display = '';
+                } else if (emptyState) {
+                    emptyState.style.display = 'none';
+                }
+            }, 150);
         }
 
         function toggleGroupSelection(folderName, isChecked) {
@@ -1930,21 +2138,17 @@
             const allGroups = Object.keys(groups).sort();
             if (allGroups.length <= 1) { showToast('No other groups to move to', 'info'); return; }
             const targets = allGroups.filter(f => f !== fromFolder);
-            const groupNames = targets.map(f => groups[f].title);
-            const choice = await showConfirm(
-                `Move "${agentName}" to which group?\n\n${groupNames.map((n,i) => `${i+1}. ${n}`).join('\n')}`,
-                'Move Agent'
-            );
-            if (!choice) return;
+            const options = targets.map(f => ({ value: f, label: groups[f].title }));
+            const selectedTarget = await showSelectPrompt('Move Agent', `Select destination group for "${agentName}":`, options);
+            if (!selectedTarget) return;
             
-            
-            if (targets.length === 1) {
-                const res = await api('move', 'POST', { from: fromFolder, to: targets[0], name: agentName });
-                if (res && res.status === 'success') { showToast(`MOVED ${agentName}`, 'success'); await syncFromBridge(); }
-                else showToast('MOVE FAILED', 'error');
+            const res = await api('move', 'POST', { from: fromFolder, to: selectedTarget, name: agentName });
+            if (res && res.status === 'success') {
+                showToast(`MOVED "${agentName}" TO ${groups[selectedTarget].title}`, 'success');
+                a11yAnnounce(`Agent ${agentName} moved to ${groups[selectedTarget].title}.`);
+                await syncFromBridge();
             } else {
-                
-                showToast('Use drag-and-drop or the move-selected feature for multi-group targets', 'info');
+                showToast('MOVE FAILED', 'error');
             }
         }
 
@@ -1999,7 +2203,7 @@
             document.getElementById('grp-name').value = ''; document.getElementById('grp-name-field').classList.remove('has-error');
             const overlay = document.getElementById('group-create-overlay'); overlay.style.display = 'flex';
             setTimeout(() => { overlay.classList.add('visible'); document.getElementById('grp-name').focus(); }, 10);
-            trapFocusIn(overlay);
+            trapFocusIn(overlay, closeGroupCreate);
         }
 
         function closeGroupCreate() {
@@ -2042,7 +2246,7 @@
             view.style.display = 'flex'; title.innerText = agent; box.innerText = groups[folder].agents[agent];
             updateLineNumbers();
             setPromptBoxEditing(false);
-            updateNavArrows(); updateBreadcrumb();
+            updateNavArrows(); updateBreadcrumb(); updateEditorTimestamp();
         }
 
         function showMenu() {
@@ -2094,6 +2298,29 @@
         }
 
         function updateBreadcrumb() { const bc = document.getElementById('agent-breadcrumb'); if (bc && groups[currentGroup]) bc.innerText = groups[currentGroup].title; }
+        function formatCopyTime(ts) {
+            if (!ts) return '';
+            if (/^\d{2}\/\d{2}\s\d{2}:\d{2}$/.test(ts)) return ts;
+            const d = new Date(ts);
+            if (!isNaN(d.getTime())) {
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const hours = String(d.getHours()).padStart(2, '0');
+                const mins = String(d.getMinutes()).padStart(2, '0');
+                return `${day}/${month} ${hours}:${mins}`;
+            }
+            return ts;
+        }
+        function updateEditorTimestamp() {
+            const el = document.getElementById('prompt-copy-timestamp');
+            if (!el) return;
+            const ts = groups[currentGroup]?.copy_times?.[currentAgent];
+            if (ts) {
+                el.innerText = formatCopyTime(ts);
+            } else {
+                el.innerText = '';
+            }
+        }
 
         function startEdit() {
             box.contentEditable = true; box.classList.add('editing');
@@ -2101,8 +2328,15 @@
             document.getElementById('main-copy-btn').style.display = 'none';
             document.getElementById('save-btn').style.display = 'block'; document.getElementById('cancel-btn').style.display = 'block';
             promptBoxWrap.classList.add('editing-state');
-            box.oninput = updateLineNumbers;
-            box.onscroll = () => { if (gutter) gutter.scrollTop = box.scrollTop; };
+            box.oninput = scheduleUpdateLineNumbers;
+            let scrollRAF = null;
+            box.onscroll = () => { 
+                if (scrollRAF) return;
+                scrollRAF = requestAnimationFrame(() => {
+                    if (gutter) gutter.scrollTop = box.scrollTop; 
+                    scrollRAF = null;
+                });
+            };
             box.onkeydown = (e) => {
                 if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveEdit(); }
                 if (e.key === 'Escape') { 
@@ -2157,7 +2391,7 @@
                 const res = await api('save', 'POST', { group: currentGroup, name: newName, content: box.innerText, old_name: prev });
                 if (res && res.status === 'success') {
                     currentAgent = newName; await syncFromBridge(); title.innerText = newName;
-                    showToast("AGENT RENAMED", "success"); updateNavArrows(); updateBreadcrumb();
+                    showToast("AGENT RENAMED", "success"); updateNavArrows(); updateBreadcrumb(); updateEditorTimestamp();
                 } else { title.innerText = prev; showToast("RENAME FAILED", "error"); }
             } else title.innerText = prev;
         }
@@ -2182,6 +2416,7 @@
             if (currentAgent && groups[currentGroup]?.agents?.[currentAgent]) {
                 title.innerText = currentAgent; box.innerText = groups[currentGroup].agents[currentAgent];
             }
+            if (typeof updateEditorTimestamp === 'function') updateEditorTimestamp();
         }
 
         async function saveEdit() {
@@ -2197,7 +2432,8 @@
         }
 
         function openWizard(pre) {
-            const sel = document.getElementById('wiz-group'); sel.innerHTML = '';
+            const sel = document.getElementById('wiz-group');
+            sel.innerHTML = '<option value="" disabled selected>Select a group...</option>';
             Object.keys(groups).sort().forEach(f => { const o = document.createElement('option'); o.value = f; o.innerText = groups[f].title; sel.appendChild(o); });
             if (pre) sel.value = pre;
             document.getElementById('wiz-name').value = ''; document.getElementById('wiz-prompt').value = '';
@@ -2206,7 +2442,7 @@
             document.getElementById('wiz-duplicate-warning').classList.remove('visible');
             const overlay = document.getElementById('wizard-overlay'); overlay.style.display = 'flex';
             setTimeout(() => { overlay.classList.add('visible'); document.getElementById('wiz-name').focus(); }, 10);
-            trapFocusIn(overlay);
+            trapFocusIn(overlay, closeWizard);
         }
 
         function closeWizard() {
@@ -2224,6 +2460,7 @@
         async function saveNewAgent() {
             const f = document.getElementById('wiz-group').value, n = document.getElementById('wiz-name').value.trim().replace(ILLEGAL_CHARS, '_'), c = document.getElementById('wiz-prompt').value;
             let err = false;
+            if (!f) { err = true; showToast("Please select a group", "warning"); }
             if (!n) { document.getElementById('wiz-name-field').classList.add('has-error'); err = true; }
             if (!c) { document.getElementById('wiz-prompt-field').classList.add('has-error'); err = true; }
             if (err) return;
@@ -2237,8 +2474,34 @@
             else showToast("CREATE FAILED", "error");
         }
 
-        function copyToClipboard(t) { navigator.clipboard.writeText(t).then(() => showToast("COPIED", "success")); }
-        function copyPrompt() { copyToClipboard(box.innerText); }
+        function copyToClipboard(t, groupFolder, agentName) {
+            navigator.clipboard.writeText(t).then(async () => {
+                showToast("COPIED", "success");
+                if (groupFolder && agentName) {
+                    const res = await api('record-copy', 'POST', { group: groupFolder, name: agentName });
+                    if (res && res.status === 'success' && res.timestamp) {
+                        if (groups[groupFolder]) {
+                            if (!groups[groupFolder].copy_times) groups[groupFolder].copy_times = {};
+                            groups[groupFolder].copy_times[agentName] = res.timestamp;
+                        }
+                        if (currentGroup === groupFolder && currentAgent === agentName && view.style.display !== 'none') {
+                            updateEditorTimestamp();
+                        }
+                        const card = document.querySelector(`.agent-card[data-folder="${groupFolder}"][data-agent="${agentName}"]`);
+                        if (card) {
+                            let tsEl = card.querySelector('.card-timestamp');
+                            if (!tsEl) {
+                                tsEl = document.createElement('span');
+                                tsEl.className = 'card-timestamp';
+                                card.appendChild(tsEl);
+                            }
+                            tsEl.innerText = formatCopyTime(res.timestamp);
+                        }
+                    }
+                }
+            });
+        }
+        function copyPrompt() { copyToClipboard(box.innerText, currentGroup, currentAgent); }
 
         function showToast(m, t = 'info') {
             const el = document.getElementById('toast'); el.innerText = m; el.className = 'toast visible ' + t;
@@ -2323,7 +2586,7 @@
             });
             overlay.style.display = 'flex';
             setTimeout(() => overlay.classList.add('visible'), 10);
-            trapFocusIn(overlay);
+            trapFocusIn(overlay, closeBulkMove);
         }
 
         function closeBulkMove() {
@@ -2354,11 +2617,31 @@
         }
 
 
+        async function resetAllCopyTimestamps() {
+            const res = await api('reset-copy-times', 'POST', {});
+            if (res && res.status === 'success') {
+                await syncFromBridge();
+                showToast("TIMESTAMPS RESET", "success");
+            } else {
+                showToast("RESET FAILED", "error");
+            }
+        }
+
+        async function resetGroupCopyTimestamps(folder) {
+            const res = await api('reset-copy-times', 'POST', { group: folder });
+            if (res && res.status === 'success') {
+                await syncFromBridge();
+                showToast("GROUP TIMESTAMPS RESET", "success");
+            } else {
+                showToast("RESET FAILED", "error");
+            }
+        }
+
         async function openRecycleBin() {
             const overlay = document.getElementById('recycle-bin-overlay');
             overlay.style.display = 'flex';
             setTimeout(() => overlay.classList.add('visible'), 10);
-            trapFocusIn(overlay);
+            trapFocusIn(overlay, closeRecycleBin);
             await refreshRecycleBinList();
         }
 
@@ -2439,7 +2722,7 @@
             const loader = document.getElementById('recycle-loader');
             const textEl = document.getElementById('recycle-loader-text');
             if (loader && textEl) {
-                textEl.innerHTML = `<div style="font-size:15px; font-weight:600; color:var(--text);">${text}</div><div id="recycle-loader-steps" style="text-align:left; margin-top:12px; font-weight:normal; font-size:13px; color:var(--text-dim); line-height:1.6; max-width: 250px; margin-left: auto; margin-right: auto;"></div>`;
+                textEl.innerHTML = `<div class="recycle-loader-title">${text}</div><div id="recycle-loader-steps" class="recycle-loader-steps-container"></div>`;
                 loader.classList.add('visible');
             }
         }
@@ -2452,7 +2735,7 @@
             const stepsEl = document.getElementById('recycle-loader-steps');
             if (stepsEl) {
                 const step = document.createElement('div');
-                step.innerHTML = `<span style="display:inline-block; width:20px;">⏳</span>${stepText}`;
+                step.innerHTML = `<span class="recycle-step-icon">⏳</span>${stepText}`;
                 stepsEl.appendChild(step);
                 return step;
             }
@@ -2461,7 +2744,7 @@
 
         function markRecycleLoaderStepComplete(stepEl, success = true) {
             if (stepEl) {
-                stepEl.innerHTML = stepEl.innerHTML.replace('⏳', success ? '<span style="color:#2ecc71;">✓</span>' : '<span style="color:#e74c3c;">❌</span>');
+                stepEl.innerHTML = stepEl.innerHTML.replace('⏳', success ? '<span class="status-icon-success">✓</span>' : '<span class="status-icon-error">❌</span>');
             }
         }
 
@@ -2604,6 +2887,7 @@
             
             overlay.style.display = 'flex';
             setTimeout(() => overlay.classList.add('visible'), 10);
+            promptBoxWrap.classList.add('search-active');
             
             if (replaceMode) {
                 replaceRow.style.display = 'flex';
@@ -2625,6 +2909,7 @@
             const overlay = document.getElementById('search-overlay');
             overlay.classList.remove('visible');
             setTimeout(() => overlay.style.display = 'none', 200);
+            promptBoxWrap.classList.remove('search-active');
             searchMatches = [];
             currentSearchIdx = -1;
             window.getSelection().removeAllRanges();
@@ -2856,39 +3141,19 @@
                 const confirmOverlay = document.getElementById('confirm-modal-overlay');
                 const alertOverlay = document.getElementById('alert-modal-overlay');
                 const bulkOverlay = document.getElementById('bulk-move-overlay');
+                const selectOverlay = document.getElementById('select-modal-overlay');
                 if (document.getElementById('wizard-overlay').classList.contains('visible')) closeWizard();
                 else if (document.getElementById('group-create-overlay').classList.contains('visible')) closeGroupCreate();
                 else if (confirmOverlay.classList.contains('visible')) { document.getElementById('confirm-modal-no').click(); }
                 else if (alertOverlay.classList.contains('visible')) closeAlertModal();
                 else if (bulkOverlay.classList.contains('visible')) closeBulkMove();
+                else if (selectOverlay && selectOverlay.classList.contains('visible')) { document.getElementById('select-modal-cancel').click(); }
                 else if (document.getElementById('recycle-bin-overlay').classList.contains('visible')) closeRecycleBin();
                 else if (view.style.display === 'flex') showMenu();
                 else if (isDeleteMode) cancelDeleteMode();
             }
         });
     </script>
-
-    
-    <div id="recycle-bin-overlay" role="dialog" aria-label="Recycle Bin">
-        <div class="recycle-card">
-            <h3><svg aria-hidden="true"><use href="#icon-trash"/></svg> Recycle Bin</h3>
-            <div class="recycle-subtitle">Deleted agents and groups are stored here for 30 days</div>
-            <div class="recycle-list" id="recycle-list"></div>
-            <div class="recycle-footer">
-                <span class="recycle-footer-info">Items older than 30 days are permanently deleted on restart</span>
-                <div style="display: flex; gap: 8px;">
-                    <button class="recycle-purge-all-btn" onclick="purgeAllBinItems()" id="purge-all-btn" style="display:none;">Purge All</button>
-                    <button class="recycle-close-btn" onclick="closeRecycleBin()">Close</button>
-                </div>
-            </div>
-            
-            <div class="recycle-loading-overlay" id="recycle-loader">
-                <div class="spinner"></div>
-                <div id="recycle-loader-text" style="color:var(--text); font-weight:600; font-size:14px; margin-top:10px;">Working...</div>
-            </div>
-        </div>
-    </div>
-
 <!-- build: ux-audit-fixes 2026-07-17 -->
 </body>
 </html>

@@ -46,7 +46,3 @@ Apply approved fixes and code deletions with absolute precision based on the use
 
 Strict Output Constraints:
 * STRIP COMMENTS: Delete all existing comments in modified files. Generate zero new comments.
-* CODE REPLACEMENT FORMAT: Output modifications exactly as follows. Zero truncation.
-  1. FILE: [Full file name and path]
-  2. CODE REPLACEMENT INDICATION: [Line numbers start to end]
-  3. [CODE BLOCK]

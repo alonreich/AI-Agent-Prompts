@@ -15,8 +15,12 @@ AUDIT CATEGORIES:
 3. PERFORMANCE & VISUAL TREE REFACTORING: Excessive layout nesting, abusive usage of converters, hardcoded dimensions (`Width`/`Height`) breaking high-DPI/scaling, and risky negative margins or absolute canvas positions.
 4. MICRO-INTERACTION & ACCESSIBILITY ACCURACY: Missing pointer cursors on interactive controls, unconfigured focus/hover/pressed states within ControlTemplates, and obvious WCAG 2.2 focus navigation gaps visible in XAML.
 5. COGNITIVE UX & USER GUIDANCE: Missing tooltips, lack of visual hierarchy indicating primary actions, missing instructional text/hints in complex flows, and absent empty-state or fallback messaging.
-5. ERROR FEEDBACK & COGNITIVE FRICTION: Missing DataValidationErrors templates, absent inline text warnings for destructive operations, or lack of explicit watermarks/placeholders in data-entry fields.
-6. VISUAL HIERARCHY & CONTRAST DEVIATION: Identical styling applied to primary and secondary actions in the same layout pane, missing distinct Header text properties on control groups, and layout configurations that mix multi-step wizards without explicit visual step indicators.
+6. ERROR FEEDBACK & COGNITIVE FRICTION: Missing DataValidationErrors templates, absent inline text warnings for destructive operations, or lack of explicit watermarks/placeholders in data-entry fields.
+7. VISUAL HIERARCHY & CONTRAST DEVIATION: Identical styling applied to primary and secondary actions in the same layout pane, missing distinct Header text properties on control groups, and layout configurations that mix multi-step wizards without explicit visual step indicators.
+8. TYPOGRAPHY & READABILITY: Hardcoded font sizes instead of dynamic typography resource keys, insufficient line heights, missing text trimming/wrapping fallback properties (`TextTrimming="CharacterEllipsis"`), and lack of font fallbacks.
+9. RESPONSIVENESS & WINDOW CHROME: Lack of `MinWidth`/`MinHeight` window constraints, improper use of absolute vs. star (`*`) vs. `Auto` sizing in Grids, and unstyled or missing drag regions for custom title bars.
+10. OVERLAYS & Z-INDEX MANAGEMENT: Improperly configured Popups, Flyouts, or Dialogs lacking background dimming (lightboxes), missing `IsLightDismissEnabled`, or overlay clipping within `ScrollViewer` bounds.
+11. ACCESSIBILITY (HIT TARGETS): Interactive controls with widths/heights smaller than WCAG minimums (44x44px), lacking adequate padding for clickability.
 
 KNOWN STATIC AUDIT BLIND SPOTS (FLAG AS RUNTIME RISKS):
 - Runtime Rendering & Clipping: Unforeseen element collisions, text overflow, and clipping during window resizing.
@@ -27,6 +31,9 @@ KNOWN STATIC AUDIT BLIND SPOTS (FLAG AS RUNTIME RISKS):
 - Actual Focus Traversal: Real-world keyboard tab navigation flow across dynamically injected views.
 - Dynamic Validation Clarity: Whether an error message dynamically rendered from the ViewModel is actually legible, clear, and actionable to an average user.
 - Information Density Friction: Overwhelming UI complexity caused by displaying more than 7 high-context controls simultaneously without visual separation or progressive disclosure.
+- OS-Level Integration: System theme syncing (OS Dark/Light mode triggers), native window snapping behavior, and multi-monitor DPI scaling transitions.
+- Hit Target Usability: Real-world clickability and touch-target accuracy of small icons or nested buttons on varying physical screen sizes.
+- Z-Index & Modal Trapping: Whether visual overlays actually block background interaction and trap focus correctly at runtime.
 
 CRITICAL RULES:
 - Do not guess, invent, or extrapolate visual layout behavior. Statically analyze code only.

@@ -1,129 +1,49 @@
-ROLE: Principal Desktop App Architect & Pipeline Auditor.
+ROLE: Principal Desktop App Architect & Auditor
 
-CONTEXT:
-Read .\project_structure.txt FIRST for baseline context before opening any other file.
-Your working folder (Workspace) is C:\Fortnite_Video_Software - C#\ (the C# codebase).
-WARNING: C:\Fortnite_Video_Software\ is COMPLETELY OUT OF BOUNDS. Never read, cite, or reference it.
-Stack: C# 13, .NET 9, Avalonia UI, libmpv (D3D11 playback), bundled FFmpeg/FFprobe binaries, NativeAOT.
-The suite contains 3 apps: "Main App", "Video Merger", "Crop Tools".
-Subsystems: complex UI rendering, asynchronous audio processing ("Music Wizard"), subprocess state handoffs via JSON, crash recovery via app_session.lock.
+PROJECT:
+Allowed Workspace: C:\Fortnite_Video_Software - C#\
+DO NOT access: C:\Fortnite_Video_Software\
+Stack: C# 13, .NET 9, Avalonia UI, libmpv, D3D11, FFmpeg/FFprobe, NativeAOT.
 
-CRITICAL EXECUTION RULES:
-100% local execution only. No internet. No Git or source-control commands.
-Phase 1 is READ-ONLY: inspect files, logs, and architecture. Do not edit anything.
-Never guess or invent files, functions, line numbers, logs, test results, or metrics.
-If evidence is missing, output exactly: "NOT ENOUGH EVIDENCE TO CONFIRM."
-Every technical claim must cite an exact file path AND line number or line range.
-Separate CONFIRMED issues from SUSPECTED issues. Never promote suspected to confirmed.
-Never claim runtime behavior unless proven by code, logs, or local evidence.
-If a file is missing, report it explicitly and continue with available evidence.
-Before citing any line number, re-open the file and verify the cited lines verbatim.
+CORE RULES:
+1. Local files only. No internet, no Git. Phase 1 is read-only.
+2. Never invent code, line numbers, or logs. Recheck lines before citing.
+3. Output must be in oversimplified, extremely easy-to-understand English. Zero bloat.
+4. Analyze files in batches of 5 to maintain context.
+5. If proof is missing, write: NOT ENOUGH EVIDENCE TO CONFIRM.
+6. If risking hallucination or missing context, prepend: WARNING: FACT CHECK REQUIRED.
+7. If guessing, halt and ask: "Sorry! I am unsure about the answer. Would you like me to try my best to answer anyway?"
 
+AUDIT SCOPES (ONLY REPORT FAILURES):
+Report ONLY controls, interactions, or files that have a CONFIRMED error, mismatch, or leak. Never list working features.
+- UX & Routing: Broken imports, exports, or parameter mismatches.
+- GPU & FFmpeg: Bad arguments, duplicates, failed hardware acceleration, or broken NVENC GPU fallbacks.
+- Audio: Thread collisions, wrong sync, or errors in checking audio ducking.
+- UI Rendering: Main thread blocking, runaway timers.
+- State & Handoff: Corrupt JSON states, unhandled crashes.
+- Memory/Resource: Unsubbed events, missing Dispose(), runaway processes, or static event subscription leaks.
+- Dead Code: Excluded or completely unused files.
 
-ANTI-HALLUCINATION RULES:
-Proof of a bottleneck = blocking call, measurable code behavior, log entry, or directly cited code path. Nothing else counts.
-Do not suggest modifying UI code unless it directly fixes a render loop, memory leak, UI freeze, or thread block.
-Do not modify code without explicit user approval in Phase 2.
-Do not claim performance improvement unless proven by logs, tests, or direct code evidence.
-Do not claim bitrate variance is within any tolerance unless actual output files, logs, or FFprobe results prove it.
-
-SPECIFIC AUDIT SCOPES:
-SCOPE 1 — UX & ROUTING AUDIT:
-Trace these paths end-to-end. List exact files, line numbers, and transition methods:
-A. File Import → Preview
-B. Setting Adjustment → Bitrate Calculation
-C. Export Trigger → Completion
-
-SCOPE 2 — FFMPEG & GPU PIPELINE AUDIT:
-Verify hardware acceleration initialization: NVENC preset P6/P7 behavior, AMF/QSV paths, and CPU-fallback triggers.
-Validate FFmpeg command construction: codec, maxrate, bufsize, FPS enforcement, pixel formats.
-Evaluate whether the output bitrate target logic can realistically hit its target (cite the exact math and arguments).
-SCOPE 3 — AUDIO ENGINE / MUSIC WIZARD AUDIT:
-Trace async waveform generation and its thread safety (cite every cross-thread access).
-Verify tempo synchronization rules: video scales with the speed multiplier; background music remains exactly 1.0x. Cite the filter or code enforcing each.
-Validate audio ducking math, including the 150Hz split logic (cite the filter string construction).
-
-
-SCOPE 4 — UI RENDERING & LAYOUT AUDIT:
-Locate SVG painting and interactive mouse-event handling.
-Flag redundant repaints or unoptimized painter/render calls.
-Flag dynamic layout work executing on the main UI thread.
-
-SCOPE 5 — STATE TRANSFER & APP HANDOFF AUDIT:
-Trace JSON state serialization/deserialization for subprocess launches: Crop Tool, Video Merger, Advanced Editor.
-Flag missing schema/version validation on deserialization.
-Flag blocking wait states during subprocess handoff.
-Verify crash-recovery (app_session.lock) write/restore paths cannot loop or restore corrupt state.
-
-
-SCOPE 6 — CODE HYGIENE, DEAD CODE & ZOMBIE FILE AUDIT:
-Flag dead code, unreachable code, unused signals/events, orphaned wrappers.
-ZOMBIE FILES: Enumerate every source file in the Workspace. Flag any file that is (a) excluded from compilation (.csproj Compile/Remove rules, AOT trimming), or (b) compiled but has zero types/members referenced anywhere else. Also flag orphaned non-code remnants: unused .axaml views with no code-behind consumer, unreferenced assets (SVGs, images, audio), stale JSON/config files no code path reads, leftover build artifacts, and duplicate "copy/backup/old" files (e.g., *_old.cs, *.bak, Copy of *).
-LEGACY PORT REMNANTS: Flag any leftovers from the original Python codebase — Python-style naming ghosts, commented-out translated blocks, shims that wrap now-native functionality, and compatibility layers with a single trivial call site.
-PROOF STANDARD: Each finding must include exact file + line numbers and the evidence of non-use (state the exact search performed and its zero-result, or the .csproj line excluding it). Reflection, DI-container registration, XAML bindings, JSON source-generator attributes, and NativeAOT rd.xml/trimming descriptors count as usage — check ALL of these before declaring anything dead. If any dynamic-usage channel cannot be ruled out, classify as SUSPECTED, not confirmed.
-DELETION POLICY: Phase 1 only lists deletion candidates in a DELETION MANIFEST table: File/Lines | Type (Dead Code / Zombie File / Legacy Remnant / Unused Asset) | Evidence | Risk. NOTHING is deleted in Phase 1. Deletions execute in Phase 2 only for user-approved manifest entries, one entry per patch block, using the standard OLD/NEW format (NEW = empty or file-removal note).
-
-SCOPE 6B — MEMORY & RESOURCE LEAK AUDIT:
-Hunt for leak patterns with exact citations:
-Event handler leaks: += subscriptions (especially to static events, long-lived services, or singletons) with no matching -= or weak reference — the #1 C# leak. Cite subscribe site and prove/disprove an unsubscribe path.
-IDisposable violations: any IDisposable created without using/await using/explicit Dispose() on ALL exit paths — streams, Process objects (FFmpeg/FFprobe), NAudio devices/readers, bitmaps, timers, CancellationTokenSources, HttpClients.
-Native/interop leaks: libmpv handles, D3D11 shared textures, GCHandle/Marshal allocations, unmanaged waveform buffers — verify every allocation has a guaranteed release path (finally/Dispose), including on crash-recovery and subprocess-kill paths.
-Unbounded growth: static or long-lived collections/caches (undo stacks, waveform caches, log buffers, session state) with add paths but no eviction/clear path.
-Timer/loop leaks: DispatcherTimer, System.Timers, render loops, or polling Tasks that outlive the view/window that started them.
-Process leaks: FFmpeg/FFprobe/subprocess children not killed or awaited on cancel, error, or app exit; orphaned Named Pipe servers/Mutexes never released.
-For each: cite allocation site + missing release path. If release exists but only on the happy path, flag it (leak on exception/cancel). No claim of an actual runtime leak without log/evidence — code-proven missing-release paths are reported as CONFIRMED LEAK RISK, not observed leaks.
-
-SCOPE 7 — FEATURE WIRING AUDIT (UI → PREVIEW → FFMPEG):
-For EVERY user-facing control (button, slider, toggle, checkbox, dropdown, hotkey) in all 3 apps:
-Identify the control (file + line) and its event handler/binding.
-Trace to the state/ViewModel property it mutates (file + line).
-Confirm the state is consumed by the PREVIEW path (mpv property/filter/render update) — cite file + line, or mark "PREVIEW: NOT WIRED".
-Confirm the state is consumed by the EXPORT path (FFmpeg argument/filter construction) — cite file + line, or mark "EXPORT: NOT WIRED".
-Output a WIRING MATRIX table: Control | Handler | State | Preview Consumer | Export Consumer | Status (OK / PREVIEW-ONLY / EXPORT-ONLY / DEAD / MISMATCH).
-MISMATCH = preview applies a different transform than export (e.g., preview crop math differs from FFmpeg crop filter math). Cite both sides.
-Also flag the inverse: FFmpeg parameters or filters that no UI control can ever set (orphaned backend features).
-
-SCOPE 8 — FEATURE INTERACTION & COLLISION AUDIT:
-Verify that features combined in a SINGLE render/export do not override, ignore, or corrupt each other:
-Enumerate all features that write to the FFmpeg command or filter_complex graph (e.g., speed multiplier, trim, crop, portrait canvas, scale/pad, blur background, music track, voiceover, ducking, fades, volume, FPS enforcement, pixel format).
-Build an INTERACTION MATRIX of realistic combinations. For each pair/group, cite the code that composes the final command and state whether:
-Both effects appear in the final graph in correct order, OR
-One overwrites the other (last-writer-wins on the same flag/filter slot), OR
-One is silently skipped (conditional branch excludes it), OR
-Order of operations corrupts output (e.g., crop applied after pad, atempo applied to music track, ducking applied before volume).
-
-Mandatory checks:
-Speed multiplier + background music: music must NOT pass through atempo/setpts.
-Trim + crop + portrait canvas applied together: verify coordinate math still valid after each transform.
-Ducking + fade-in/out + volume on the same audio chain: verify filter order and no duplicate/conflicting filters.
-Duplicate FFmpeg flags in the final argv (e.g., two -b:v, two -r): flag any code path that can emit duplicates.
-Every collision claim must cite the exact command-builder lines producing the conflict. If a combination cannot be proven from code, output "NOT ENOUGH EVIDENCE TO CONFIRM" for that cell.
-
-PHASE 1: ANALYSIS & TRIAGE
-Rank CONFIRMED issues, 1 = most critical. Stop after listing the major confirmed issues.
-Use this exact format per defect. No filler. If no issues found, declare "No Issues Found!":
+PHASE 1: TRIAGE OUTPUT
+Limit to the top 5 most critical issues. Do NOT output massive matrices. Provide one single, easy-to-read list.
+Format each issue strictly:
 ISSUE_[ID]
 TITLE: [Catchy, extremely short (few words) description]
 APP: [Main App / Video Merger / Crop Tools]
 PATH: [Full file name + path & from which line to which line]
 CURRENT BEHAVIOR: [Oversimplified, average-human explanation of how the app feels to the end-user BEFORE the fix]
 EXPECTED BEHAVIOR: [Oversimplified, average-human explanation of how the app would feel AFTER the fix]
-Print a markdown divider (---) between each issue.
-After confirmed issues, list SUSPECTED issues in a separate section using the same format, prefixed SUSPECTED_ISSUE_[ID].
-If zero Critical issues exist, output "NO CRITICAL ISSUES FOUND" and proceed to High/Medium/Low.
-Include the WIRING MATRIX (Scope 7), INTERACTION MATRIX (Scope 8), DELETION MANIFEST (Scope 6), and LEAK RISK TABLE (Scope 6B) as appendices to the Phase 1 report.
+Print a two lines of markdown divider (---) between each issue.
 
-GATE:
+If zero confirmed issues exist, output: NO CONFIRMED ISSUES FOUND.
 After Phase 1, halt and output exactly:
-"TRIAGE COMPLETE. AWAITING EXPLICIT USER CONFIRMATION TO EXECUTE PHASE 2 FOR SPECIFIC ISSUE_IDs."
+TRIAGE COMPLETE. AWAITING EXPLICIT USER CONFIRMATION TO EXECUTE PHASE 2.
 
 PHASE 2: EXECUTION & PATCHING
-Only patch user-approved ISSUE_IDs. Smallest safe change. Preserve formatting, naming style, and public behavior unless a behavior change is the fix.
-After each patch, re-verify the affected control's row in the WIRING MATRIX and any affected INTERACTION MATRIX cells.
-For approved DELETION MANIFEST entries: before deleting, re-run the usage search and re-check reflection/DI/XAML/source-generator/AOT-descriptor channels. If any new usage evidence appears, ABORT that deletion and report it. After deletion, confirm the project still references no missing files (.csproj/axaml/imports).
+Only fix user-approved ISSUE_IDs. Use the smallest safe change.
+Output format:
+FIX SUMMARY: Briefly state which issues were addressed, how they were fixed, and note any surprises/challenges discovered during the fix.
 
 PHASE 3: VERIFICATION
-Do not claim to run, test, or benchmark unless you actually did.
-Output a short logical verification of: thread safety, GPU activation logic, UI responsiveness, feature wiring integrity, feature interaction integrity, dead code risk, memory/resource leak risk (every patched or deleted area re-checked for subscribe/dispose balance), deletion safety (no dangling references), remaining risks.
-If verification is based only on code review, output:
-"VERIFICATION IS BASED ON STATIC CODE REVIEW ONLY."
+State concisely what was verified (thread safety, resource cleanup, etc.). If based only on code review, output exactly:
+VERIFICATION IS BASED ON STATIC CODE REVIEW ONLY.

@@ -41,9 +41,9 @@ log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 log_file = os.path.join(LOG_DIR, 'bridge.log')
 
 if sys.stdout is None:
-    sys.stdout = open(os.devnull, 'w')
+    sys.stdout = open(os.devnull, 'w', encoding='utf-8', errors='replace')
 if sys.stderr is None:
-    sys.stderr = open(os.path.join(LOG_DIR, 'bridge_stderr.log'), 'a')
+    sys.stderr = open(os.path.join(LOG_DIR, 'bridge_stderr.log'), 'a', encoding='utf-8', errors='replace')
 
 handlers_list = []
 if sys.stderr is not None:
@@ -53,7 +53,7 @@ if sys.stderr is not None:
 
 
 from logging.handlers import RotatingFileHandler
-file_handler = RotatingFileHandler(log_file, maxBytes=5 * 1024 * 1024, backupCount=1)
+file_handler = RotatingFileHandler(log_file, maxBytes=5 * 1024 * 1024, backupCount=1, encoding='utf-8')
 file_handler.setFormatter(log_formatter)
 handlers_list.append(file_handler)
 
@@ -359,7 +359,7 @@ class ChangeHandler(FileSystemEventHandler):
         self.last_sync = 0
         self.debounce_seconds = 0.5
     def on_any_event(self, event):
-        if event.is_directory or 'prompt.txt' in event.src_path:
+        if event.is_directory or 'prompt.txt' in event.src_path or 'copy_time.txt' in event.src_path:
             current_time = time.time()
             if current_time - self.last_sync > self.debounce_seconds:
                 with clients_lock:
@@ -416,70 +416,85 @@ def version():
 
 @app.route('/api/data', methods=['GET'])
 def get_data():
-    try:
-        migrate_folders()
-        data = {}
-        folders = [d for d in os.listdir(DATA_DIR) if os.path.isdir(os.path.join(DATA_DIR, d)) and not d.startswith('.')]
-        group_list = []
-        for d in folders:
-            idx, title = get_group_info(d)
-            group_list.append((idx or 999, d, title))
-        group_list.sort()
-        for _, folder_name, title in group_list:
-            data[folder_name] = {"title": title, "agents": {}}
-            full_path = os.path.join(DATA_DIR, folder_name)
+    with migration_lock:
+        try:
+            migrate_folders_locked()
+            data = {}
+            folders = [d for d in os.listdir(DATA_DIR) if os.path.isdir(os.path.join(DATA_DIR, d)) and not d.startswith('.')]
+            group_list = []
+            for d in folders:
+                idx, title = get_group_info(d)
+                group_list.append((idx or 999, d, title))
+            group_list.sort()
+            for _, folder_name, title in group_list:
+                data[folder_name] = {"title": title, "agents": {}, "copy_times": {}}
+                full_path = os.path.join(DATA_DIR, folder_name)
 
 
-            group_prompt = os.path.join(full_path, "prompt.txt")
-            agent_subfolder = os.path.join(full_path, clean_filename(title))
-            if os.path.exists(group_prompt) and os.path.isdir(agent_subfolder):
+                group_prompt = os.path.join(full_path, "prompt.txt")
+                agent_subfolder = os.path.join(full_path, clean_filename(title))
+                if os.path.exists(group_prompt) and os.path.isdir(agent_subfolder):
 
-                try:
-                    if not os.path.exists(os.path.join(agent_subfolder, "prompt.txt")):
-                        shutil.move(group_prompt, os.path.join(agent_subfolder, "prompt.txt"))
-                    else:
-                        os.remove(group_prompt)
-                except (OSError, PermissionError) as e:
-                    logger.warning(f"Collision resolution failed for '{folder_name}': {e}")
+                    try:
+                        if not os.path.exists(os.path.join(agent_subfolder, "prompt.txt")):
+                            shutil.move(group_prompt, os.path.join(agent_subfolder, "prompt.txt"))
+                        else:
+                            os.remove(group_prompt)
+                    except (OSError, PermissionError) as e:
+                        logger.warning(f"Collision resolution failed for '{folder_name}': {e}")
 
-            for entry in os.listdir(full_path):
-                agent_path = os.path.join(full_path, entry)
-                if os.path.isdir(agent_path):
-                    prompt_file = os.path.join(agent_path, "prompt.txt")
-                    if os.path.exists(prompt_file):
+                for entry in os.listdir(full_path):
+                    agent_path = os.path.join(full_path, entry)
+                    if os.path.isdir(agent_path):
+                        prompt_file = os.path.join(agent_path, "prompt.txt")
+                        if os.path.exists(prompt_file):
 
-                        if not safe_path(agent_path):
-                            logger.warning(f"Skipping unsafe path: {agent_path}")
+                            if not safe_path(agent_path):
+                                logger.warning(f"Skipping unsafe path: {agent_path}")
+                                continue
+                            try:
+                                with open(prompt_file, "r", encoding="utf-8") as f:
+
+                                    content = f.read(MAX_PROMPT_SIZE + 1)
+                                    if len(content) > MAX_PROMPT_SIZE:
+                                        content = content[:MAX_PROMPT_SIZE] + "\n\n[TRUNCATED: Prompt exceeds size limit]"
+                                data[folder_name]["agents"][entry] = content
+                            except (OSError, UnicodeDecodeError) as e:
+                                logger.warning(f"Could not read {prompt_file}: {e}")
+                            copy_f = os.path.join(agent_path, "copy_time.txt")
+                            if os.path.exists(copy_f):
+                                try:
+                                    with open(copy_f, "r", encoding="utf-8") as cf:
+                                        data[folder_name]["copy_times"][entry] = cf.read().strip()
+                                except Exception:
+                                    pass
+                    elif entry == "prompt.txt":
+
+                        agent_key = title
+
+                        subfolder_path = os.path.join(full_path, clean_filename(title))
+                        if os.path.isdir(subfolder_path):
+
                             continue
                         try:
-                            with open(prompt_file, "r", encoding="utf-8") as f:
-
+                            with open(os.path.join(full_path, "prompt.txt"), "r", encoding="utf-8") as f:
                                 content = f.read(MAX_PROMPT_SIZE + 1)
                                 if len(content) > MAX_PROMPT_SIZE:
                                     content = content[:MAX_PROMPT_SIZE] + "\n\n[TRUNCATED: Prompt exceeds size limit]"
-                            data[folder_name]["agents"][entry] = content
+                            data[folder_name]["agents"][agent_key] = content
                         except (OSError, UnicodeDecodeError) as e:
-                            logger.warning(f"Could not read {prompt_file}: {e}")
-                elif entry == "prompt.txt":
-
-                    agent_key = title
-
-                    subfolder_path = os.path.join(full_path, clean_filename(title))
-                    if os.path.isdir(subfolder_path):
-
-                        continue
-                    try:
-                        with open(os.path.join(full_path, "prompt.txt"), "r", encoding="utf-8") as f:
-                            content = f.read(MAX_PROMPT_SIZE + 1)
-                            if len(content) > MAX_PROMPT_SIZE:
-                                content = content[:MAX_PROMPT_SIZE] + "\n\n[TRUNCATED: Prompt exceeds size limit]"
-                        data[folder_name]["agents"][agent_key] = content
-                    except (OSError, UnicodeDecodeError) as e:
-                        logger.warning(f"Could not read {os.path.join(full_path, 'prompt.txt')}: {e}")
-        return jsonify(data)
-    except Exception as e:
-        logger.error(f"get_data error: {e}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+                            logger.warning(f"Could not read {os.path.join(full_path, 'prompt.txt')}: {e}")
+                        copy_f = os.path.join(full_path, "copy_time.txt")
+                        if os.path.exists(copy_f):
+                            try:
+                                with open(copy_f, "r", encoding="utf-8") as cf:
+                                    data[folder_name]["copy_times"][agent_key] = cf.read().strip()
+                            except Exception:
+                                pass
+            return jsonify(data)
+        except Exception as e:
+            logger.error(f"get_data error: {e}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 
@@ -597,7 +612,16 @@ def save_agent():
             group_prompt_file = os.path.join(base, "prompt.txt")
             if os.path.exists(group_prompt_file):
                 if name == group_title:
+                    old_c = None
+                    try:
+                        with open(group_prompt_file, "r", encoding="utf-8") as f: old_c = f.read()
+                    except Exception: pass
                     with open(group_prompt_file, "w", encoding="utf-8") as f: f.write(content)
+                    if old_c != content:
+                        ct = os.path.join(base, "copy_time.txt")
+                        if os.path.exists(ct):
+                            try: os.remove(ct)
+                            except Exception: pass
                     return jsonify({'status': 'success'})
                 else:
                     convert_dir = os.path.join(base, clean_filename(group_title))
@@ -643,6 +667,11 @@ def save_agent():
             agent_dir = os.path.join(base, name)
             os.makedirs(agent_dir, exist_ok=True)
             with open(os.path.join(agent_dir, 'prompt.txt'), 'w', encoding='utf-8') as f: f.write(content)
+            if not target_to_backup or do_backup or (old_name and old_name != name):
+                ct = os.path.join(agent_dir, "copy_time.txt")
+                if os.path.exists(ct):
+                    try: os.remove(ct)
+                    except Exception: pass
             time.sleep(0.1)
             migrate_folders_locked(); return jsonify({'status': 'success'})
         except Exception as e:
@@ -650,7 +679,77 @@ def save_agent():
             return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
+@app.route('/api/record-copy', methods=['POST'])
+def record_copy():
+    with migration_lock:
+        try:
+            req = request.get_json(silent=True) or {}
+            group_folder = req.get('group')
+            name = clean_filename(req.get('name', ''))
+            if not group_folder or not name:
+                return jsonify({'status': 'error', 'message': 'Group and name are required'}), 400
+            base = safe_path(DATA_DIR, group_folder)
+            if not base:
+                return jsonify({'status': 'error', 'message': 'Invalid group path'}), 403
 
+            _, group_title = get_group_info(group_folder)
+            agent_dir = os.path.join(base, name)
+            target_path = None
+            if os.path.isdir(agent_dir):
+                target_path = os.path.join(agent_dir, "copy_time.txt")
+            elif name == group_title and os.path.exists(os.path.join(base, "prompt.txt")):
+                target_path = os.path.join(base, "copy_time.txt")
+
+            if not target_path:
+                return jsonify({'status': 'error', 'message': 'Agent folder not found'}), 404
+
+            timestamp_str = time.strftime("%d/%m %H:%M", time.localtime())
+            with open(target_path, 'w', encoding='utf-8') as f:
+                f.write(timestamp_str)
+            time.sleep(0.05)
+            return jsonify({'status': 'success', 'timestamp': timestamp_str})
+        except Exception as e:
+            logger.error(f"record_copy error: {e}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/reset-copy-times', methods=['POST'])
+def reset_copy_times():
+    with migration_lock:
+        try:
+            req = request.get_json(silent=True) or {}
+            target_group = req.get('group')
+            
+            count = 0
+            if os.path.exists(DATA_DIR):
+                for item in os.listdir(DATA_DIR):
+                    if target_group and item != target_group:
+                        continue
+                    group_path = os.path.join(DATA_DIR, item)
+                    if not os.path.isdir(group_path):
+                        continue
+                    group_ct = os.path.join(group_path, "copy_time.txt")
+                    if os.path.exists(group_ct):
+                        try:
+                            os.remove(group_ct)
+                            count += 1
+                        except Exception as e:
+                            logger.warning(f"Could not remove {group_ct}: {e}")
+                    for entry in os.listdir(group_path):
+                        agent_path = os.path.join(group_path, entry)
+                        if os.path.isdir(agent_path):
+                            agent_ct = os.path.join(agent_path, "copy_time.txt")
+                            if os.path.exists(agent_ct):
+                                try:
+                                    os.remove(agent_ct)
+                                    count += 1
+                                except Exception as e:
+                                    logger.warning(f"Could not remove {agent_ct}: {e}")
+            time.sleep(0.1)
+            return jsonify({'status': 'success', 'reset_count': count})
+        except Exception as e:
+            logger.error(f"reset_copy_times error: {e}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 @app.route('/api/delete', methods=['POST'])
@@ -946,38 +1045,40 @@ def recycle_restore():
 
 @app.route('/api/recycle-purge', methods=['POST'])
 def recycle_purge():
-    try:
-        req = request.get_json(silent=True) or {}
-        bin_path = req.get('bin_path')
-        if not bin_path: return jsonify({'status': 'error', 'message': 'bin_path required'}), 400
-        bin_path = clean_filename(bin_path)
-        full_path = os.path.join(RECYCLE_BIN_DIR, bin_path)
-        if not os.path.exists(full_path):
-            return jsonify({'status': 'error', 'message': 'Item not found'}), 404
-        if robust_rmtree(full_path):
-            return jsonify({'status': 'success'})
-        return jsonify({'status': 'error', 'message': 'Failed to delete'}), 500
-    except Exception as e:
-        logger.error(f"recycle-purge error: {e}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+    with migration_lock:
+        try:
+            req = request.get_json(silent=True) or {}
+            bin_path = req.get('bin_path')
+            if not bin_path: return jsonify({'status': 'error', 'message': 'bin_path required'}), 400
+            bin_path = clean_filename(bin_path)
+            full_path = os.path.join(RECYCLE_BIN_DIR, bin_path)
+            if not os.path.exists(full_path):
+                return jsonify({'status': 'error', 'message': 'Item not found'}), 404
+            if robust_rmtree(full_path):
+                return jsonify({'status': 'success'})
+            return jsonify({'status': 'error', 'message': 'Failed to delete'}), 500
+        except Exception as e:
+            logger.error(f"recycle-purge error: {e}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 
 
 @app.route('/api/recycle-purge-all', methods=['POST'])
 def recycle_purge_all():
-    try:
-        ensure_recycle_bin()
-        count = 0
-        for entry in os.listdir(RECYCLE_BIN_DIR):
-            entry_path = os.path.join(RECYCLE_BIN_DIR, entry)
-            if os.path.isdir(entry_path):
-                if robust_rmtree(entry_path):
-                    count += 1
-        return jsonify({'status': 'success', 'purged': count})
-    except Exception as e:
-        logger.error(f"recycle-purge-all error: {e}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+    with migration_lock:
+        try:
+            ensure_recycle_bin()
+            count = 0
+            for entry in os.listdir(RECYCLE_BIN_DIR):
+                entry_path = os.path.join(RECYCLE_BIN_DIR, entry)
+                if os.path.isdir(entry_path):
+                    if robust_rmtree(entry_path):
+                        count += 1
+            return jsonify({'status': 'success', 'purged': count})
+        except Exception as e:
+            logger.error(f"recycle-purge-all error: {e}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 
