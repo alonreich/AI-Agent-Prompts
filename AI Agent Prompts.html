@@ -14,10 +14,10 @@
             cursor: not-allowed !important;
         }
         :root {
-            --bg: #151f35;             
+            --bg: #151f35;
             --bg-light: #1a2d4a;
-            --card-bg: #1f3148; 
-            --border: #5a7395;           
+            --card-bg: #1f3148;
+            --border: #5a7395;
             --border-glow: rgba(88, 166, 255, 0.3);
             --text: #cdd5de;
             --text-dim: #9aa1a9; /* Improved from #a8b0ba for better contrast */
@@ -25,8 +25,8 @@
             --blue-hover: #4095ff;
             --gold: rgb(255, 195, 40);
             --gold-glow: rgba(255, 195, 40, 0.3);
-            --error: #ff8c89;            
-            --error-dark: #b91c1c;       
+            --error: #ff8c89;
+            --error-dark: #b91c1c;
             --danger: #da3633;
             --danger-hover: #f85149;
             --success: #238636;
@@ -34,8 +34,8 @@
             --secondary-hover: #3d444d;
             --info: #58a6ff;
             --warning: #9e6a03;
-            --group-bg-top: #223656;     
-            --group-bg-bottom: #1a2c48;  
+            --group-bg-top: #223656;
+            --group-bg-bottom: #1a2c48;
 
             --radius-sm: 6px;
             --radius-md: 10px;
@@ -53,6 +53,7 @@
             --edit-text: rgb(255, 190, 27);
             --highlight-match-bg: #ffc328;
             --highlight-current-bg: #ffeb3b;
+            --editor-surface: var(--bg-light);
         }
         body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
         ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -60,11 +61,11 @@
         ::-webkit-scrollbar-thumb { background: var(--blue); border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--blue-hover); }
 
-        
 
-        #menu-container { display: flex; flex-direction: column; min-height: 100vh; padding: 18px 26px; box-sizing: border-box; align-items: center; position: relative; }
 
-        
+        #menu-container { display: flex; flex-direction: column; min-height: 100vh; padding: 12px 20px; box-sizing: border-box; align-items: center; position: relative; }
+
+
         .add-btn, .group-btn, .copy-btn, .save-btn {
             background: var(--blue);
             color: #0c162c;
@@ -73,24 +74,24 @@
         .add-btn:hover, .group-btn:hover, .copy-btn:hover, .save-btn:hover {
             background: var(--blue-hover);
         }
-        
-        
-        .btn-secondary, .back-btn, .wiz-cancel, .cancel-btn, .cancel-del-btn, .title-cancel-btn { 
+
+
+        .btn-secondary, .back-btn, .wiz-cancel, .cancel-btn, .cancel-del-btn, .title-cancel-btn {
             background: var(--btn-secondary-bg);
             color: var(--text);
             border: 1px solid var(--border);
         }
-        .btn-secondary:hover, .back-btn:hover, .wiz-cancel:hover, .cancel-btn:hover, .cancel-del-btn:hover, .title-cancel-btn:hover { 
+        .btn-secondary:hover, .back-btn:hover, .wiz-cancel:hover, .cancel-btn:hover, .cancel-del-btn:hover, .title-cancel-btn:hover {
             background: var(--btn-secondary-hover); /* Darkened for WCAG contrast */
             border-color: var(--text-dim);
         }
 
-        .btn-danger, .del-btn { 
+        .btn-danger, .del-btn {
             background: var(--danger);
             color: #fff;
             border: none;
         }
-        .btn-danger:hover, .del-btn:hover { 
+        .btn-danger:hover, .del-btn:hover {
             background: var(--danger-hover);
         }
 
@@ -103,21 +104,22 @@
         }
         .confirm-del-btn:hover { background: var(--danger-hover); box-shadow: 0 0 10px rgba(248, 81, 73, 0.3); }
         .confirm-del-btn.disabled { opacity: 0.5; cursor: not-allowed; }
-        
+
         .del-badge {
             background: #fff; color: var(--error-dark); border-radius: 50%; min-width: 18px; height: 18px;
             font-size: 11px; display: inline-flex; align-items: center; justify-content: center;
             font-weight: 700;
         }
 
-        .control-bar { 
-            display: flex; align-items: center; justify-content: space-between; 
-            width: 100%; gap: 12px; height: 60px; 
+        .control-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            width: 100%; gap: 10px; min-height: 44px; height: auto;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .control-left { display: flex; align-items: center; gap: 12px; flex: 1; }
-        .control-center { flex: 2; max-width: 600px; position: relative; }
-        .control-right { display: flex; align-items: center; gap: 12px; flex: 1; justify-content: flex-end; }
+        .control-left { display: flex; align-items: center; gap: 10px; flex: 1; }
+        .control-center { flex: 2; max-width: 600px; position: relative; min-height: 42px; }
+        .control-center.search-active-feedback { min-height: 64px; }
+        .control-right { display: flex; align-items: center; gap: 10px; flex: 1; justify-content: flex-end; }
 
         /* Unified Button System */
         .btn {
@@ -142,7 +144,7 @@
         .btn-danger-outline:hover { background: color-mix(in srgb, var(--error) 10%, transparent); border-color: var(--error); }
 
         /* Contextual Selection Bar */
-        .toolbar-wrapper { width: 100%; position: relative; height: 60px; margin-bottom: 20px; overflow: hidden; }
+        .toolbar-wrapper { width: 100%; position: relative; min-height: 46px; height: auto; margin-bottom: 12px; overflow: visible; }
         #selection-bar {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(218, 54, 51, 0.1); border: 1px solid rgba(218, 54, 51, 0.3);
@@ -158,17 +160,33 @@
         /* Existing Overrides */
         .search-wrapper { position: relative; width: 100%; }
         .search-wrapper svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; fill: var(--text-dim); pointer-events: none; }
-        #search-box { width: 100%; background: var(--bg-light); border: 1px solid var(--border); color: #fff; padding: 10px 16px 10px 40px; border-radius: var(--radius-md); font-size: 14px; outline: none; transition: all 0.2s; box-sizing: border-box; height: 42px; }
+        #search-box { width: 100%; background: var(--bg-light); border: 1px solid var(--border); color: #fff; padding: 10px 44px 10px 40px; border-radius: var(--radius-md); font-size: 14px; line-height: 20px; outline: none; transition: all 0.2s; box-sizing: border-box; height: 42px; display: block; }
         #search-box:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15); }
+        .search-clear-btn {
+            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            width: 24px; height: 24px; border: 1px solid transparent; border-radius: var(--radius-sm);
+            background: transparent; color: var(--text-dim); display: none; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 18px; line-height: 1; padding: 0;
+        }
+        .search-wrapper.has-query .search-clear-btn { display: flex; }
+        .search-clear-btn:hover, .search-clear-btn:focus-visible { color: #fff; background: rgba(255,255,255,0.08); border-color: var(--border); }
+        .search-feedback {
+            position: absolute; top: 48px; left: 0; right: 0;
+            min-height: 18px; color: var(--text-dim);
+            font-size: 12px; line-height: 1.35; text-align: center;
+            display: none;
+        }
+        .control-center.search-active-feedback .search-feedback { display: block; }
+        .search-feedback strong { color: var(--blue); font-weight: 700; }
 
 
-        #main-menu { 
-            width: 100%; 
-            display: flex; 
+        #main-menu {
+            width: 100%;
+            display: flex;
             flex-wrap: wrap;
-            gap: 20px; 
-            padding-top: 10px; 
-            align-items: flex-start; 
+            gap: 14px;
+            padding-top: 4px;
+            align-items: flex-start;
         }
         .group-container {
             border: 1px solid var(--border);
@@ -182,20 +200,42 @@
             cursor: default;
             width: fit-content;
             min-width: 220px;
-            max-width: 350px;
+            max-width: none;
             box-sizing: border-box;
             box-shadow: 0 4px 16px rgba(0,0,0,0.3), 0 0 0 1px rgba(88,166,255,0.08);
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
+        .custom-resize-handle {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 15px;
+            height: 15px;
+            cursor: ew-resize;
+            z-index: 10;
+        }
+        .custom-resize-handle::after {
+            content: '';
+            position: absolute;
+            bottom: 3px;
+            right: 3px;
+            width: 8px;
+            height: 8px;
+            border-right: 2px solid rgba(255, 255, 255, 0.4);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.4);
+        }
+        .custom-resize-handle:hover::after {
+            border-color: rgba(255, 255, 255, 0.8);
+        }
         .group-container:hover {
             border-color: rgba(88, 166, 255, 0.25);
             box-shadow: 0 6px 24px rgba(0,0,0,0.35), 0 0 20px rgba(88, 166, 255, 0.1);
             transform: translateY(-2px);
         }
-        .group-container.drag-over { 
-            border-color: var(--blue); 
+        .group-container.drag-over {
+            border-color: var(--blue);
             background: rgba(88, 166, 255, 0.08);
             box-shadow: 0 0 0 2px var(--blue), var(--shadow-lg);
         }
@@ -236,15 +276,15 @@
             transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1), opacity 0.3s;
         }
 
-        
+
         /* Disable dragging interactions in delete mode */
         #main-menu.delete-mode .group-drag-handle { opacity: 0 !important; pointer-events: none; }
         #main-menu.delete-mode .group-title { cursor: default !important; }
-        #main-menu.delete-mode .edit-group-icon, 
+        #main-menu.delete-mode .edit-group-icon,
         #main-menu.delete-mode .delete-group-icon { opacity: 0 !important; pointer-events: none; }
         .group-actions-wrap { position: absolute; right: -15px; display: flex; gap: 4px; align-items: center; opacity: 0; pointer-events: none; transition: 0.2s; }
         .group-header:hover .group-actions-wrap, .group-header:hover .group-reset-icon { opacity: 1; pointer-events: auto; }
-        
+
         .group-drag-handle, .group-reset-icon { position: absolute; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; cursor: pointer; transition: 0.2s; background: none; border: none; padding: 0; z-index: 10; }
         .group-drag-handle { left: -15px; width: 29px; height: 29px; touch-action: none; opacity: 0.5; }
         .group-reset-icon { left: 24px; opacity: 0; pointer-events: none; background: rgba(0, 0, 0, 0.35); border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.15); }
@@ -257,7 +297,7 @@
         .group-reset-icon svg { width: 18px; height: 18px; fill: #fff; color: #fff; }
 
         .group-header { display: flex; align-items: center; justify-content: center; margin-bottom: 7px; border-bottom: 1px solid rgba(255, 255, 255, 0.2); padding: 2px 75px 5px 75px; position: relative; gap: 6px; }
-        .group-title { font-size: calc(14px - 1pt); font-weight: 600; color: var(--gold); text-transform: uppercase; letter-spacing: 1.5px; margin: 0; outline: none; text-align: center; padding: 4px 15px; border-radius: var(--radius-sm); transition: 0.2s; cursor: pointer; user-select: none; }
+        .group-title { font-size: calc(14px - 1pt); font-weight: 600; color: var(--gold); text-transform: uppercase; letter-spacing: 1.5px; margin: 0; outline: none; text-align: center; padding: 4px 15px; border-radius: var(--radius-sm); transition: 0.2s; cursor: pointer; user-select: none; white-space: normal; overflow-wrap: break-word; }
         .group-title:active { cursor: grabbing; }
         .group-title.editing { cursor: text; user-select: text; }
 
@@ -270,14 +310,76 @@
             color: #fff;
         }
 
-        
+        /* ROLLBACK: group title overlay actions start
+           To revert only this behavior, remove this block and remove
+           "group-title-overlay-actions" from the group header class in renderMenu(). */
+        .group-header.group-title-overlay-actions {
+            overflow: visible;
+        }
+        .group-header.group-title-overlay-actions .group-title {
+            width: calc(100% + 134px);
+            max-width: calc(100% + 134px);
+            min-width: 0;
+            margin-left: -67px;
+            margin-right: -67px;
+            box-sizing: border-box;
+        }
+        .group-header.group-title-overlay-actions .group-reset-icon,
+        .group-header.group-title-overlay-actions .group-actions-wrap {
+            z-index: 30;
+        }
+        .group-header.group-title-overlay-actions:hover .group-reset-icon {
+            background: var(--group-action-mask-bg, var(--group-bg-top));
+            border-color: var(--group-action-mask-bg, var(--group-bg-top));
+            box-shadow: 0 0 0 2px var(--group-action-mask-bg, var(--group-bg-top));
+        }
+        .group-header.group-title-overlay-actions:hover .edit-group-icon,
+        .group-header.group-title-overlay-actions:hover .delete-group-icon {
+            background: var(--group-action-mask-bg, var(--group-bg-top));
+            box-shadow: 0 0 0 2px var(--group-action-mask-bg, var(--group-bg-top));
+        }
+        .group-header.group-title-overlay-actions:hover .edit-group-icon {
+            border-radius: var(--radius-sm);
+        }
+        .group-header.group-title-overlay-actions:hover .delete-group-icon {
+            border-radius: var(--radius-sm);
+        }
+        .group-header.group-title-overlay-actions.renaming-group-title .group-title.editing {
+            width: calc(100% + 134px);
+            max-width: calc(100% + 134px);
+            margin-left: -67px;
+            margin-right: -67px;
+            padding-left: 15px;
+            padding-right: 15px;
+            box-sizing: border-box;
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+        .group-header.group-title-overlay-actions.renaming-group-title .group-rename-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 40;
+            box-shadow: 0 0 0 2px var(--group-action-mask-bg, var(--group-bg-top));
+        }
+        .group-header.group-title-overlay-actions.renaming-group-title .group-rename-save {
+            right: 28px;
+        }
+        .group-header.group-title-overlay-actions.renaming-group-title .group-rename-cancel {
+            right: -10px;
+        }
+        /* ROLLBACK: group title overlay actions end */
+
+
+
+
         .edit-group-icon, .delete-group-icon {
             display: flex; align-items: center; justify-content: center;
             cursor: pointer; opacity: 0.4; transition: opacity 0.2s; padding: 4px;
             flex-shrink: 0; width: 26px; height: 26px;
             background: none; border: none; color: inherit;
         }
-        
+
         .group-header:hover .edit-group-icon,
         .group-header:hover .delete-group-icon { opacity: 0.7; }
 
@@ -286,7 +388,7 @@
 
         .edit-group-icon svg, .delete-group-icon svg { width: 16px; height: 16px; fill: currentColor; }
 
-        .group-rename-btn { border: none; cursor: pointer; padding: 3px 10px; border-radius: 3px; font-weight: 700; font-size: 14px; display: none; align-items: center; transition: 0.2s; line-height: 1; }
+        .group-rename-btn { border: none; cursor: pointer; padding: 3px 10px; border-radius: 3px; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; transition: 0.2s; line-height: 1; }
         .group-rename-save { background: var(--success); color: #fff; }
         .group-rename-cancel { background: var(--border); color: #fff; }
         .group-rename-save:hover { background: var(--success-hover); }
@@ -306,24 +408,24 @@
         #global-trash-zone svg { width: 40px; height: 40px; fill: currentColor; margin-bottom: 8px; pointer-events: none; }
         #global-trash-zone span { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; pointer-events: none; }
 
-        
+
         .group-grid {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             width: 100%;
         }
 
-        
+
         .add-agent-card {
-            width: 240px; height: 35px; border: 1px dashed var(--text-dim);
+            width: fit-content; max-width: 100%; height: 30px; border: 1px dashed var(--text-dim);
             background: transparent; color: var(--text); /* Improved contrast */
             display: flex;
             align-items: center; justify-content: center; cursor: pointer;
-            transition: all 0.2s; box-sizing: border-box; font-size: 12px;
+            transition: all 0.2s; box-sizing: border-box; font-size: 12px; padding: 0 10px;
             font-weight: 500; border-radius: var(--radius-sm); gap: 6px;
-            background: none; margin: 10px auto 0 auto;
+            background: none; margin: 6px auto 0 auto; white-space: nowrap;
         }
         .add-agent-card:hover { border-color: var(--blue); color: var(--blue); background: rgba(88, 166, 255, 0.05); }
         .add-agent-card:active { transform: scale(0.97); }
@@ -331,7 +433,7 @@
 
         .empty-group-msg { width: 100%; color: var(--text-dim); font-size: 12px; font-style: italic; padding: 12px; text-align: center; }
 
-        
+
         .agent-card {
             width: fit-content;
             min-width: 150px;
@@ -367,7 +469,38 @@
             word-break: break-word;
             overflow-wrap: anywhere;
         }
-        
+        .agent-card.search-content-match {
+            border-color: rgba(88, 166, 255, 0.45);
+            color: var(--text);
+            background: rgba(88, 166, 255, 0.06);
+        }
+        .card-search-meta {
+            pointer-events: none;
+            margin-top: 5px;
+            color: var(--blue);
+            font-size: 10px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .card-search-snippet {
+            pointer-events: none;
+            margin-top: 4px;
+            max-width: 230px;
+            color: var(--text-dim);
+            font-size: 11px;
+            font-weight: 500;
+            line-height: 1.25;
+            white-space: normal;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+        .search-match-mark {
+            background: rgba(255, 195, 40, 0.28);
+            color: #fff;
+            border-radius: 2px;
+            padding: 0 2px;
+        }
+
         .agent-card:hover { border-color: var(--gold-glow); background: var(--agent-card-hover-bg); box-shadow: 0 0 10px var(--gold-glow); transform: translateY(-1px); }
         .agent-card:active { transform: scale(0.97); }
         .agent-card.dragging { opacity: 0.4; border: 1px dashed var(--blue); }
@@ -379,11 +512,11 @@
         .quick-copy-btn:hover { opacity: 1; color: var(--blue); }
         .quick-copy-btn svg { width: 16px; height: 16px; fill: currentColor; }
 
-        #prompt-view { display: none; height: 100vh; flex-direction: column; padding: 14px 24px; box-sizing: border-box; position: relative; animation: fadeIn 0.3s ease-out; }
+        #prompt-view { display: none; height: 100vh; flex-direction: column; padding: 10px 20px; box-sizing: border-box; position: relative; animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        .nav-bar { display: flex; align-items: center; margin-bottom: 14px; gap: 10px; }
-        .nav-bar h2 { margin: 0; font-size: 1.4rem; font-weight: 600; color: var(--blue); flex: 0 1 auto; text-align: left; outline: none; }
+        .nav-bar { display: flex; align-items: center; margin-bottom: 8px; gap: 8px; flex-wrap: wrap; }
+        .nav-bar h2 { margin: 0; font-size: 1.3rem; font-weight: 600; color: var(--blue); flex: 0 1 auto; text-align: left; outline: none; }
         .nav-bar h2[contenteditable="true"] { border-bottom: 2px solid var(--blue); background: var(--bg-light); padding: 5px; border-radius: var(--radius-sm); min-width: 150px; }
 
         .nav-arrow { background: var(--card-bg); color: var(--text); border: 1px solid var(--border); width: 36px; height: 36px; border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; font-size: 20px; font-weight: 500; }
@@ -395,18 +528,35 @@
         .nav-cross-hint { font-size: 11px; color: var(--text-dim); opacity: 0; transition: 0.2s; white-space: nowrap; }
         .nav-arrow:hover + .nav-cross-hint { opacity: 0.8; }
 
-        .back-btn { background: var(--border); color: var(--text); border: 1px solid transparent; border-radius: var(--radius-sm); cursor: pointer; font-weight: 500; font-size: 12px; transition: 0.2s; }
+        .back-btn { background: var(--border); color: var(--text); border: 1px solid transparent; border-radius: var(--radius-sm); cursor: pointer; font-weight: 500; font-size: 12px; transition: 0.2s; height: 34px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; }
         .back-btn:hover { background: var(--secondary-hover); border-color: #8b949e; }
 
-        .title-save-btn, .title-cancel-btn { background: var(--success); color: #fff; border: none; padding: 6px 16px; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600; font-size: 12px; display: none; align-items: center; transition: 0.2s; }
-        .title-cancel-btn { background: var(--border); }
+        .title-save-btn, .title-cancel-btn {
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            border-radius: var(--radius-sm);
+            font-weight: 800;
+            font-size: 16px;
+            line-height: 1;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+            flex-shrink: 0;
+            width: 34px;
+            height: 34px;
+            margin-left: 8px;
+        }
+        .title-save-btn { background: var(--success); color: #fff; }
+        .title-cancel-btn { background: var(--border); color: #fff; }
         .title-save-btn:hover { background: var(--success-hover); }
         .title-cancel-btn:hover { background: var(--secondary-hover); }
 
-        .edit-title-btn, .delete-agent-btn { 
-            background: none !important; border: none !important; cursor: pointer; 
+        .edit-title-btn, .delete-agent-btn {
+            background: none !important; border: none !important; cursor: pointer;
             padding: 0 !important; margin: 0 0 0 12px !important;
-            opacity: 0; transition: opacity 0.2s, color 0.2s; 
+            opacity: 0; transition: opacity 0.2s, color 0.2s;
             display: flex; align-items: center; justify-content: center;
             flex-shrink: 0; width: 36px !important; height: 36px !important;
             color: inherit;
@@ -419,98 +569,150 @@
 
         .edit-title-btn svg, .delete-agent-btn svg { width: 22px !important; height: 22px !important; fill: currentColor; }
 
-        #prompt-box-wrap { 
-            flex: 1; 
-            position: relative; 
-            display: flex; 
-            flex-direction: row; 
-            background: var(--bg-light); 
-            border: 1px solid var(--border); 
-            border-radius: var(--radius-md); 
+        #prompt-box-wrap {
+            --editor-surface: var(--bg-light);
+            --prompt-pad-y: 20px;
+            --prompt-pad-x: 24px;
+            --prompt-line-height: 24px;
+            --line-gutter-width: 52px;
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: row;
+            background: var(--editor-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
             overflow: auto;
             transition: border-color 0.2s, box-shadow 0.2s;
+            isolation: isolate;
         }
         #prompt-box-wrap:hover:not(.editing-state) { border-color: var(--border-glow); }
-        #prompt-box-wrap.editing-state { border-color: var(--blue); box-shadow: 0 0 15px rgba(88, 166, 255, 0.1); background: var(--edit-bg); }
+        #prompt-box-wrap.editing-state { --editor-surface: var(--edit-bg); border-color: var(--blue); box-shadow: 0 0 15px rgba(88, 166, 255, 0.1); background: var(--editor-surface); }
         #prompt-box-wrap.editing-state #prompt-box { color: var(--edit-text); }
         #prompt-box-wrap::before {
             content: "EDIT MODE";
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 8vw;
-            font-weight: 900;
-            color: rgba(88, 166, 255, 0.04);
+            top: 12px;
+            right: 14px;
+            transform: none;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            color: rgba(88, 166, 255, 0.72);
+            background: rgba(88, 166, 255, 0.08);
+            border: 1px solid rgba(88, 166, 255, 0.22);
+            border-radius: var(--radius-pill);
+            padding: 4px 10px;
             pointer-events: none;
-            z-index: 0;
+            z-index: 30;
             display: none;
             white-space: nowrap;
             user-select: none;
         }
         #prompt-box-wrap.editing-state::before { display: block; }
 
-        
+
         #search-overlay {
-            position: absolute; top: 15px; right: 80px; width: 320px; max-width: calc(100vw - 100px);
+            position: relative; width: min(680px, 100%); max-width: 100%;
+            align-self: flex-end; margin: 0 0 8px 0;
             background: var(--bg); border: 1px solid var(--border);
-            border-radius: var(--radius-md); padding: 15px; z-index: 1000;
-            box-shadow: var(--shadow-lg); opacity: 0.9;
-            display: none; flex-direction: column; gap: 10px;
+            border-radius: var(--radius-md); padding: 8px 10px; z-index: 1000;
+            box-shadow: var(--shadow-md); opacity: 1;
+            display: none; flex-direction: column; gap: 6px;
             backdrop-filter: blur(4px);
         }
         #search-overlay.visible { display: flex; animation: fadeIn 0.2s ease-out; }
-        .search-row { display: flex; align-items: center; gap: 8px; }
-        .search-row input { flex: 1; background: var(--bg-light); border: 1px solid var(--border); color: #fff; padding: 6px 10px; border-radius: var(--radius-sm); font-size: 13px; outline: none; }
+        .search-row { display: flex; align-items: center; gap: 6px; }
+        .search-row:first-of-type { padding-right: 24px; }
+        .search-row input { flex: 1; background: var(--bg-light); border: 1px solid var(--border); color: #fff; padding: 4px 8px; border-radius: var(--radius-sm); font-size: 13px; line-height: 20px; min-height: 30px; box-sizing: border-box; outline: none; }
         .search-row input:focus { border-color: var(--blue); }
-        .search-options { display: flex; gap: 12px; margin: 4px 0; padding-left: 2px; }
+        .search-options { display: flex; gap: 10px; margin: 0; padding-left: 2px; }
         .search-opt { font-size: 11px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; cursor: pointer; }
         .search-opt input { margin: 0; cursor: pointer; }
-        .search-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 5px; }
-        .search-btn { background: var(--bg-light); color: var(--text); border: 1px solid var(--border); padding: 4px 10px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .search-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 0; }
+        .search-btn { background: var(--bg-light); color: var(--text); border: 1px solid var(--border); padding: 3px 8px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .search-btn:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
+        .search-btn:disabled { opacity: 0.4; cursor: not-allowed; background: var(--bg-light); color: var(--text-dim); border-color: var(--border); }
+        .search-btn:disabled:hover { background: var(--bg-light); color: var(--text-dim); border-color: var(--border); }
         .search-btn.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
-        .search-close { position: absolute; top: 5px; right: 5px; background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 4px; }
+        .search-btn.primary:disabled { background: var(--bg-light); color: var(--text-dim); border-color: var(--border); }
+        .search-close { position: absolute; top: 4px; right: 4px; background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 4px; }
         .search-close:hover { color: #fff; }
         .search-stats { font-size: 11px; color: var(--text-dim); margin-right: auto; }
+        .search-mode-note {
+            display: none;
+            color: #ffe08a;
+            background: rgba(158, 106, 3, 0.14);
+            border: 1px solid rgba(255, 195, 40, 0.28);
+            border-radius: var(--radius-sm);
+            padding: 5px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            line-height: 1.35;
+        }
+        #search-overlay.replace-active .search-mode-note,
+        #search-overlay.replace-dirty .search-mode-note { display: block; }
+        #search-overlay.replace-dirty .search-mode-note {
+            color: #fff0b8;
+            background: rgba(255, 195, 40, 0.18);
+            border-color: rgba(255, 195, 40, 0.45);
+        }
 
         #line-gutter {
-            background: rgba(0, 0, 0, 0.2);
+            background:
+                linear-gradient(to right, transparent calc(100% - 1px), var(--border) calc(100% - 1px)),
+                var(--editor-surface);
             color: #607d8b;
-            padding: 30px 12px 30px 0;
+            padding: var(--prompt-pad-y) 10px var(--prompt-pad-y) 0;
             text-align: right;
             font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
             font-size: 14px;
-            line-height: 24px;
-            white-space: pre;
+            line-height: var(--prompt-line-height);
             user-select: none;
-            border-right: 1px solid var(--border);
-            min-width: 50px;
-            width: 50px;
+            border-right: none;
+            min-width: var(--line-gutter-width);
+            width: var(--line-gutter-width);
+            flex: 0 0 var(--line-gutter-width);
+            min-height: 100%;
+            align-self: stretch;
             pointer-events: none;
             box-sizing: border-box;
             transition: padding-top 0.2s;
             position: sticky;
             left: 0;
-            z-index: 10;
+            z-index: 20;
+            box-shadow: 10px 0 14px -14px #000;
+            overflow: hidden;
+        }
+        .line-number-row {
+            display: block;
+            height: var(--prompt-line-height);
+            line-height: var(--prompt-line-height);
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
         }
 
-        #prompt-box { 
+        #prompt-box {
             position: relative; z-index: 1;
-            color: var(--gold); 
-            padding: 30px; 
-            flex: 1; 
-            white-space: pre; 
-            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; 
-            font-size: 14px; 
-            line-height: 24px; 
-            outline: none; 
+            color: var(--gold);
+            padding: var(--prompt-pad-y) var(--prompt-pad-x);
+            flex: 1;
+            white-space: pre-wrap;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 14px;
+            line-height: var(--prompt-line-height);
+            outline: none;
             background: transparent;
             border: none;
             transition: padding-top 0.2s;
             box-sizing: border-box;
-            min-width: max-content;
+            min-width: 0;
+            width: 100%;
+            overflow-wrap: anywhere;
+            tab-size: 4;
         }
+        #line-gutter { display: block; }
+        #prompt-box-wrap { overflow-x: hidden; }
         #prompt-box * {
             margin: 0 !important;
             padding: 0 !important;
@@ -520,11 +722,13 @@
             background: transparent !important;
             color: inherit !important;
         }
-        #prompt-box-wrap.search-active #prompt-box,
-        #prompt-box-wrap.search-active #line-gutter {
-            padding-top: 150px;
+        #prompt-box-wrap.wrap-lines #prompt-box {
+            min-width: 0;
+            width: 100%;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
         }
-        
+
         /* High-contrast highlight color for search matches */
         ::highlight(search-match) {
             background-color: var(--highlight-match-bg); /* Solid gold for contrast */
@@ -539,9 +743,9 @@
             color: #000;
         }
 
-        .header { display: flex; justify-content: center; margin-bottom: 14px; gap: 12px; position: relative; }
-        
-        .copy-btn, .save-btn, .cancel-btn { min-width: 120px; max-width: 135px; min-height: 34px; max-height: 38px; height: 36px; padding: 0 10px; border: 1px solid transparent; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600; font-size: 12px; transition: 0.2s; box-shadow: var(--shadow-sm); box-sizing: border-box; display: flex; align-items: center; justify-content: center; white-space: nowrap; }
+        .header { display: flex; justify-content: center; margin-bottom: 8px; gap: 8px; position: relative; }
+
+        .copy-btn, .save-btn, .cancel-btn { min-width: 112px; max-width: 132px; min-height: 32px; max-height: 36px; height: 34px; padding: 0 10px; border: 1px solid transparent; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600; font-size: 12px; transition: 0.2s; box-shadow: var(--shadow-sm); box-sizing: border-box; display: flex; align-items: center; justify-content: center; white-space: nowrap; }
         .save-btn { background: var(--success); color: #fff; }
         .cancel-btn { background: transparent; border: 1px solid var(--border); color: var(--text); }
 
@@ -558,16 +762,16 @@
 
         .wizard-card {
             background: var(--bg); border: 1px solid var(--border); width: 600px;
-            padding: 40px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+            padding: 28px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
             transform: scale(0.95); transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         #wizard-overlay.visible .wizard-card, #group-create-overlay.visible .wizard-card { transform: scale(1); }
 
-        .wizard-card h3 { margin-top: 0; margin-bottom: 25px; font-weight: 600; color: var(--blue); }
+        .wizard-card h3 { margin-top: 0; margin-bottom: 16px; font-weight: 600; color: var(--blue); }
 
-        .wizard-field { margin-bottom: 20px; }
-        .wizard-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-dim); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .wizard-field input, .wizard-field textarea, .wizard-field select { width: 100%; background: var(--bg-light); border: 1px solid var(--border); color: var(--gold); padding: 12px; border-radius: var(--radius-sm); font-family: inherit; outline: none; box-sizing: border-box; transition: all 0.2s; }
+        .wizard-field { margin-bottom: 14px; }
+        .wizard-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .wizard-field input, .wizard-field textarea, .wizard-field select { width: 100%; background: var(--bg-light); border: 1px solid var(--border); color: var(--gold); padding: 9px 10px; border-radius: var(--radius-sm); font-family: inherit; outline: none; box-sizing: border-box; transition: all 0.2s; }
         .wizard-field input:focus, .wizard-field textarea:focus, .wizard-field select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15); }
 
         .wizard-field .field-error { color: var(--error); font-size: 12px; margin-top: 6px; display: none; }
@@ -590,16 +794,47 @@
         .toast.warning { background: var(--warning); }
         .toast.info { background: var(--info); }
 
-        .wiz-save { background: var(--success); color: #fff; border: none; font-weight: 600; padding: 10px 24px; border-radius: var(--radius-sm); cursor: pointer; transition: 0.2s; font-size: 13px; }
+        .editor-conflict-banner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin: -2px auto 12px auto;
+            padding: 10px 14px;
+            max-width: 920px;
+            border: 1px solid rgba(255, 195, 40, 0.45);
+            background: rgba(158, 106, 3, 0.18);
+            color: #ffe08a;
+            border-radius: var(--radius-md);
+            font-size: 12px;
+            font-weight: 600;
+            box-sizing: border-box;
+        }
+        .editor-conflict-banner[hidden] { display: none; }
+        .editor-conflict-banner span { color: var(--text); font-weight: 500; }
+        .editor-conflict-banner button {
+            height: 28px;
+            padding: 0 10px;
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(255, 195, 40, 0.4);
+            background: rgba(255, 195, 40, 0.08);
+            color: #ffe08a;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .editor-conflict-banner button:hover { background: rgba(255, 195, 40, 0.18); }
+
+        .wiz-save { background: var(--success); color: #fff; border: none; font-weight: 600; padding: 8px 18px; border-radius: var(--radius-sm); cursor: pointer; transition: 0.2s; font-size: 13px; }
         .wiz-save:hover { background: var(--success-hover); }
-        .wiz-cancel { background: var(--border); color: var(--text); border: 1px solid transparent; padding: 10px 24px; border-radius: var(--radius-sm); cursor: pointer; transition: 0.2s; font-weight: 600; font-size: 13px; }
+        .wiz-cancel { background: var(--border); color: var(--text); border: 1px solid transparent; padding: 8px 18px; border-radius: var(--radius-sm); cursor: pointer; transition: 0.2s; font-weight: 600; font-size: 13px; }
         .wiz-cancel:hover { background: var(--secondary-hover); }
-        .wiz-primary { background: var(--blue); color: #0c162c; border: none; font-weight: 600; padding: 10px 24px; border-radius: var(--radius-sm); cursor: pointer; transition: 0.2s; font-size: 13px; }
+        .wiz-primary { background: var(--blue); color: #0c162c; border: none; font-weight: 600; padding: 8px 18px; border-radius: var(--radius-sm); cursor: pointer; transition: 0.2s; font-size: 13px; }
         .wiz-primary:hover { background: var(--blue-hover); }
-        .wiz-danger { background: var(--danger); color: #fff; border: none; font-weight: 600; padding: 10px 24px; border-radius: var(--radius-sm); cursor: pointer; transition: 0.2s; font-size: 13px; }
+        .wiz-danger { background: var(--danger); color: #fff; border: none; font-weight: 600; padding: 8px 18px; border-radius: var(--radius-sm); cursor: pointer; transition: 0.2s; font-size: 13px; }
         .wiz-danger:hover { background: var(--danger-hover); }
 
-        
+
         .bridge-status { position: fixed; bottom: 15px; right: 15px; font-size: 11px; font-weight: 600; color: var(--text-dim); background: var(--bg-light); padding: 4px 10px; border-radius: var(--radius-pill); border: 1px solid var(--border); z-index: 100; }
         .bridge-status.online { color: var(--success); border-color: rgba(46, 160, 67, 0.4); }
 
@@ -633,7 +868,7 @@
         .search-empty-state button { background: var(--blue); color: #fff; border: none; padding: 10px 24px; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.2s; }
         .search-empty-state button:hover { background: var(--blue-hover); }
 
-        
+
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(1, 4, 9, 0.85); display: none; justify-content: center;
@@ -643,21 +878,21 @@
         .modal-overlay.visible { opacity: 1; }
         .modal-card {
             background: var(--bg); border: 1px solid var(--border); width: 450px;
-            padding: 30px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+            padding: 22px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
             transform: scale(0.95); transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
             text-align: center;
         }
         .modal-overlay.visible .modal-card { transform: scale(1); }
-        .modal-card h3 { margin-top: 0; color: var(--blue); font-size: 1.2rem; margin-bottom: 15px; }
-        .modal-card p { color: var(--text); font-size: 14px; line-height: 1.5; margin-bottom: 25px; }
-        .modal-card select { width: 100%; background: var(--bg-light); border: 1px solid var(--border); color: var(--gold); padding: 12px; border-radius: var(--radius-sm); font-family: inherit; outline: none; box-sizing: border-box; transition: all 0.2s; margin-bottom: 20px; }
+        .modal-card h3 { margin-top: 0; color: var(--blue); font-size: 1.2rem; margin-bottom: 10px; }
+        .modal-card p { color: var(--text); font-size: 14px; line-height: 1.4; margin-bottom: 16px; }
+        .modal-card select { width: 100%; background: var(--bg-light); border: 1px solid var(--border); color: var(--gold); padding: 9px 10px; border-radius: var(--radius-sm); font-family: inherit; outline: none; box-sizing: border-box; transition: all 0.2s; margin-bottom: 14px; }
         .modal-card select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15); }
-        .modal-actions { display: flex; justify-content: center; gap: 12px; }
-
-        
+        .modal-actions { display: flex; justify-content: center; gap: 8px; }
 
 
-        
+
+
+
         .move-selected-btn {
             background: rgba(88, 166, 255, 0.1); color: var(--blue); border-color: rgba(88, 166, 255, 0.4);
             padding: 8px 16px; border-radius: var(--radius-sm); display: none; align-items: center;
@@ -677,18 +912,18 @@
         }
         .wiz-inline-btn:hover { border-color: var(--blue); color: var(--blue); }
 
-        
-        .group-container .group-color-bar { 
-            position: absolute; 
-            top: 1px; left: 1px; right: 1px; 
-            height: 3px; 
-            border-radius: calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px) 0 0; 
-            opacity: 0.6; 
-            transition: opacity 0.2s; 
+
+        .group-container .group-color-bar {
+            position: absolute;
+            top: 1px; left: 1px; right: 1px;
+            height: 3px;
+            border-radius: calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px) 0 0;
+            opacity: 0.6;
+            transition: opacity 0.2s;
         }
         .group-container:hover .group-color-bar { opacity: 1; }
 
-        
+
         .reset-counters-btn {
             background: none; border: 1px solid var(--border); color: var(--blue);
             min-width: 36px; width: 36px; height: 36px; max-width: 36px; max-height: 36px;
@@ -698,6 +933,16 @@
         }
         .reset-counters-btn:hover { border-color: var(--blue); color: var(--blue); background: rgba(56, 189, 248, 0.1); box-shadow: 0 0 10px var(--border-glow); }
         .reset-counters-btn svg { width: 18px; height: 18px; fill: currentColor; }
+
+        .density-toggle-btn {
+            background: none; border: 1px solid var(--border); color: var(--text);
+            height: 36px; padding: 0 10px; border-radius: var(--radius-sm);
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: 0.2s; font-size: 11px; font-weight: 700; letter-spacing: 0.3px;
+            flex-shrink: 0;
+        }
+        .density-toggle-btn:hover { border-color: var(--blue); color: var(--blue); background: rgba(88, 166, 255, 0.08); }
+        .density-toggle-btn.active { border-color: var(--blue); color: #fff; background: rgba(88, 166, 255, 0.18); }
 
         .recycle-bin-btn {
             background: none; border: 1px solid var(--border); color: var(--gold);
@@ -717,7 +962,7 @@
         }
         .recycle-bin-btn .bin-badge.has-items { opacity: 1; }
 
-        
+
         #recycle-bin-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(1, 4, 9, 0.85); display: none; justify-content: center;
@@ -727,7 +972,7 @@
         #recycle-bin-overlay.visible { opacity: 1; }
         .recycle-card {
             background: var(--bg); border: 1px solid var(--border); width: 600px; max-height: 80vh;
-            padding: 30px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+            padding: 22px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
             transform: scale(0.95); transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
             display: flex; flex-direction: column; position: relative; overflow: hidden;
         }
@@ -741,35 +986,35 @@
         .recycle-loading-overlay.visible { display: flex; }
         .recycle-card h3 { margin-top: 0; color: var(--gold); font-size: 1.2rem; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
         .recycle-card h3 svg { width: 20px; height: 20px; fill: currentColor; }
-        .recycle-subtitle { color: var(--text-dim); font-size: 12px; margin-bottom: 16px; }
+        .recycle-subtitle { color: var(--text-dim); font-size: 12px; margin-bottom: 10px; }
         .recycle-list { flex: 1; overflow-y: auto; min-height: 0; }
-        .recycle-group-header { color: var(--text-dim); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 12px 0 6px 0; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+        .recycle-group-header { color: var(--text-dim); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 8px 0 4px 0; padding-bottom: 3px; border-bottom: 1px solid var(--border); }
         .recycle-group-header:first-child { margin-top: 0; }
         .recycle-item {
             display: flex; align-items: center; justify-content: space-between;
-            padding: 8px 12px; border-radius: var(--radius-sm); transition: 0.15s;
-            border: 1px solid transparent; margin-bottom: 4px;
+            padding: 6px 10px; border-radius: var(--radius-sm); transition: 0.15s;
+            border: 1px solid transparent; margin-bottom: 2px;
         }
         .recycle-item:hover { background: rgba(88, 166, 255, 0.05); border-color: var(--border); }
         .recycle-item-info { flex: 1; min-width: 0; }
         .recycle-item-name { color: var(--gold); font-weight: 500; font-size: 13px; white-space: normal; word-break: break-word; }
         .recycle-item-meta { color: var(--text-dim); font-size: 11px; margin-top: 2px; }
-        .recycle-item-actions { display: flex; gap: 6px; flex-shrink: 0; margin-left: 12px; }
+        .recycle-item-actions { display: flex; gap: 5px; flex-shrink: 0; margin-left: 10px; }
         .recycle-restore-btn {
             background: rgba(88, 166, 255, 0.1); color: var(--blue); border: 1px solid rgba(88, 166, 255, 0.3);
-            padding: 4px 12px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 600;
+            padding: 3px 10px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 600;
             cursor: pointer; transition: 0.2s;
         }
         .recycle-restore-btn:hover { background: var(--blue); color: #fff; }
         .recycle-purge-btn {
             background: rgba(255, 140, 137, 0.1); color: var(--error); border: 1px solid rgba(255, 140, 137, 0.3);
-            padding: 4px 12px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 600;
+            padding: 3px 10px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 600;
             cursor: pointer; transition: 0.2s;
         }
         .recycle-purge-btn:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
-        .recycle-empty { text-align: center; padding: 40px 20px; color: var(--text-dim); font-size: 14px; }
-        .recycle-empty svg { width: 40px; height: 40px; fill: var(--text-dim); opacity: 0.3; margin-bottom: 12px; }
-        .recycle-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+        .recycle-empty { text-align: center; padding: 24px 16px; color: var(--text-dim); font-size: 14px; }
+        .recycle-empty svg { width: 34px; height: 34px; fill: var(--text-dim); opacity: 0.3; margin-bottom: 8px; }
+        .recycle-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
         .recycle-footer-info { color: var(--text-dim); font-size: 11px; }
         .recycle-close-btn {
             background: var(--border); color: var(--text); border: none; padding: 8px 20px;
@@ -782,7 +1027,41 @@
         }
         .recycle-purge-all-btn:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
 
-        
+        body.compact-density #menu-container { padding: 8px 16px; }
+        body.compact-density .toolbar-wrapper { min-height: 42px; margin-bottom: 8px; }
+        body.compact-density .control-bar { min-height: 40px; gap: 8px; }
+        body.compact-density .control-left,
+        body.compact-density .control-right { gap: 8px; }
+        body.compact-density .control-center { min-height: 40px; }
+        body.compact-density .control-center.search-active-feedback { min-height: 60px; }
+        body.compact-density #main-menu { gap: 10px; padding-top: 2px; }
+        body.compact-density .group-grid { gap: 4px; }
+        body.compact-density .add-agent-card { height: 27px; margin-top: 4px; padding: 0 8px; font-size: 11px; }
+        body.compact-density #prompt-view { padding: 8px 16px; }
+        body.compact-density .nav-bar { gap: 6px; margin-bottom: 6px; }
+        body.compact-density .agent-title-wrap { margin: 0 6px; }
+        body.compact-density .prompt-action-strip { gap: 6px; }
+        body.compact-density #prompt-box-wrap { --prompt-pad-y: 14px; --prompt-pad-x: 18px; }
+        body.compact-density #search-overlay { margin-bottom: 6px; padding: 6px 8px; gap: 5px; }
+        body.compact-density .search-row input { min-height: 28px; padding: 3px 7px; }
+        body.compact-density .search-mode-note { padding: 4px 7px; }
+        body.compact-density .wizard-card { padding: 22px; }
+        body.compact-density .wizard-card h3 { margin-bottom: 12px; }
+        body.compact-density .wizard-field { margin-bottom: 10px; }
+        body.compact-density .wizard-field label { margin-bottom: 4px; }
+        body.compact-density .wizard-field input,
+        body.compact-density .wizard-field textarea,
+        body.compact-density .wizard-field select,
+        body.compact-density .modal-card select { padding: 7px 9px; }
+        body.compact-density .modal-card { padding: 18px; }
+        body.compact-density .modal-card h3 { margin-bottom: 8px; }
+        body.compact-density .modal-card p { margin-bottom: 12px; }
+        body.compact-density .recycle-card { padding: 18px; }
+        body.compact-density .recycle-subtitle { margin-bottom: 8px; }
+        body.compact-density .recycle-item { padding: 5px 8px; margin-bottom: 1px; }
+        body.compact-density .recycle-footer { margin-top: 8px; padding-top: 6px; }
+
+
         :focus-visible {
             outline: 2px solid var(--blue);
             outline-offset: 2px;
@@ -796,7 +1075,7 @@
             outline-offset: 2px;
         }
 
-        
+
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
                 animation-duration: 0.01ms !important;
@@ -806,60 +1085,93 @@
             }
         }
 
-        
+
         @media (max-width: 768px) {
-            #menu-container { padding: 20px; }
-            #prompt-view { padding: 20px; }
-            .control-bar { flex-wrap: wrap; gap: 12px; }
-            .control-left, .control-right { flex: 0 0 auto; }
+            #menu-container { padding: 14px; }
+            #prompt-view { padding: 12px; }
+            .toolbar-wrapper { height: auto; min-height: 90px; overflow: visible; }
+            .control-bar { flex-wrap: wrap; gap: 10px; }
+            .control-left { flex: 1 1 100%; order: 2; }
+            .control-left .btn { flex: 1 1 0; justify-content: center; padding: 0 10px; }
+            .control-right { flex: 0 0 auto; order: 3; margin-left: auto; }
             .control-center { flex: 0 0 100%; order: -1; }
+            #standard-bar { height: auto; align-items: stretch; }
+            #selection-bar { height: auto; min-height: 52px; flex-wrap: wrap; padding: 8px 12px; }
+            #search-overlay { width: 100%; align-self: stretch; }
+            .search-actions { flex-wrap: wrap; }
+            .search-stats { flex: 1 1 100%; }
             .group-container { min-width: 100%; }
-            .wizard-card { width: 90vw; max-width: 600px; padding: 24px; }
+            .wizard-card { width: 90vw; max-width: 600px; padding: 20px; }
             .modal-card { width: 90vw; max-width: 450px; }
-            .recycle-card { width: 90vw; max-width: 600px; max-height: 80vh; padding: 20px; box-sizing: border-box; }
-            #prompt-box { white-space: pre-wrap !important; } 
-            #line-gutter { display: none; } 
+            .recycle-card { width: 90vw; max-width: 600px; max-height: 80vh; padding: 18px; box-sizing: border-box; }
+            #prompt-box-wrap { --line-gutter-width: 44px; --prompt-pad-x: 14px; }
+            #prompt-box { white-space: pre-wrap !important; min-width: 0; width: 100%; overflow-wrap: anywhere; padding-bottom: 64px; }
+            #prompt-box-wrap { overflow-x: hidden; }
+            #line-gutter { display: block; }
+            .header { flex-wrap: wrap; }
+            .editor-conflict-banner { flex-wrap: wrap; justify-content: flex-start; }
             .desktop-actions { display: none !important; position: absolute; top: 100%; right: 0; background: var(--card-bg); padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); flex-direction: column; z-index: 100; box-shadow: var(--shadow-md); margin-top: 5px; }
             .desktop-actions.show { display: flex !important; }
             .mobile-menu-btn { display: flex !important; align-items: center; justify-content: center; background: none; border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); width: 40px; height: 40px; cursor: pointer; }
         }
         @media (max-width: 480px) {
-            #menu-container { padding: 15px 10px; }
-            #prompt-view { padding: 15px 10px; }
+            #menu-container { padding: 10px 8px; }
+            #prompt-view { padding: 10px 8px; }
             .control-right { flex-wrap: wrap; gap: 8px; }
             .control-right button { padding: 8px 10px; font-size: 12px; }
             .header { flex-wrap: wrap; }
-            .copy-btn, .save-btn, .cancel-btn { padding: 10px 20px; font-size: 13px; }
-            .nav-bar { flex-wrap: wrap; gap: 8px; }
+            .copy-btn, .save-btn, .cancel-btn { padding: 0 12px; font-size: 12px; }
+            .nav-bar { flex-wrap: wrap; gap: 6px; }
         }
 
-        
+
         .agent-checkbox { width: 18px; height: 18px; }
 
-        
+
         .edit-hint-btn {
             position: relative; top: 0; right: 0;
             background: rgba(88, 166, 255, 0.1); border: 1px solid var(--border-glow);
             color: var(--blue); padding: 0 16px; border-radius: var(--radius-sm);
             font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s;
             display: flex; align-items: center; gap: 8px; z-index: 10;
-            height: 36px; min-width: 120px; box-sizing: border-box; justify-content: center;
+            height: 34px; min-width: 112px; box-sizing: border-box; justify-content: center;
         }
         .edit-hint-btn:hover { background: var(--blue); color: #fff; box-shadow: 0 0 10px var(--border-glow); }
         .edit-hint-btn svg { width: 14px; height: 14px; fill: currentColor; }
 
         #prompt-view .header { box-sizing: border-box; }
-        
+        #prompt-view.editing-active #main-edit-btn,
+        #prompt-view.editing-active .ai-review-btn {
+            display: none !important;
+        }
+
+        .wrap-toggle-btn {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0 14px;
+            border-radius: var(--radius-sm);
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+            display: none;
+            align-items: center;
+            gap: 7px;
+            height: 34px;
+        }
+        .wrap-toggle-btn:hover { border-color: var(--blue); color: var(--blue); background: rgba(88, 166, 255, 0.08); }
+        .wrap-toggle-btn.active { background: rgba(88, 166, 255, 0.18); border-color: var(--blue); color: #fff; }
+        .wrap-toggle-btn svg { width: 14px; height: 14px; fill: currentColor; }
+
         .ai-review-btn {
             background: rgba(147, 112, 219, 0.1); border: 1px solid rgba(147, 112, 219, 0.4);
             color: #bfa3ff; padding: 0 16px; border-radius: 15px;
             font-size: 11px; font-weight: 600; cursor: pointer; transition: 0.2s;
-            display: flex; align-items: center; gap: 6px; height: 36px;
+            display: flex; align-items: center; gap: 6px; height: 34px;
         }
         .ai-review-btn:hover { background: rgba(147, 112, 219, 0.3); box-shadow: 0 0 10px rgba(147, 112, 219, 0.4); color: #fff; }
         .ai-review-btn svg { width: 14px; height: 14px; fill: currentColor; }
-
-        #prompt-box-wrap.editing-state .ai-review-btn { display: none; }#prompt-box-wrap.editing-state .edit-hint-btn { display: none; }
 
         .card-timestamp {
             font-size: 10px;
@@ -897,16 +1209,17 @@
         .offline-fix-header { font-size: 14px; color: var(--blue); }
         .offline-fix-list { text-align: left; font-size: 13px; display: inline-block; margin-bottom: 20px; color: var(--text-dim); }
         .offline-debug-info { font-size: 10px; opacity: 0.4; border-top: 1px solid var(--border); padding-top: 15px; }
-        .agent-title-wrap { display: flex; align-items: center; flex: 1; margin: 0 15px; position: relative; }
-        .nav-breadcrumb { margin-right: 15px; margin-left: 0; }
-        .nav-agent-title { margin: 0; text-align: left; outline: none; }
+        .agent-title-wrap { display: flex; align-items: center; flex: 1 1 260px; min-width: 0; margin: 0 8px; position: relative; }
+        .nav-breadcrumb { margin-right: 10px; margin-left: 0; flex-shrink: 0; }
+        .nav-agent-title { margin: 0; text-align: left; outline: none; min-width: 0; overflow-wrap: anywhere; }
         .flex-spacer { flex: 1; }
+        .prompt-action-strip { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex: 0 1 auto; flex-wrap: wrap; }
         .collision-modal-actions { justify-content: space-between; }
         .collision-btn-group { display: flex; gap: 8px; }
     </style>
 </head>
 <body>
-    
+
     <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
         <symbol id="icon-warning" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></symbol>
         <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></symbol>
@@ -918,14 +1231,15 @@
         <symbol id="icon-copy" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></symbol>
         <symbol id="icon-counter" viewBox="0 0 512 512"><path fill="currentColor" fill-rule="evenodd" d="M105.21 256c0-82.475 64.576-149.333 144.235-149.333c79.658 0 144.234 66.858 144.234 149.333v12.501l-26.642-27.584l-29.135 30.166l76.382 79.082l76.383-79.082l-29.136-30.166l-26.642 27.584V256c0-106.048-83.017-192-185.444-192C147.017 64 64 149.952 64 256s83.017 192 185.445 192c43.826 0 84.171-15.765 115.923-42.112l-25.777-33.301c-24.705 20.501-56.025 32.746-90.146 32.746c-79.659 0-144.235-66.858-144.235-149.333m129.457-43.833v129.166h42.666V170.667h-38.291l-56.625 33.25l18 29.625z" clip-rule="evenodd"/></symbol>
         <symbol id="icon-search" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></symbol>
+        <symbol id="icon-wrap" viewBox="0 0 24 24"><path d="M4 6h11a4 4 0 0 1 0 8H8.8l2.6 2.6L10 18l-5-5 5-5 1.4 1.4L8.8 12H15a2 2 0 0 0 0-4H4V6zm0 12h4v-2H4v2z"/></symbol>
         <symbol id="icon-drag" viewBox="0 0 24 24"><path d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></symbol>
         <symbol id="icon-logo" viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm0 3.45l8.15 14.1H3.85L12 5.45zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></symbol>
     </svg>
 
-    
+
     <div id="a11y-announce" aria-live="polite" aria-atomic="true" class="sr-only" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0"></div>
 
-    
+
 
     <div id="bridge-offline-overlay">
         <div class="offline-card">
@@ -963,16 +1277,19 @@
                             ADD GROUP
                         </button>
                     </div>
-                    
+
                     <div class="control-center">
                         <div class="search-wrapper">
-                            <input type="text" id="search-box" placeholder="Search prompts..." aria-label="Search prompts" oninput="filterAgents()">
+                            <input type="text" id="search-box" placeholder="Search titles, then prompt text..." aria-label="Search prompt titles, then prompt text" oninput="filterAgents()">
+                            <button type="button" id="search-clear-btn" class="search-clear-btn" onclick="clearSearch()" aria-label="Clear search">×</button>
                             <svg aria-hidden="true"><use href="#icon-search"/></svg>
                         </div>
+                        <div id="search-feedback" class="search-feedback" aria-live="polite"></div>
                     </div>
-                    
+
                     <div class="control-right" style="position: relative;">
-                        <div class="desktop-actions" style="display: flex; gap: 12px; align-items: center;">
+                        <div class="desktop-actions" style="display: flex; gap: 8px; align-items: center;">
+                            <button class="density-toggle-btn active" id="density-toggle-btn" onclick="toggleDensityMode()" aria-pressed="true" title="Toggle density">COMPACT</button>
                             <button class="reset-counters-btn" onclick="resetAllCopyTimestamps()" aria-label="Reset All Copy Timestamps" title="Reset All Copy Timestamps">
                                 <svg aria-hidden="true"><use href="#icon-counter"/></svg>
                             </button>
@@ -997,9 +1314,9 @@
                         <span class="count-badge" id="del-count">0</span>
                         SELECTED
                     </div>
-                    
+
                     <div class="control-center"></div>
-                    
+
                     <div class="control-right">
                         <button class="btn btn-outline" id="bulk-move-btn" onclick="openBulkMove()" aria-label="Move selected agents to another group">
                             MOVE SELECTED
@@ -1024,6 +1341,8 @@
             <div class="agent-title-wrap">
                 <span id="agent-breadcrumb" class="breadcrumb nav-breadcrumb"></span>
                 <h2 id="agent-title" class="nav-agent-title">Agent Name</h2>
+                <button class="title-save-btn" id="title-save-btn" onmousedown="event.preventDefault()" onclick="saveTitleEdit()" aria-label="Save agent name" title="Save agent name">&#10003;</button>
+                <button class="title-cancel-btn" id="title-cancel-btn" onmousedown="event.preventDefault()" onclick="cancelTitleEdit()" aria-label="Cancel agent name edit" title="Cancel agent name edit">&#10005;</button>
                 <button class="edit-title-btn" onclick="startEditTitle()" aria-label="Edit Agent Name">
                     <svg aria-hidden="true"><use href="#icon-edit"/></svg>
                 </button>
@@ -1032,47 +1351,56 @@
                 </button>
                 <div class="flex-spacer"></div>
                 <span id="prompt-copy-timestamp" class="editor-timestamp"></span>
-                <button class="title-save-btn" id="title-save-btn" onmousedown="event.preventDefault()" onclick="saveTitleEdit()">SAVE</button>
-                <button class="title-cancel-btn" id="title-cancel-btn" onmousedown="event.preventDefault()" onclick="cancelTitleEdit()">CANCEL</button>
+            </div>
+            <div class="prompt-action-strip">
+                <button id="main-copy-btn" class="btn btn-primary copy-btn" onclick="copyPrompt()">COPY PROMPT</button>
+                <button id="main-edit-btn" class="edit-hint-btn" onclick="startEdit()" aria-label="Edit prompt">
+                    <svg aria-hidden="true"><use href="#icon-edit"/></svg>
+                    EDIT PROMPT
+                </button>
+                <button id="wrap-toggle-btn" class="wrap-toggle-btn" onclick="toggleLineWrap()" aria-pressed="false" title="Toggle line wrapping">
+                    <svg aria-hidden="true"><use href="#icon-wrap"/></svg>
+                    WRAP
+                </button>
+                <button id="save-btn" class="btn btn-success save-btn" style="display:none" onclick="saveEdit()">SAVE CHANGES</button>
+                <button id="cancel-btn" class="btn btn-secondary cancel-btn" style="display:none" onclick="stopEdit()">CANCEL</button>
+                <button class="ai-review-btn" onclick="reviewPromptWithAI()" title="Allow AI to review and improve this AI Agent prompt">
+                    <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    AI REVIEW
+                </button>
             </div>
         </div>
-        <div class="header">
-            <button id="main-copy-btn" class="btn btn-primary copy-btn" onclick="copyPrompt()">COPY PROMPT</button>
-            
-            <button id="main-edit-btn" class="edit-hint-btn" onclick="startEdit()" aria-label="Edit prompt">
-                <svg aria-hidden="true"><use href="#icon-edit"/></svg>
-                EDIT PROMPT
-            </button>
-            <button id="save-btn" class="btn btn-success save-btn" style="display:none" onclick="saveEdit()">SAVE CHANGES</button>
-            <button id="cancel-btn" class="btn btn-secondary cancel-btn" style="display:none" onclick="stopEdit()">CANCEL</button>
-            
-            <button class="ai-review-btn" onclick="reviewPromptWithAI()" title="Allow AI to review and improve this AI Agent prompt">
-                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                AI REVIEW
-            </button>
+        <div id="editor-conflict-banner" class="editor-conflict-banner" hidden>
+            Changed outside this editor.
+            <span>Reload the newer file or save your version on purpose.</span>
+            <button type="button" onclick="reloadExternalPrompt()">RELOAD THEIRS</button>
+            <button type="button" onclick="saveEdit(true)">SAVE MINE</button>
+        </div>
+        <div id="search-overlay">
+            <button class="search-close" onclick="closeSearch()" aria-label="Close search">×</button>
+            <div class="search-row">
+                <input type="text" id="search-find" placeholder="Find..." aria-label="Find in prompt" oninput="updateSearchStats(true)" onkeydown="handleSearchKey(event)">
+            </div>
+            <div id="replace-row" class="search-row" style="display:none">
+                <input type="text" id="search-replace" placeholder="Replace with..." aria-label="Replace with" onkeydown="handleReplaceKey(event)">
+            </div>
+            <div id="search-mode-note" class="search-mode-note" aria-live="polite">
+                Replace edits this prompt. Save changes to keep them.
+            </div>
+            <div class="search-options">
+                <label class="search-opt"><input type="checkbox" id="search-case" onchange="updateSearchStats(true)"> Match Case</label>
+                <label class="search-opt"><input type="checkbox" id="search-word" onchange="updateSearchStats(true)"> Whole Word</label>
+            </div>
+            <div class="search-actions">
+                <span id="search-stats" class="search-stats">0 of 0</span>
+                <button class="search-btn" id="find-prev-btn" onclick="findNext(-1)">Prev</button>
+                <button class="search-btn primary" id="find-next-btn" onclick="findNext(1)">Next</button>
+                <button class="search-btn" id="replace-btn" style="display:none" onclick="replaceCurrent()">Replace</button>
+                <button class="search-btn" id="replace-all-btn" style="display:none" onclick="replaceAll()">Replace All</button>
+            </div>
         </div>
         <div id="prompt-box-wrap">
             <div id="line-gutter"></div>
-            <div id="search-overlay">
-                <button class="search-close" onclick="closeSearch()" aria-label="Close search">×</button>
-                <div class="search-row">
-                    <input type="text" id="search-find" placeholder="Find..." oninput="updateSearchStats(true)" onkeydown="handleSearchKey(event)">
-                </div>
-                <div id="replace-row" class="search-row" style="display:none">
-                    <input type="text" id="search-replace" placeholder="Replace with..." onkeydown="handleReplaceKey(event)">
-                </div>
-                <div class="search-options">
-                    <label class="search-opt"><input type="checkbox" id="search-case" onchange="updateSearchStats(true)"> Match Case</label>
-                    <label class="search-opt"><input type="checkbox" id="search-word" onchange="updateSearchStats(true)"> Whole Word</label>
-                </div>
-                <div class="search-actions">
-                    <span id="search-stats" class="search-stats">0 of 0</span>
-                    <button class="search-btn" id="find-prev-btn" onclick="findNext(-1)">Prev</button>
-                    <button class="search-btn primary" id="find-next-btn" onclick="findNext(1)">Next</button>
-                    <button class="search-btn" id="replace-btn" style="display:none" onclick="replaceCurrent()">Replace</button>
-                    <button class="search-btn" id="replace-all-btn" style="display:none" onclick="replaceAll()">All</button>
-                </div>
-            </div>
             <div id="prompt-box" ondblclick="startEdit()" role="textbox" aria-multiline="true" aria-label="Prompt content" aria-readonly="true"></div>
         </div>
     </div>
@@ -1090,7 +1418,7 @@
             <div class="wizard-field" id="wiz-name-field">
                 <label for="wiz-name">AI Agent Prompt Name</label>
                 <input type="text" id="wiz-name" placeholder="e.g. C# Image_Editor" aria-label="Agent prompt name" oninput="checkWizardDuplicate()">
-                
+
                 <div class="wiz-duplicate-warning" id="wiz-duplicate-warning">
                     <svg aria-hidden="true"><use href="#icon-warning"/></svg>
                     <span>An agent with this name already exists in the selected group. It will be overwritten.</span>
@@ -1197,7 +1525,7 @@
                     <button class="recycle-close-btn" onclick="closeRecycleBin()">Close</button>
                 </div>
             </div>
-            
+
             <div class="recycle-loading-overlay" id="recycle-loader">
                 <div class="spinner"></div>
                 <div id="recycle-loader-text" class="recycle-loader-text">Working...</div>
@@ -1209,7 +1537,7 @@
     <div id="bridge-status" class="bridge-status">BRIDGE: OFFLINE</div>
 
     <script>
-        
+
         let audioCtx;
         function playClickSound() {
             if (typeof audioCtx === 'undefined') {
@@ -1225,7 +1553,7 @@
             const oscillator = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
             oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(987.77, audioCtx.currentTime); 
+            oscillator.frequency.setValueAtTime(987.77, audioCtx.currentTime);
             gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
             oscillator.connect(gainNode);
             gainNode.connect(audioCtx.destination);
@@ -1235,14 +1563,14 @@
         }
 
         document.addEventListener('click', function(e) {
-            
+
             if (e.target.closest('button, [onclick], [role="button"], .agent-card')) {
                 if (!e.target.closest('[disabled], .disabled')) {
                     playClickSound();
                 }
             }
         }, true);
-        
+
         const FOCUSABLE_SELECTOR = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
         let focusTrapPrevious = null;
 
@@ -1276,10 +1604,134 @@
             if (focusTrapPrevious) { focusTrapPrevious.focus(); focusTrapPrevious = null; }
         }
 
-        
-        function clearSearch() { search.value = ''; filterAgents(); }
 
-        
+        function clearSearch() {
+            search.value = '';
+            renderMenu('');
+            search.focus();
+        }
+
+        function normalizeSearchValue(value) {
+            return String(value || '').trim().toLocaleLowerCase();
+        }
+
+        function pluralize(count, singular, plural = singular + 's') {
+            return count === 1 ? singular : plural;
+        }
+
+        function buildDashboardSearchState(filter = '') {
+            const rawQuery = String(filter || '').trim();
+            const query = normalizeSearchValue(rawQuery);
+            const byFolder = new Map();
+            const allTitleMatches = [];
+            const allContentMatches = [];
+
+            Object.keys(groups).forEach(folderName => {
+                const groupData = groups[folderName];
+                const groupAgents = groupData?.agents || {};
+                Object.keys(groupAgents).forEach(agentName => {
+                    const promptText = String(groupAgents[agentName] || '');
+                    if (!query) {
+                        allTitleMatches.push({ folderName, agentName, matchType: 'all' });
+                    } else if (agentName.toLocaleLowerCase().includes(query)) {
+                        allTitleMatches.push({ folderName, agentName, matchType: 'title' });
+                    } else if (promptText.toLocaleLowerCase().includes(query)) {
+                        allContentMatches.push({ folderName, agentName, matchType: 'content', content: promptText });
+                    }
+                });
+            });
+
+            const useContentFallback = Boolean(query) && allTitleMatches.length === 0;
+            const matches = useContentFallback ? allContentMatches : allTitleMatches;
+            matches.forEach(match => {
+                if (!byFolder.has(match.folderName)) byFolder.set(match.folderName, []);
+                byFolder.get(match.folderName).push(match);
+            });
+
+            return {
+                rawQuery,
+                query,
+                byFolder,
+                total: matches.length,
+                hasQuery: Boolean(query),
+                mode: !query ? 'all' : (useContentFallback ? 'content' : 'title')
+            };
+        }
+
+        function updateDashboardSearchFeedback(state) {
+            const wrapper = search.closest('.search-wrapper');
+            const center = search.closest('.control-center');
+            const clearBtn = document.getElementById('search-clear-btn');
+            const feedback = document.getElementById('search-feedback');
+            const hasQuery = Boolean(state?.hasQuery);
+
+            if (wrapper) wrapper.classList.toggle('has-query', hasQuery);
+            if (center) center.classList.toggle('search-active-feedback', hasQuery);
+            if (clearBtn) clearBtn.hidden = !hasQuery;
+            if (!feedback) return;
+
+            if (!hasQuery) {
+                feedback.textContent = '';
+                return;
+            }
+
+            if (state.total === 0) {
+                feedback.textContent = 'No prompt titles or prompt text match this search.';
+                return;
+            }
+
+            const promptWord = pluralize(state.total, 'prompt');
+            const matchWord = pluralize(state.total, 'match', 'matches');
+            if (state.mode === 'content') {
+                feedback.innerHTML = `<strong>${state.total}</strong> prompt text ${matchWord} in ${promptWord}. No title matched, so these are content matches.`;
+            } else {
+                feedback.innerHTML = `<strong>${state.total}</strong> title ${matchWord} in ${promptWord}.`;
+            }
+        }
+
+        function appendHighlightedText(target, text, rawQuery) {
+            const source = String(text || '');
+            const query = String(rawQuery || '');
+            const index = query ? source.toLocaleLowerCase().indexOf(query.toLocaleLowerCase()) : -1;
+            if (index === -1) {
+                target.appendChild(document.createTextNode(source));
+                return;
+            }
+
+            target.appendChild(document.createTextNode(source.slice(0, index)));
+            const mark = document.createElement('span');
+            mark.className = 'search-match-mark';
+            mark.textContent = source.slice(index, index + query.length);
+            target.appendChild(mark);
+            target.appendChild(document.createTextNode(source.slice(index + query.length)));
+        }
+
+        function appendContentMatchSnippet(card, promptText, rawQuery) {
+            const cleanText = String(promptText || '').replace(/\s+/g, ' ').trim();
+            const query = String(rawQuery || '').trim();
+            if (!cleanText || !query) return;
+
+            const lowerText = cleanText.toLocaleLowerCase();
+            const lowerQuery = query.toLocaleLowerCase();
+            const matchIndex = lowerText.indexOf(lowerQuery);
+            if (matchIndex === -1) return;
+
+            const snippetStart = Math.max(0, matchIndex - 45);
+            const snippetEnd = Math.min(cleanText.length, matchIndex + query.length + 70);
+            const snippet = `${snippetStart > 0 ? '...' : ''}${cleanText.slice(snippetStart, snippetEnd)}${snippetEnd < cleanText.length ? '...' : ''}`;
+
+            const meta = document.createElement('span');
+            meta.className = 'card-search-meta';
+            meta.textContent = 'Content match';
+            card.appendChild(meta);
+
+            const snippetEl = document.createElement('span');
+            snippetEl.className = 'card-search-snippet';
+            appendHighlightedText(snippetEl, snippet, query);
+            card.appendChild(snippetEl);
+        }
+
+
         let scrollAnchorId = null;
         function saveScroll() {
             const containers = menu.querySelectorAll('.group-container');
@@ -1299,15 +1751,43 @@
             });
         }
 
-        
+
         function a11yAnnounce(msg) {
             const el = document.getElementById('a11y-announce');
             if (el) { el.textContent = ''; requestAnimationFrame(() => { el.textContent = msg; }); }
         }
 
-        
+
         function setPromptBoxEditing(isEditing) {
             box.setAttribute('aria-readonly', isEditing ? 'false' : 'true');
+            view.classList.toggle('editing-active', isEditing);
+        }
+
+        let wrapLines = true;
+
+        function updateWrapToggle() {
+            wrapLines = true;
+            promptBoxWrap.classList.add('wrap-lines');
+            const btn = document.getElementById('wrap-toggle-btn');
+            if (btn) {
+                btn.classList.add('active');
+                btn.setAttribute('aria-pressed', 'true');
+                btn.title = 'Line wrapping is always on';
+            }
+            updateLineNumbers();
+        }
+
+        function toggleLineWrap() {
+            wrapLines = true;
+            updateWrapToggle();
+        }
+
+        function apiErrorMessage(res, fallback) {
+            return (res && typeof res.message === 'string' && res.message.trim()) ? res.message : fallback;
+        }
+
+        function showApiError(res, fallback) {
+            showToast(apiErrorMessage(res, fallback), 'error');
         }
 
 
@@ -1340,7 +1820,7 @@
         let lastPlaceholderIndex = -1;
         let lastPlaceholderGroup = null;
 
-        
+
         function flip(container, action) {
             const children = Array.from(container.querySelectorAll('.group-container, .agent-card, .add-agent-card'));
             const firstRects = children.map(c => c.getBoundingClientRect());
@@ -1355,7 +1835,7 @@
                     const dy = firstRect.top - lastRect.top;
                     return (dx || dy) ? { dx, dy } : null;
                 });
-                
+
                 children.forEach((c, i) => {
                     const delta = deltas[i];
                     if (delta) {
@@ -1363,9 +1843,9 @@
                         c.style.transform = `translate(${delta.dx}px, ${delta.dy}px)`;
                     }
                 });
-                
+
                 if (children.length > 0) children[0].offsetHeight;
-                
+
                 children.forEach((c, i) => {
                     if (deltas[i]) {
                         c.style.transition = 'transform 0.3s ease';
@@ -1377,14 +1857,23 @@
 
         let currentGroup = '', currentAgent = '';
         let titleEditBackup = '';
+        let editBaseContent = '';
+        let hasExternalEditConflict = false;
+        let latestExternalContent = '';
         let isBridgeOnline = false;
         let connectionFailures = 0;
         let lastSyncTime = 0;
-        const MAX_FAILURES = 5; 
+        const MAX_FAILURES = 5;
+        let compactDensity = true;
+        try {
+            compactDensity = localStorage.getItem('compactDensity') !== '0';
+        } catch (e) {
+            compactDensity = true;
+        }
 
         let activeEventSource = null;
 
-        
+
         function getGroupHue(index) {
 
 
@@ -1497,6 +1986,7 @@
         }
 
         const ILLEGAL_CHARS = /[<>:"\/\\|?*\x00-\x1F]/g;
+        
         const menu = document.getElementById('main-menu');
         const view = document.getElementById('prompt-view');
         const box = document.getElementById('prompt-box');
@@ -1508,14 +1998,106 @@
         const globalTrash = document.getElementById('global-trash-zone');
         const promptBoxWrap = document.getElementById('prompt-box-wrap');
         const gutter = document.getElementById('line-gutter');
+        const EDITOR_HISTORY_LIMIT = 120;
+        let editorUndoStack = [];
+        let editorRedoStack = [];
+        let editorHistoryTimer = null;
+
+        function updateDensityMode() {
+            document.body.classList.toggle('compact-density', compactDensity);
+            const btn = document.getElementById('density-toggle-btn');
+            if (!btn) return;
+            btn.classList.toggle('active', compactDensity);
+            btn.setAttribute('aria-pressed', compactDensity ? 'true' : 'false');
+            btn.textContent = compactDensity ? 'COMFORT' : 'COMPACT';
+            btn.title = compactDensity ? 'Switch to comfortable spacing' : 'Switch to compact spacing';
+        }
+
+        function toggleDensityMode() {
+            compactDensity = !compactDensity;
+            try { localStorage.setItem('compactDensity', compactDensity ? '1' : '0'); } catch (e) {}
+            updateDensityMode();
+        }
+        updateDensityMode();
+
+        function getEditorText() {
+            return box.textContent || '';
+        }
+
+        function initializeEditorHistory(text = getEditorText()) {
+            editorUndoStack = [String(text || '')];
+            editorRedoStack = [];
+            if (editorHistoryTimer) clearTimeout(editorHistoryTimer);
+        }
+
+        function recordEditorHistoryNow() {
+            if (!box.classList.contains('editing')) return;
+            const text = getEditorText();
+            if (editorUndoStack[editorUndoStack.length - 1] === text) return;
+            editorUndoStack.push(text);
+            if (editorUndoStack.length > EDITOR_HISTORY_LIMIT) editorUndoStack.shift();
+            editorRedoStack = [];
+        }
+
+        function scheduleEditorHistoryRecord() {
+            if (editorHistoryTimer) clearTimeout(editorHistoryTimer);
+            editorHistoryTimer = setTimeout(recordEditorHistoryNow, 250);
+        }
+
+        function movePromptCaretToEnd() {
+            if (!box.classList.contains('editing')) return;
+            const range = document.createRange();
+            range.selectNodeContents(box);
+            range.collapse(false);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+
+        function applyEditorHistoryText(text) {
+            box.textContent = text;
+            scheduleUpdateLineNumbers();
+            if (isPromptSearchVisible()) updateSearchStats(false);
+            movePromptCaretToEnd();
+        }
+
+        function undoPromptEdit() {
+            if (!box.classList.contains('editing')) return false;
+            const activeEl = document.activeElement;
+            const current = getEditorText();
+            if (editorUndoStack[editorUndoStack.length - 1] !== current) recordEditorHistoryNow();
+            if (editorUndoStack.length <= 1) return false;
+            const popped = editorUndoStack.pop();
+            editorRedoStack.push(popped);
+            applyEditorHistoryText(editorUndoStack[editorUndoStack.length - 1]);
+            if (activeEl && activeEl.closest && activeEl.closest('#search-overlay')) activeEl.focus();
+            const isDirty = getEditorText() !== editBaseContent;
+            setSearchReplaceDirty(isDirty, isDirty ? 'Unsaved edit undone. Save changes to keep the current text.' : '');
+            return true;
+        }
+
+        function redoPromptEdit() {
+            if (!box.classList.contains('editing') || editorRedoStack.length === 0) return false;
+            const activeEl = document.activeElement;
+            const text = editorRedoStack.pop();
+            editorUndoStack.push(text);
+            if (editorUndoStack.length > EDITOR_HISTORY_LIMIT) editorUndoStack.shift();
+            applyEditorHistoryText(text);
+            if (activeEl && activeEl.closest && activeEl.closest('#search-overlay')) activeEl.focus();
+            const isDirty = getEditorText() !== editBaseContent;
+            setSearchReplaceDirty(isDirty, isDirty ? 'Unsaved edit redone. Save changes to keep the current text.' : '');
+            return true;
+        }
 
         box.addEventListener('paste', function(e) {
             e.preventDefault();
+            if (box.classList.contains('editing')) recordEditorHistoryNow();
             const text = (e.originalEvent || e).clipboardData.getData('text/plain');
             document.execCommand('insertText', false, text);
+            scheduleEditorHistoryRecord();
         });
 
-        
+
         let lineUpdateTimer = null;
         function scheduleUpdateLineNumbers() {
             if (lineUpdateTimer) clearTimeout(lineUpdateTimer);
@@ -1524,21 +2106,104 @@
 
         function updateLineNumbers() {
             if (!gutter || !box) return;
-            const text = box.innerText || '';
-            let count = 1;
-            for (let i = 0; i < text.length; i++) {
-                if (text.charCodeAt(i) === 10) count++;
+            const text = box.textContent || '';
+            const lines = text.split('\n');
+            const lineHeight = parseFloat(getComputedStyle(box).lineHeight) || 24;
+            const textNodes = [];
+            const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null, false);
+            let node = walker.nextNode();
+            let runningOffset = 0;
+
+            while (node) {
+                const length = node.nodeValue.length;
+                textNodes.push({
+                    node,
+                    start: runningOffset,
+                    end: runningOffset + length
+                });
+                runningOffset += length;
+                node = walker.nextNode();
             }
 
-            if (gutter.dataset.count != count) {
-                let nums = '';
-                for (let i = 1; i <= count; i++) {
-                    nums += i + (i === count ? '' : '\n');
+            const resolveTextOffset = (offset) => {
+                if (!textNodes.length) return null;
+                for (const item of textNodes) {
+                    if (offset <= item.end) {
+                        return {
+                            node: item.node,
+                            offset: Math.max(0, Math.min(item.node.nodeValue.length, offset - item.start))
+                        };
+                    }
                 }
-                gutter.textContent = nums;
-                gutter.dataset.count = count;
-            }
+                const last = textNodes[textNodes.length - 1];
+                return { node: last.node, offset: last.node.nodeValue.length };
+            };
+
+            const rangeForOffsets = (start, end) => {
+                if (end <= start || !textNodes.length) return null;
+                const startPoint = resolveTextOffset(start);
+                const endPoint = resolveTextOffset(end);
+                if (!startPoint || !endPoint) return null;
+                try {
+                    const range = document.createRange();
+                    range.setStart(startPoint.node, startPoint.offset);
+                    range.setEnd(endPoint.node, endPoint.offset);
+                    return range;
+                } catch (e) {
+                    return null;
+                }
+            };
+
+            const getVisualLineHeight = (start, end) => {
+                const range = rangeForOffsets(start, end);
+                if (!range) return lineHeight;
+
+                const rects = Array.from(range.getClientRects()).filter(rect => rect.width > 0 && rect.height > 0);
+                if (!rects.length) return lineHeight;
+
+                const tops = [];
+                let minTop = Infinity;
+                let maxBottom = -Infinity;
+                rects.forEach(rect => {
+                    minTop = Math.min(minTop, rect.top);
+                    maxBottom = Math.max(maxBottom, rect.bottom);
+                    if (!tops.some(top => Math.abs(top - rect.top) < 2)) tops.push(rect.top);
+                });
+
+                const rowsFromExtent = Math.max(1, Math.ceil((maxBottom - minTop - 1) / lineHeight));
+                const visualRows = Math.max(1, tops.length, rowsFromExtent);
+                return visualRows * lineHeight;
+            };
+
+            const fragment = document.createDocumentFragment();
+            let lineStart = 0;
+            lines.forEach((line, index) => {
+                const lineEnd = lineStart + line.length;
+                const row = document.createElement('div');
+                row.className = 'line-number-row';
+                row.textContent = String(index + 1);
+                row.style.height = `${getVisualLineHeight(lineStart, lineEnd)}px`;
+                fragment.appendChild(row);
+                lineStart = lineEnd + 1;
+            });
+
+            gutter.replaceChildren(fragment);
+            gutter.dataset.count = String(lines.length);
+            updateGutterHeight();
             syncGutterScroll();
+        }
+
+        function updateGutterHeight() {
+            if (!gutter || !box || !promptBoxWrap) return;
+            requestAnimationFrame(() => {
+                const height = Math.max(
+                    promptBoxWrap.clientHeight,
+                    promptBoxWrap.scrollHeight,
+                    box.scrollHeight,
+                    box.offsetHeight
+                );
+                gutter.style.minHeight = `${height}px`;
+            });
         }
 
         function syncGutterScroll() {
@@ -1548,8 +2213,8 @@
         async function api(endpoint, method = 'GET', body = null) {
             try {
 
-                const baseUrl = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') 
-                                ? `${window.location.protocol}//${window.location.host}` 
+                const baseUrl = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
+                                ? `${window.location.protocol}//${window.location.host}`
                                 : 'http://127.0.0.1:5589';
                 const url = new URL(`${baseUrl}/api/${endpoint}`);
                 url.searchParams.set('t', Date.now());
@@ -1559,8 +2224,16 @@
                     body: body ? JSON.stringify(body) : null,
                     cache: 'no-store'
                 });
-                return await res.json();
-            } catch (e) { return null; }
+                const contentType = res.headers.get('content-type') || '';
+                const payload = contentType.includes('application/json')
+                    ? await res.json()
+                    : { message: await res.text() };
+                if (!res.ok && payload && !payload.status) payload.status = 'error';
+                if (!res.ok && payload) payload.http_status = res.status;
+                return payload;
+            } catch (e) {
+                return { status: 'error', message: 'Local bridge is not reachable.' };
+            }
         }
 
         window.addEventListener('DOMContentLoaded', async () => {
@@ -1576,8 +2249,10 @@
             window.addEventListener('pointerup', handleManualDragUp);
             window.addEventListener('pointermove', handleAgentPointerMove);
             window.addEventListener('pointerup', handleAgentPointerUp);
+            window.addEventListener('resize', scheduleUpdateLineNumbers);
+            updateWrapToggle();
 
-            
+
             window.addEventListener('contextmenu', (e) => {
                 if (activeGroupDrag || agentDragStarted) {
                     e.preventDefault();
@@ -1585,7 +2260,7 @@
                 }
             });
 
-            
+
             box.addEventListener('scroll', syncGutterScroll);
         });
 
@@ -1679,7 +2354,7 @@
             if (!activeGroupDrag) return;
             lastClientX = e.clientX;
             lastClientY = e.clientY;
-            
+
             if (dragMoveRAF) return;
             dragMoveRAF = requestAnimationFrame(() => {
                 dragMoveRAF = null;
@@ -1715,12 +2390,12 @@
                 const msg = count > 0
                     ? `DELETE GROUP "${group ? group.title : folder}" with ${count} agents? This moves them to the Recycle Bin.`
                     : `DELETE EMPTY GROUP "${group ? group.title : folder}"? This moves it to the Recycle Bin.`;
-                
+
                 cancelDrag();
 
                 if (await showConfirm(msg, 'Delete Group')) {
                     await moveToRecycleBin(folder);
-                    
+
                     a11yAnnounce(`Group ${group ? group.title : folder} moved to recycle bin.`);
                 }
             } else {
@@ -1748,10 +2423,10 @@
                     agentGhost.style.left = (e.clientX - agentGhostOffsetX) + 'px';
                     agentGhost.style.top = (e.clientY - agentGhostOffsetY) + 'px';
                 }
-                
+
                 const elem = document.elementFromPoint(e.clientX, e.clientY);
                 const targetGroup = elem ? elem.closest('.group-container') : null;
-                
+
                 document.querySelectorAll('.group-container.drag-over').forEach(el => {
                     if (el !== targetGroup) el.classList.remove('drag-over');
                 });
@@ -1762,7 +2437,7 @@
                     if (grid) {
                         const children = Array.from(grid.children).filter(c => c !== agentSourceCard && c.classList.contains('agent-card'));
                         let afterElement = null;
-                        
+
 
                         const dragName = agentSourceCard.dataset.agent;
                         for (const child of children) {
@@ -1771,7 +2446,7 @@
                                 afterElement = child; break;
                             }
                         }
-                        
+
 
                         flip(grid, () => {
                             if (afterElement) {
@@ -1801,10 +2476,10 @@
                 draggedFromGroup = agentSourceCard.dataset.folder;
                 agentOriginalParent = agentSourceCard.parentNode;
                 agentOriginalNextSibling = agentSourceCard.nextSibling;
-                
+
                 const rect = agentSourceCard.getBoundingClientRect();
                 agentGhostOffsetX = e.clientX - rect.left; agentGhostOffsetY = e.clientY - rect.top;
-                
+
                 agentGhost = agentSourceCard.cloneNode(true);
                 agentGhost.classList.add('drag-ghost');
                 agentGhost.style.width = rect.width + 'px';
@@ -1812,7 +2487,7 @@
                 agentGhost.style.left = rect.left + 'px';
                 agentGhost.style.top = rect.top + 'px';
                 agentGhost.style.margin = '0';
-                
+
                 agentSourceCard.classList.add('dragging');
                 document.body.appendChild(agentGhost);
                 globalTrash.classList.add('active');
@@ -1840,10 +2515,10 @@
                     const res = await api('recycle-delete-agents', 'POST', { agents: [{ g: fromGroup, a: agent }] });
                     if (res && res.status === 'success') {
                         showToast(`MOVED TO BIN: ${agent}`, "success");
-                        
+
                         a11yAnnounce(`Agent ${agent} moved to recycle bin.`);
                         await syncFromBridge(); updateBinBadge();
-                    } else { showToast(res ? res.message || "DELETE FAILED" : "DELETE FAILED", "error"); syncFromBridge(); }
+                    } else { showApiError(res, "DELETE FAILED"); syncFromBridge(); }
                 }
             } else {
                 const elem = document.elementFromPoint(e.clientX, e.clientY);
@@ -1854,7 +2529,7 @@
                         if (res && res.status === 'success') {
                             showToast(`MOVED ${agent}`, "success");
                             a11yAnnounce(`Agent ${agent} moved to ${groups[targetGroup.dataset.folder].title}.`);
-                        } else { showToast("MOVE FAILED", "error"); syncFromBridge(); }
+                        } else { showApiError(res, "MOVE FAILED"); syncFromBridge(); }
                     });
                     animateGhostTo(sourceCard);
                 } else {
@@ -1884,8 +2559,8 @@
 
         function startEventStream() {
             if (activeEventSource) { activeEventSource.close(); activeEventSource = null; }
-            const baseUrl = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') 
-                            ? `${window.location.protocol}//${window.location.host}` 
+            const baseUrl = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
+                            ? `${window.location.protocol}//${window.location.host}`
                             : 'http://127.0.0.1:5589';
             activeEventSource = new EventSource(`${baseUrl}/events?t=${Date.now()}`);
             activeEventSource.onmessage = (e) => {
@@ -1918,8 +2593,24 @@
                         document.getElementById('menu-container').style.display = 'flex';
                         return true;
                     }
+                    const remoteContent = groups[currentGroup].agents[currentAgent];
                     updateBreadcrumb();
                     if (typeof updateEditorTimestamp === 'function') updateEditorTimestamp();
+                    if (wasEditing) {
+                        if (remoteContent !== editBaseContent) {
+                            latestExternalContent = remoteContent;
+                            hasExternalEditConflict = true;
+                            showEditorConflictBanner();
+                        }
+                    } else if (box.textContent !== remoteContent) {
+                        box.textContent = remoteContent;
+                        editBaseContent = remoteContent;
+                        initializeEditorHistory(remoteContent);
+                        updateLineNumbers();
+                        if (isPromptSearchVisible()) updateSearchStats(true);
+                        setSearchReplaceDirty(false);
+                        hideEditorConflictBanner();
+                    }
                 }
                 restoreScroll();
                 return true;
@@ -1929,41 +2620,77 @@
 
         function renderMenu(filter = '') {
             menu.innerHTML = '';
-            const f = filter.toLowerCase();
+            const searchState = buildDashboardSearchState(filter);
+            updateDashboardSearchFeedback(searchState);
             const groupFolders = Object.keys(groups);
             groupFolders.forEach((folderName, index) => {
                 const groupData = groups[folderName], groupAgents = groupData.agents;
-                const filteredAgents = Object.keys(groupAgents).filter(a => a.toLowerCase().includes(f));
-                if (filteredAgents.length === 0 && f) return;
+                const filteredAgents = searchState.byFolder.get(folderName) || [];
+                if (filteredAgents.length === 0 && searchState.hasQuery) return;
 
                 const container = document.createElement('div');
                 container.className = 'group-container'; container.dataset.folder = folderName;
                 container.setAttribute('role', 'region');
                 container.setAttribute('aria-label', groupData.title + ' group');
 
+                if (groupData.custom_width) {
+                    container.style.width = groupData.custom_width + 'px';
+                }
+
+                const resizeHandle = document.createElement('div');
+                resizeHandle.className = 'custom-resize-handle';
+                resizeHandle.title = 'Drag to resize group width';
                 
+                let startX, startWidth;
+                resizeHandle.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    startX = e.clientX;
+                    startWidth = container.offsetWidth;
+                    
+                    const onMouseMove = (moveEvent) => {
+                        const newWidth = Math.max(220, startWidth + (moveEvent.clientX - startX));
+                        container.style.width = newWidth + 'px';
+                    };
+                    
+                    const onMouseUp = () => {
+                        window.removeEventListener('mousemove', onMouseMove);
+                        window.removeEventListener('mouseup', onMouseUp);
+                        const finalWidth = container.offsetWidth;
+                        if (finalWidth !== groupData.custom_width) {
+                            groupData.custom_width = finalWidth;
+                            api('save-group-width', 'POST', { group: folderName, width: finalWidth })
+                                .catch(console.error);
+                        }
+                    };
+                    
+                    window.addEventListener('mousemove', onMouseMove);
+                    window.addEventListener('mouseup', onMouseUp);
+                });
+                container.appendChild(resizeHandle);
+
                 const colorBar = document.createElement('div');
                 colorBar.className = 'group-color-bar';
                 const groupHue = getGroupHue(index);
                 colorBar.style.background = `hsl(${groupHue}, 50%, 55%)`;
                 container.appendChild(colorBar);
-                
+
                 // Paint entire box with a gentle hue overlay
                 container.style.backgroundImage = `linear-gradient(180deg, hsla(${groupHue}, 50%, 55%, 0.1), hsla(${groupHue}, 50%, 55%, 0.02)), linear-gradient(180deg, var(--group-bg-top), var(--group-bg-bottom))`;
+                container.style.setProperty('--group-action-mask-bg', `color-mix(in srgb, hsl(${groupHue}, 50%, 55%) 10%, var(--group-bg-top))`);
 
-                const header = document.createElement('div'); header.className = 'group-header';
+                const header = document.createElement('div'); header.className = 'group-header group-title-overlay-actions';
 
-                
-                const groupChk = document.createElement('input'); 
-                groupChk.type = 'checkbox'; 
+
+                const groupChk = document.createElement('input');
+                groupChk.type = 'checkbox';
                 groupChk.className = 'agent-checkbox group-checkbox';
                 groupChk.style.position = 'static'; groupChk.style.transform = 'none';
                 groupChk.setAttribute('aria-label', 'Select all in ' + groupData.title);
                 groupChk.onclick = (e) => e.stopPropagation();
                 groupChk.onpointerdown = (e) => e.stopPropagation();
                 groupChk.onchange = () => toggleGroupSelection(folderName, groupChk.checked);
-                
-                const allSelected = filteredAgents.length > 0 && filteredAgents.every(a => deleteSelections.has(selKey(folderName, a)));
+
+                const allSelected = filteredAgents.length > 0 && filteredAgents.every(match => deleteSelections.has(selKey(folderName, match.agentName)));
                 groupChk.checked = selectedGroups.has(folderName) || (filteredAgents.length > 0 && allSelected);
                 header.appendChild(groupChk);
 
@@ -2035,15 +2762,17 @@
 
                 const grid = document.createElement('div'); grid.className = 'group-grid';
                 filteredAgents.sort((a, b) => {
-                    if (a.length !== b.length) return a.length - b.length;
-                    return a.localeCompare(b);
-                }).forEach(agentName => {
+                    if (a.agentName.length !== b.agentName.length) return a.agentName.length - b.agentName.length;
+                    return a.agentName.localeCompare(b.agentName);
+                }).forEach(match => {
+                    const agentName = match.agentName;
                     const card = document.createElement('div'); card.className = 'agent-card';
+                    if (match.matchType === 'content') card.classList.add('search-content-match');
                     card.dataset.folder = folderName; card.dataset.agent = agentName;
                     card.setAttribute('role', 'button');
                     card.setAttribute('tabindex', '0');
-                    card.setAttribute('aria-label', agentName + ' prompt');
-                    
+                    card.setAttribute('aria-label', match.matchType === 'content' ? agentName + ' prompt, content match' : agentName + ' prompt');
+
                     card.onkeydown = (e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
@@ -2059,8 +2788,13 @@
                         agentPointerStartX = e.clientX; agentPointerStartY = e.clientY;
                         agentDragStarted = false; agentSourceCard = card;
                     };
-                    const cardLabel = document.createElement('span'); cardLabel.className = 'card-label'; cardLabel.innerText = agentName;
+                    const cardLabel = document.createElement('span');
+                    cardLabel.className = 'card-label';
+                    if (searchState.mode === 'title') appendHighlightedText(cardLabel, agentName, searchState.rawQuery);
+                    else cardLabel.innerText = agentName;
                     card.appendChild(cardLabel);
+
+                    if (match.matchType === 'content') appendContentMatchSnippet(card, match.content, searchState.rawQuery);
 
                     const chk = document.createElement('input'); chk.type = 'checkbox'; chk.className = 'agent-checkbox';
                     chk.setAttribute('aria-label', 'Select ' + agentName);
@@ -2088,7 +2822,7 @@
                     grid.appendChild(card);
                 });
 
-                if (filteredAgents.length === 0 && !f) {
+                if (filteredAgents.length === 0 && !searchState.hasQuery) {
                     const emptyMsg = document.createElement('div'); emptyMsg.className = 'empty-group-msg';
                     emptyMsg.innerText = 'No agents yet - click + to add one'; grid.appendChild(emptyMsg);
                 }
@@ -2101,9 +2835,9 @@
                 container.appendChild(grid); menu.appendChild(container);
             });
 
-            if (f && menu.children.length === 0) {
+            if (searchState.hasQuery && searchState.total === 0) {
                 const emptyState = document.createElement('div'); emptyState.className = 'search-empty-state';
-                emptyState.innerHTML = '<h3>No agents match your search</h3><p>Try a different search term</p><button onclick="clearSearch()">Clear Search</button>';
+                emptyState.innerHTML = '<h3>No prompts match your search</h3><p>Checked prompt titles first, then prompt text.</p><button onclick="clearSearch()">Clear Search</button>';
                 menu.appendChild(emptyState);
             }
             if (isDeleteMode) menu.classList.add('delete-mode');
@@ -2113,41 +2847,7 @@
         function filterAgents() {
             clearTimeout(filterDebounceTimer);
             filterDebounceTimer = setTimeout(() => {
-                const f = search.value.toLowerCase();
-                const groups = document.querySelectorAll('.group-container');
-                groups.forEach(g => {
-                    let hasVisible = false;
-                    const cards = g.querySelectorAll('.agent-card');
-                    cards.forEach(c => {
-                        const name = c.dataset.agent.toLowerCase();
-                        if (name.includes(f)) {
-                            c.style.display = '';
-                            hasVisible = true;
-                        } else {
-                            c.style.display = 'none';
-                        }
-                    });
-                    const emptyMsg = g.querySelector('.empty-group-msg');
-                    if (emptyMsg) {
-                        if (cards.length === 0 && !f) emptyMsg.style.display = '';
-                        else emptyMsg.style.display = 'none';
-                    }
-                    if (!hasVisible && cards.length > 0 && f) g.style.display = 'none';
-                    else g.style.display = '';
-                });
-                let allEmpty = true;
-                groups.forEach(g => { if (g.style.display !== 'none') allEmpty = false; });
-                let emptyState = document.querySelector('.search-empty-state');
-                if (f && allEmpty) {
-                    if (!emptyState) {
-                        emptyState = document.createElement('div'); emptyState.className = 'search-empty-state';
-                        emptyState.innerHTML = '<h3>No agents match your search</h3><p>Try a different search term</p><button onclick="clearSearch()">Clear Search</button>';
-                        menu.appendChild(emptyState);
-                    }
-                    emptyState.style.display = '';
-                } else if (emptyState) {
-                    emptyState.style.display = 'none';
-                }
+                renderMenu(search.value);
             }, 150);
         }
 
@@ -2156,7 +2856,7 @@
             if (!group) return;
             if (isChecked) selectedGroups.add(folderName);
             else selectedGroups.delete(folderName);
-            
+
             Object.keys(group.agents).forEach(agentName => {
                 const key = selKey(folderName, agentName);
                 if (isChecked) deleteSelections.add(key);
@@ -2165,7 +2865,7 @@
             renderMenu(search.value);
             updateDeleteCount();
         }
-        
+
         async function openKeyboardMove(fromFolder, agentName) {
             const allGroups = Object.keys(groups).sort();
             if (allGroups.length <= 1) { showToast('No other groups to move to', 'info'); return; }
@@ -2173,21 +2873,21 @@
             const options = targets.map(f => ({ value: f, label: groups[f].title }));
             const selectedTarget = await showSelectPrompt('Move Agent', `Select destination group for "${agentName}":`, options);
             if (!selectedTarget) return;
-            
+
             const res = await api('move', 'POST', { from: fromFolder, to: selectedTarget, name: agentName });
             if (res && res.status === 'success') {
                 showToast(`MOVED "${agentName}" TO ${groups[selectedTarget].title}`, 'success');
                 a11yAnnounce(`Agent ${agentName} moved to ${groups[selectedTarget].title}.`);
                 await syncFromBridge();
             } else {
-                showToast('MOVE FAILED', 'error');
+                showApiError(res, 'MOVE FAILED');
             }
         }
 
         async function moveToRecycleBin(folder) {
             const res = await api('recycle-delete-group', 'POST', { folder });
             if (res && res.status === 'success') { showToast('GROUP MOVED TO RECYCLE BIN', 'success'); await syncFromBridge(); }
-            else { showToast('DELETE FAILED', 'error'); syncFromBridge(); }
+            else { showApiError(res, 'DELETE FAILED'); syncFromBridge(); }
         }
 
         async function confirmDeleteGroup(folder) {
@@ -2199,20 +2899,44 @@
         }
 
         function startRenameGroup(oldFolder, oldTitle, titleEl, header) {
+            const container = header.closest('.group-container');
+            let oldInlineWidth = '';
+            let oldInlineMinWidth = '';
+            let oldInlineMaxWidth = '';
+            if (container) {
+                oldInlineWidth = container.style.width;
+                oldInlineMinWidth = container.style.minWidth;
+                oldInlineMaxWidth = container.style.maxWidth;
+                const originalWidth = container.offsetWidth;
+                container.style.width = originalWidth + 'px';
+                container.style.minWidth = originalWidth + 'px';
+                container.style.maxWidth = originalWidth + 'px';
+            }
             titleEl.contentEditable = true; titleEl.classList.add('editing'); titleEl.focus();
+            header.classList.add('renaming-group-title');
             const range = document.createRange(); range.selectNodeContents(titleEl);
             const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
 
             const saveBtn = document.createElement('button'); saveBtn.className = 'group-rename-btn group-rename-save'; saveBtn.innerHTML = '&#10003;';
             const cancelBtn = document.createElement('button'); cancelBtn.className = 'group-rename-btn group-rename-cancel'; cancelBtn.innerHTML = '&#10005;';
             header.appendChild(saveBtn); header.appendChild(cancelBtn);
-            const editIcon = header.querySelector('.edit-group-icon'), delIcon = header.querySelector('.delete-group-icon');
+            const editIcon = header.querySelector('.edit-group-icon'), delIcon = header.querySelector('.delete-group-icon'), resetIcon = header.querySelector('.group-reset-icon'), dragHandle = header.querySelector('.group-drag-handle');
             if (editIcon) editIcon.style.display = 'none'; if (delIcon) delIcon.style.display = 'none';
+            if (resetIcon) resetIcon.style.display = 'none';
+            if (dragHandle) dragHandle.style.display = 'none';
 
             const cleanup = () => {
                 titleEl.contentEditable = false; titleEl.classList.remove('editing');
+                header.classList.remove('renaming-group-title');
                 saveBtn.remove(); cancelBtn.remove();
                 if (editIcon) editIcon.style.display = ''; if (delIcon) delIcon.style.display = '';
+                if (resetIcon) resetIcon.style.display = '';
+                if (dragHandle) dragHandle.style.display = '';
+                if (container) {
+                    container.style.width = oldInlineWidth;
+                    container.style.minWidth = oldInlineMinWidth;
+                    container.style.maxWidth = oldInlineMaxWidth;
+                }
                 titleEl.onblur = null;
             };
 
@@ -2221,12 +2945,12 @@
                 if (newTitle && newTitle !== oldTitle) {
                     const res = await api('rename-group', 'POST', { old: oldFolder, new: newTitle });
                     if (res && res.status === 'success') { showToast(`RENAMED TO: ${newTitle}`, "success"); syncFromBridge(); }
-                    else { showToast("RENAME FAILED", "error"); syncFromBridge(); }
+                    else { showApiError(res, "RENAME FAILED"); syncFromBridge(); }
                 } else { titleEl.innerText = oldTitle; }
             };
             cancelBtn.onclick = (e) => { e.stopPropagation(); titleEl.innerText = oldTitle; cleanup(); };
-            saveBtn.onmousedown = (e) => e.preventDefault(); 
-            cancelBtn.onmousedown = (e) => e.preventDefault(); 
+            saveBtn.onmousedown = (e) => e.preventDefault();
+            cancelBtn.onmousedown = (e) => e.preventDefault();
             titleEl.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); saveBtn.click(); } if (e.key === 'Escape') cancelBtn.click(); };
             titleEl.onblur = () => { setTimeout(() => { if (titleEl.contentEditable === 'true') { titleEl.innerText = oldTitle; cleanup(); } }, 200); };
         }
@@ -2269,14 +2993,19 @@
                     if (folder) sel.value = folder;
                 }
             }
-            else { showToast("CREATE FAILED", "error"); }
+            else { showApiError(res, "CREATE FAILED"); }
         }
 
         function showPrompt(folder, agent) {
             currentGroup = folder; currentAgent = agent; stopEdit(); cancelTitleEdit();
             document.getElementById('menu-container').style.display = 'none';
             view.style.display = 'flex'; title.innerText = agent; box.textContent = groups[folder].agents[agent];
+            editBaseContent = groups[folder].agents[agent];
+            initializeEditorHistory(editBaseContent);
             updateLineNumbers();
+            if (isPromptSearchVisible()) updateSearchStats(true);
+            updateWrapToggle();
+            setSearchReplaceDirty(false);
             setPromptBoxEditing(false);
             updateNavArrows(); updateBreadcrumb(); updateEditorTimestamp();
         }
@@ -2354,13 +3083,50 @@
             }
         }
 
+        function hideEditorConflictBanner() {
+            const banner = document.getElementById('editor-conflict-banner');
+            if (banner) banner.hidden = true;
+        }
+
+        function showEditorConflictBanner() {
+            const banner = document.getElementById('editor-conflict-banner');
+            if (banner) banner.hidden = false;
+            a11yAnnounce('This prompt changed outside the editor.');
+        }
+
+        function reloadExternalPrompt() {
+            const remoteContent = latestExternalContent || groups[currentGroup]?.agents?.[currentAgent];
+            if (typeof remoteContent !== 'string') return;
+            box.textContent = remoteContent;
+            editBaseContent = remoteContent;
+            latestExternalContent = '';
+            hasExternalEditConflict = false;
+            hideEditorConflictBanner();
+            updateLineNumbers();
+            initializeEditorHistory(remoteContent);
+            if (isPromptSearchVisible()) updateSearchStats(true);
+            setSearchReplaceDirty(false);
+            showToast('RELOADED NEWER PROMPT', 'success');
+        }
+
         function startEdit() {
+            if (box.classList.contains('editing')) return;
+            editBaseContent = groups[currentGroup]?.agents?.[currentAgent] ?? box.innerText;
+            initializeEditorHistory(editBaseContent);
+            latestExternalContent = '';
+            hasExternalEditConflict = false;
+            hideEditorConflictBanner();
             box.contentEditable = true; box.classList.add('editing');
             box.setAttribute('aria-readonly', 'false');
+            setPromptBoxEditing(true);
             document.getElementById('main-copy-btn').style.display = 'none';
             document.getElementById('save-btn').style.display = 'block'; document.getElementById('cancel-btn').style.display = 'block';
             promptBoxWrap.classList.add('editing-state');
-            box.oninput = scheduleUpdateLineNumbers;
+            box.oninput = () => {
+                scheduleUpdateLineNumbers();
+                schedulePromptSearchStats();
+                scheduleEditorHistoryRecord();
+            };
             box.onkeydown = (e) => {
                 if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
                     e.preventDefault();
@@ -2368,12 +3134,12 @@
                     return;
                 }
                 if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveEdit(); return; }
-                if (e.key === 'Escape') { 
+                if (e.key === 'Escape') {
                     const searchOverlay = document.getElementById('search-overlay');
                     if (searchOverlay && searchOverlay.classList.contains('visible')) {
                         e.preventDefault(); e.stopPropagation(); closeSearch(); return;
                     }
-                    e.preventDefault(); stopEdit(); 
+                    e.preventDefault(); stopEdit();
                 }
             };
         }
@@ -2385,15 +3151,27 @@
                     showToast(`MOVED TO BIN: ${currentAgent}`, "success");
                     updateBinBadge();
                     showMenu();
-                } else { showToast("DELETE FAILED", "error"); }
+                } else { showApiError(res, "DELETE FAILED"); }
             }
         }
 
-        function reviewPromptWithAI() {
+        async function reviewPromptWithAI() {
             const rawPrompt = box.innerText;
-            const aiInstructions = `Please review this AI agent prompt pasted below. Please in real real short bulletins summerize what is good about the prompt, and then below in real real short what is not good about this prompt, and may not get the expected results duo to missing hallucination guards, or lack of details and constrains. Please point out and suggest correction for any grammer or typo issues as well. On the very bottom please reprint in full the entire suggested corrected AI Agent prompt for me to copy and paste the corrected version of it easily. keep all the answers real short and consice, and keep everything in an extremely oversimplified english which would be easy for the average human to understand:\n\n"${rawPrompt}"`;
-            const encoded = encodeURIComponent(aiInstructions);
-            window.open('https://chatgpt.com/?q=' + encoded, '_blank');
+            if (!rawPrompt.trim()) { showToast('PROMPT IS EMPTY', 'warning'); return; }
+            const alreadyAccepted = (() => {
+                try { return localStorage.getItem('aiReviewPrivacyAck') === '1'; } catch (e) { return false; }
+            })();
+            if (!alreadyAccepted) {
+                const ok = await showConfirm('AI Review opens ChatGPT. The review text will be copied to your clipboard, and you choose whether to paste it there. Continue?', 'AI Review');
+                if (!ok) return;
+                try { localStorage.setItem('aiReviewPrivacyAck', '1'); } catch (e) {}
+            }
+            const aiInstructions = `Please review this AI agent prompt pasted below. Keep the answer very short and use very simple English.\n\nReturn:\n1. What is good.\n2. What is weak or risky.\n3. Missing hallucination guards, details, or constraints.\n4. Grammar or typo fixes.\n5. A full corrected version I can copy.\n\nPrompt:\n\n${rawPrompt}`;
+            const copied = await writeClipboardPlain(aiInstructions);
+            if (copied) showToast('AI REVIEW PROMPT COPIED', 'success');
+            else showAlert('Could not copy the AI Review prompt. You can still open ChatGPT and copy the prompt manually from this app.', 'Copy Failed');
+            const opened = window.open('https://chatgpt.com/', '_blank', 'noopener,noreferrer');
+            if (!opened) showToast('CHATGPT POPUP WAS BLOCKED', 'warning');
         }
 
         function startEditTitle() {
@@ -2421,7 +3199,7 @@
                 if (res && res.status === 'success') {
                     currentAgent = newName; await syncFromBridge(); title.innerText = newName;
                     showToast("AGENT RENAMED", "success"); updateNavArrows(); updateBreadcrumb(); updateEditorTimestamp();
-                } else { title.innerText = prev; showToast("RENAME FAILED", "error"); }
+                } else { title.innerText = prev; showApiError(res, "RENAME FAILED"); }
             } else title.innerText = prev;
         }
 
@@ -2436,7 +3214,11 @@
 
         function stopEdit() {
             box.contentEditable = false; box.classList.remove('editing'); title.contentEditable = false; box.onkeydown = null;
-            box.setAttribute('aria-readonly', 'true');
+            setPromptBoxEditing(false);
+            editBaseContent = '';
+            latestExternalContent = '';
+            hasExternalEditConflict = false;
+            hideEditorConflictBanner();
             document.getElementById('main-copy-btn').style.display = 'block';
             document.getElementById('save-btn').style.display = 'none'; document.getElementById('cancel-btn').style.display = 'none';
             document.querySelector('.edit-title-btn').style.display = 'flex';
@@ -2445,19 +3227,50 @@
             if (currentAgent && groups[currentGroup]?.agents?.[currentAgent]) {
                 title.innerText = currentAgent; box.textContent = groups[currentGroup].agents[currentAgent];
             }
+            initializeEditorHistory(getEditorText());
+            setSearchReplaceDirty(false);
             if (typeof updateEditorTimestamp === 'function') updateEditorTimestamp();
         }
 
-        async function saveEdit() {
+        async function saveEdit(forceSave = false) {
+            if (hasExternalEditConflict && !forceSave) {
+                const confirmed = await showConfirm('This prompt changed outside this editor. Save your version over the newer file?', 'External Change');
+                if (!confirmed) return;
+                forceSave = true;
+            }
             const saveBtn = document.getElementById('save-btn');
             const originalText = saveBtn.innerText;
             saveBtn.innerText = "SAVING...";
             saveBtn.disabled = true;
-            const res = await api('save', 'POST', { group: currentGroup, name: currentAgent, content: box.innerText, old_name: currentAgent });
+            const newContent = box.innerText;
+            const res = await api('save', 'POST', {
+                group: currentGroup,
+                name: currentAgent,
+                content: newContent,
+                old_name: currentAgent,
+                base_content: editBaseContent,
+                force: forceSave
+            });
             saveBtn.innerText = originalText;
             saveBtn.disabled = false;
-            if (res && res.status === 'success') { showToast("PROMPT SAVED", "success"); await syncFromBridge(); stopEdit(); }
-            else showToast("SAVE FAILED", "error");
+            if (res && res.status === 'conflict') {
+                latestExternalContent = typeof res.current_content === 'string' ? res.current_content : latestExternalContent;
+                hasExternalEditConflict = true;
+                showEditorConflictBanner();
+                showToast(apiErrorMessage(res, 'Prompt changed outside this editor.'), 'warning');
+                return;
+            }
+            if (res && res.status === 'success') {
+                editBaseContent = newContent;
+                latestExternalContent = '';
+                hasExternalEditConflict = false;
+                hideEditorConflictBanner();
+                setSearchReplaceDirty(false);
+                showToast("PROMPT SAVED", "success");
+                await syncFromBridge();
+                stopEdit();
+            }
+            else showApiError(res, "SAVE FAILED");
         }
 
         function openWizard(pre) {
@@ -2500,35 +3313,63 @@
             const res = await api('save', 'POST', { group: f, name: n, content: c });
             btn.innerText = originalText; btn.disabled = false;
             if (res && res.status === 'success') { showToast("AGENT CREATED", "success"); closeWizard(); await syncFromBridge(); }
-            else showToast("CREATE FAILED", "error");
+            else showApiError(res, "CREATE FAILED");
         }
 
-        function copyToClipboard(t, groupFolder, agentName) {
-            navigator.clipboard.writeText(t).then(async () => {
-                showToast("COPIED", "success");
-                if (groupFolder && agentName) {
-                    const res = await api('record-copy', 'POST', { group: groupFolder, name: agentName });
-                    if (res && res.status === 'success' && res.timestamp) {
-                        if (groups[groupFolder]) {
-                            if (!groups[groupFolder].copy_times) groups[groupFolder].copy_times = {};
-                            groups[groupFolder].copy_times[agentName] = res.timestamp;
-                        }
-                        if (currentGroup === groupFolder && currentAgent === agentName && view.style.display !== 'none') {
-                            updateEditorTimestamp();
-                        }
-                        const card = document.querySelector(`.agent-card[data-folder="${groupFolder}"][data-agent="${agentName}"]`);
-                        if (card) {
-                            let tsEl = card.querySelector('.card-timestamp');
-                            if (!tsEl) {
-                                tsEl = document.createElement('span');
-                                tsEl.className = 'card-timestamp';
-                                card.appendChild(tsEl);
-                            }
-                            tsEl.innerText = formatCopyTime(res.timestamp);
-                        }
-                    }
+        async function writeClipboardPlain(text) {
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(text);
+                    return true;
                 }
-            });
+            } catch (e) {}
+
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.top = '-1000px';
+            ta.style.left = '-1000px';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            let ok = false;
+            try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+            ta.remove();
+            return ok;
+        }
+
+        async function copyToClipboard(t, groupFolder, agentName) {
+            const copied = await writeClipboardPlain(t);
+            if (!copied) {
+                showAlert('Copy failed. Please select the prompt text and press Ctrl+C.', 'Copy Failed');
+                return;
+            }
+            showToast("COPIED", "success");
+            if (groupFolder && agentName) {
+                const res = await api('record-copy', 'POST', { group: groupFolder, name: agentName });
+                if (res && res.status === 'success' && res.timestamp) {
+                    if (groups[groupFolder]) {
+                        if (!groups[groupFolder].copy_times) groups[groupFolder].copy_times = {};
+                        groups[groupFolder].copy_times[agentName] = res.timestamp;
+                    }
+                    if (currentGroup === groupFolder && currentAgent === agentName && view.style.display !== 'none') {
+                        updateEditorTimestamp();
+                    }
+                    const card = document.querySelector(`.agent-card[data-folder="${groupFolder}"][data-agent="${agentName}"]`);
+                    if (card) {
+                        let tsEl = card.querySelector('.card-timestamp');
+                        if (!tsEl) {
+                            tsEl = document.createElement('span');
+                            tsEl.className = 'card-timestamp';
+                            card.appendChild(tsEl);
+                        }
+                        tsEl.innerText = formatCopyTime(res.timestamp);
+                    }
+                } else {
+                    showToast(apiErrorMessage(res, 'COPIED, BUT TIMESTAMP WAS NOT SAVED'), 'warning');
+                }
+            }
         }
         function copyPrompt() { copyToClipboard(box.innerText, currentGroup, currentAgent); }
 
@@ -2544,24 +3385,24 @@
             const selBar = document.getElementById('selection-bar');
             selBar.style.display = 'flex';
             setTimeout(() => selBar.classList.add('active'), 10);
-            
-            menu.classList.add('delete-mode'); 
+
+            menu.classList.add('delete-mode');
             updateDeleteCount();
             a11yAnnounce('Delete mode activated. Select agents to delete or move.');
         }
 
         function cancelDeleteMode() {
-            isDeleteMode = false; 
+            isDeleteMode = false;
             deleteSelections.clear();
             selectedGroups.clear();
-            
+
             const selBar = document.getElementById('selection-bar');
             selBar.classList.remove('active');
             setTimeout(() => selBar.style.display = 'none', 300);
-            
+
             document.getElementById('standard-bar').style.transform = 'translateY(0)';
             document.getElementById('standard-bar').style.opacity = '1';
-            
+
             menu.classList.remove('delete-mode');
             a11yAnnounce('Delete mode cancelled.');
         }
@@ -2570,8 +3411,8 @@
             const sel = Array.from(deleteSelections).map(k => { const i = k.indexOf('||'); return { g: k.substring(0, i), a: k.substring(i + 2) }; });
             const gSel = Array.from(selectedGroups);
             if (sel.length === 0 && gSel.length === 0) { showToast("NO ITEMS SELECTED", "info"); return; }
-            
-            const msg = (sel.length > 0 && gSel.length > 0) 
+
+            const msg = (sel.length > 0 && gSel.length > 0)
                 ? `Move ${sel.length} agents and ${gSel.length} groups to Recycle Bin?`
                 : (gSel.length > 0 ? `Move ${gSel.length} groups to Recycle Bin?` : `Move ${sel.length} agents to Recycle Bin?`);
 
@@ -2579,14 +3420,20 @@
                 const promises = [];
                 if (sel.length > 0) promises.push(api('recycle-delete-agents', 'POST', { agents: sel }));
                 gSel.forEach(folder => promises.push(api('recycle-delete-group', 'POST', { folder })));
-                
-                Promise.all(promises).then(() => { 
-                    deleteSelections.clear(); 
+
+                Promise.all(promises).then((results) => {
+                    const failed = results.find(r => !r || r.status !== 'success');
+                    if (failed) {
+                        showApiError(failed, "DELETE FAILED");
+                        syncFromBridge();
+                        return;
+                    }
+                    deleteSelections.clear();
                     selectedGroups.clear();
-                    syncFromBridge(); 
-                    cancelDeleteMode(); 
-                    showToast("ITEMS MOVED TO RECYCLE BIN", "success"); 
-                    updateBinBadge(); 
+                    syncFromBridge();
+                    cancelDeleteMode();
+                    showToast("ITEMS MOVED TO RECYCLE BIN", "success");
+                    updateBinBadge();
                 });
             }
         }
@@ -2641,7 +3488,7 @@
                 cancelDeleteMode();
                 await syncFromBridge();
             } else {
-                showToast("MOVE FAILED", "error");
+                showApiError(res, "MOVE FAILED");
             }
         }
 
@@ -2652,7 +3499,7 @@
                 await syncFromBridge();
                 showToast("TIMESTAMPS RESET", "success");
             } else {
-                showToast("RESET FAILED", "error");
+                showApiError(res, "RESET FAILED");
             }
         }
 
@@ -2662,7 +3509,7 @@
                 await syncFromBridge();
                 showToast("GROUP TIMESTAMPS RESET", "success");
             } else {
-                showToast("RESET FAILED", "error");
+                showApiError(res, "RESET FAILED");
             }
         }
 
@@ -2737,7 +3584,7 @@
             await new Promise(r => setTimeout(r, 200));
             const check = await api('recycle-list');
             if (!check || !check.items) return false;
-            
+
             if (actionType === 'purge-all') {
                 return check.items.length === 0;
             } else if (binPath) {
@@ -2784,11 +3631,11 @@
                 const res = await api('recycle-restore', 'POST', { bin_path: binPath, collision_action: collisionAction });
                 if (res && res.status === 'success') {
                     markRecycleLoaderStepComplete(step1, true);
-                    
+
                     let step2 = addRecycleLoaderStep('Verifying file system changes...');
                     if (await verifyRecycleAction('restore', binPath)) {
                         markRecycleLoaderStepComplete(step2, true);
-                        
+
                         let step3 = addRecycleLoaderStep('Refreshing workspace data...');
                         showToast('ITEM RESTORED SUCCESSFULLY', 'success');
                         await refreshRecycleBinList();
@@ -2807,9 +3654,9 @@
                     if (action) {
                         return restoreBinItem(binPath, btnElement, action);
                     }
-                } else { 
+                } else {
                     markRecycleLoaderStepComplete(step1, false);
-                    showToast(res ? res.message || 'RESTORE FAILED' : 'RESTORE FAILED', 'error'); 
+                    showApiError(res, 'RESTORE FAILED');
                 }
             } catch (e) {
                 markRecycleLoaderStepComplete(step1, false);
@@ -2827,11 +3674,11 @@
                 const res = await api('recycle-purge', 'POST', { bin_path: binPath });
                 if (res && res.status === 'success') {
                     markRecycleLoaderStepComplete(step1, true);
-                    
+
                     let step2 = addRecycleLoaderStep('Verifying permanent deletion...');
                     if (await verifyRecycleAction('purge', binPath)) {
                         markRecycleLoaderStepComplete(step2, true);
-                        
+
                         let step3 = addRecycleLoaderStep('Updating interface...');
                         showToast('PERMANENTLY DELETED', 'success');
                         await refreshRecycleBinList();
@@ -2842,9 +3689,9 @@
                         showToast('DELETION VERIFICATION FAILED', 'warning');
                         await refreshRecycleBinList();
                     }
-                } else { 
+                } else {
                     markRecycleLoaderStepComplete(step1, false);
-                    showToast(res ? res.message || 'PURGE FAILED' : 'PURGE FAILED', 'error'); 
+                    showApiError(res, 'PURGE FAILED');
                 }
             } catch (e) {
                 markRecycleLoaderStepComplete(step1, false);
@@ -2862,11 +3709,11 @@
                 const res = await api('recycle-purge-all', 'POST');
                 if (res && res.status === 'success') {
                     markRecycleLoaderStepComplete(step1, true);
-                    
+
                     let step2 = addRecycleLoaderStep('Verifying deletion...');
                     if (await verifyRecycleAction('purge-all')) {
                         markRecycleLoaderStepComplete(step2, true);
-                        
+
                         let step3 = addRecycleLoaderStep('Updating interface...');
                         showToast('RECYCLE BIN EMPTIED', 'success');
                         await refreshRecycleBinList();
@@ -2878,9 +3725,9 @@
                         showToast('PURGE VERIFICATION FAILED: Some items remained', 'warning');
                         await refreshRecycleBinList();
                     }
-                } else { 
+                } else {
                     markRecycleLoaderStepComplete(step1, false);
-                    showToast(res ? res.message || 'PURGE FAILED' : 'PURGE FAILED', 'error'); 
+                    showApiError(res, 'PURGE FAILED');
                 }
             } catch (e) {
                 markRecycleLoaderStepComplete(step1, false);
@@ -2903,21 +3750,74 @@
             } catch (e) {}
         }
 
-        
+
         let searchMatches = [];
         let currentSearchIdx = -1;
+        let currentRangeRect = null;
+        let searchSelectionActive = false;
+        let promptSearchUpdateTimer = null;
+        let searchReplaceDirty = false;
+        const SEARCH_HIGHLIGHT_LIMIT = 120;
+        const REPLACE_ALL_CONFIRM_MATCH_LIMIT = 10;
 
-        function openSearch(replaceMode = false) {
+        function getSelectedPromptText() {
+            const sel = window.getSelection();
+            if (!sel || sel.isCollapsed) return '';
+            const text = sel.toString().trim();
+            if (!text) return '';
+            const anchorNode = sel.anchorNode;
+            const focusNode = sel.focusNode;
+            const anchorEl = anchorNode && (anchorNode.nodeType === Node.ELEMENT_NODE ? anchorNode : anchorNode.parentElement);
+            const focusEl = focusNode && (focusNode.nodeType === Node.ELEMENT_NODE ? focusNode : focusNode.parentElement);
+            if (!box.contains(anchorEl) || !box.contains(focusEl)) return '';
+            return text.length > 300 ? text.slice(0, 300) : text;
+        }
+
+        function updateSearchButtons() {
+            const hasTerm = Boolean(document.getElementById('search-find').value);
+            const hasMatches = searchMatches.length > 0;
+            const buttons = [
+                document.getElementById('find-prev-btn'),
+                document.getElementById('find-next-btn'),
+                document.getElementById('replace-btn'),
+                document.getElementById('replace-all-btn')
+            ];
+            buttons.forEach(btn => {
+                if (btn) btn.disabled = !hasTerm || !hasMatches;
+            });
+        }
+
+        function updateSearchModeNote() {
+            const note = document.getElementById('search-mode-note');
+            if (!note) return;
+            if (searchReplaceDirty) {
+                note.textContent = 'Unsaved replace/edit changes. Save to keep them. Ctrl+Z can undo.';
+            } else {
+                note.textContent = 'Replace edits this prompt. Save changes to keep them.';
+            }
+        }
+
+        function setSearchReplaceDirty(isDirty, message = '') {
+            searchReplaceDirty = Boolean(isDirty);
+            const overlay = document.getElementById('search-overlay');
+            if (overlay) overlay.classList.toggle('replace-dirty', searchReplaceDirty);
+            const note = document.getElementById('search-mode-note');
+            if (note && message) note.textContent = message;
+            else updateSearchModeNote();
+        }
+
+        function openSearch(replaceMode = false, seedText = '') {
             if (view.style.display !== 'flex') return;
             const overlay = document.getElementById('search-overlay');
             const replaceRow = document.getElementById('replace-row');
             const replaceBtn = document.getElementById('replace-btn');
             const replaceAllBtn = document.getElementById('replace-all-btn');
-            
+
             overlay.style.display = 'flex';
             setTimeout(() => overlay.classList.add('visible'), 10);
             promptBoxWrap.classList.add('search-active');
-            
+            overlay.classList.toggle('replace-active', replaceMode);
+
             if (replaceMode) {
                 replaceRow.style.display = 'flex';
                 replaceBtn.style.display = 'inline-flex';
@@ -2927,11 +3827,13 @@
                 replaceBtn.style.display = 'none';
                 replaceAllBtn.style.display = 'none';
             }
-            
+
             const findInput = document.getElementById('search-find');
+            if (seedText) findInput.value = seedText;
+            updateSearchModeNote();
             findInput.focus();
             findInput.select();
-            updateSearchStats();
+            updateSearchStats(true);
         }
 
         function closeSearch() {
@@ -2941,123 +3843,192 @@
             promptBoxWrap.classList.remove('search-active');
             searchMatches = [];
             currentSearchIdx = -1;
-            window.getSelection().removeAllRanges();
+            if (promptSearchUpdateTimer) clearTimeout(promptSearchUpdateTimer);
+            clearPromptSearchHighlights({ clearSelection: true });
+            updateSearchButtons();
+        }
+
+        function isPromptSearchVisible() {
+            const overlay = document.getElementById('search-overlay');
+            return Boolean(overlay && overlay.classList.contains('visible'));
+        }
+
+        function schedulePromptSearchStats() {
+            if (promptSearchUpdateTimer) clearTimeout(promptSearchUpdateTimer);
+            promptSearchUpdateTimer = setTimeout(() => {
+                if (isPromptSearchVisible()) updateSearchStats(false);
+            }, 60);
+        }
+
+        function clearPromptSearchHighlights(options = {}) {
+            if (window.CSS && CSS.highlights) CSS.highlights.clear();
+            currentRangeRect = null;
+            if (options.clearSelection && searchSelectionActive) {
+                window.getSelection().removeAllRanges();
+                searchSelectionActive = false;
+            }
+        }
+
+        function getPromptTextForSearch() {
+            return box.textContent || '';
         }
 
         function getSearchRegex(term) {
             if (!term) return null;
             const isCase = document.getElementById('search-case').checked;
             const isWord = document.getElementById('search-word').checked;
-            let escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            if (isWord) escaped = `\\b${escaped}\\b`;
-            return new RegExp(escaped, isCase ? 'g' : 'gi');
+            const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const unicodeFlags = isCase ? 'gu' : 'giu';
+            const plainFlags = isCase ? 'g' : 'gi';
+            const wordChars = String.raw`\p{L}\p{N}_`;
+            const pattern = isWord ? `(?<![${wordChars}])${escaped}(?![${wordChars}])` : escaped;
+            try {
+                return new RegExp(pattern, unicodeFlags);
+            } catch (e) {
+                return new RegExp(isWord ? `\\b${escaped}\\b` : escaped, plainFlags);
+            }
         }
 
-        function updateSearchStats() {
+        function updateSearchStats(resetIndex = false) {
             const term = document.getElementById('search-find').value;
             const stats = document.getElementById('search-stats');
-            if (!term) { 
-                searchMatches = []; currentSearchIdx = -1; stats.innerText = '0 of 0'; 
-                if (window.CSS && CSS.highlights) CSS.highlights.clear();
-                return; 
+            if (!term) {
+                searchMatches = []; currentSearchIdx = -1; stats.innerText = '0 of 0';
+                clearPromptSearchHighlights({ clearSelection: true });
+                updateSearchButtons();
+                return;
             }
-            
+
             const regex = getSearchRegex(term);
-            const text = box.textContent;
+            if (!regex) return;
+            const text = getPromptTextForSearch();
             searchMatches = [];
             let match;
             while ((match = regex.exec(text)) !== null) {
                 searchMatches.push({ index: match.index, length: match[0].length });
                 if (regex.lastIndex === match.index) regex.lastIndex++;
             }
-            
+
             if (searchMatches.length > 0) {
-                if (currentSearchIdx === -1) currentSearchIdx = 0;
+                if (typeof resetIndex === 'number') {
+                    const nextIdx = searchMatches.findIndex(m => m.index >= resetIndex);
+                    currentSearchIdx = nextIdx === -1 ? 0 : nextIdx;
+                } else if (resetIndex || currentSearchIdx === -1) currentSearchIdx = 0;
                 else if (currentSearchIdx >= searchMatches.length) currentSearchIdx = 0;
                 stats.innerText = `${currentSearchIdx + 1} of ${searchMatches.length}`;
                 highlightCurrentMatch(true);
             } else {
                 currentSearchIdx = -1;
                 stats.innerText = '0 of 0';
-                if (window.CSS && CSS.highlights) CSS.highlights.clear();
+                clearPromptSearchHighlights({ clearSelection: true });
+            }
+            updateSearchButtons();
+        }
+
+        function getRangeForMatch(match) {
+            if (!match) return null;
+            const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null, false);
+            let node = walker.nextNode();
+            let charCount = 0;
+            let startNode = null, endNode = null, startOffset = 0, endOffset = 0;
+            const matchEnd = match.index + match.length;
+
+            while (node && charCount + node.length <= match.index) {
+                charCount += node.length;
+                node = walker.nextNode();
+            }
+            if (node) {
+                startNode = node;
+                startOffset = match.index - charCount;
+            }
+
+            while (node && charCount + node.length < matchEnd) {
+                charCount += node.length;
+                node = walker.nextNode();
+            }
+            if (node) {
+                endNode = node;
+                endOffset = matchEnd - charCount;
+            }
+
+            if (!startNode || !endNode) return null;
+            try {
+                const range = document.createRange();
+                range.setStart(startNode, startOffset);
+                range.setEnd(endNode, endOffset);
+                return range;
+            } catch (e) {
+                return null;
             }
         }
 
-        let currentRangeRect = null;
-
         function applyHighlights() {
             if (!window.CSS || !CSS.highlights) return false;
-            
+
             CSS.highlights.clear();
             currentRangeRect = null;
+            if (searchSelectionActive) {
+                window.getSelection().removeAllRanges();
+                searchSelectionActive = false;
+            }
             if (searchMatches.length === 0) return true;
 
             const allRanges = [];
             let currentRange = null;
 
-            const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null, false);
-            let node = walker.nextNode();
-            let charCount = 0;
-            
-            for (let i = 0; i < searchMatches.length; i++) {
-                const m = searchMatches[i];
-                const mStart = m.index;
-                const mEnd = m.index + m.length;
-                
-                let startNode = null, startOffset = 0;
-                let endNode = null, endOffset = 0;
-                
-                while (node && charCount + node.length <= mStart) {
-                    charCount += node.length;
-                    node = walker.nextNode();
-                }
-                if (node) { startNode = node; startOffset = mStart - charCount; }
-                
-                while (node && charCount + node.length < mEnd) {
-                    charCount += node.length;
-                    node = walker.nextNode();
-                }
-                if (node) { endNode = node; endOffset = mEnd - charCount; }
-                
-                if (startNode && endNode) {
-                    const range = new Range();
-                    try {
-                        range.setStart(startNode, startOffset);
-                        range.setEnd(endNode, endOffset);
-                        if (i === currentSearchIdx) {
-                            currentRange = range;
-                            currentRangeRect = range.getBoundingClientRect();
-                        } else {
-                            allRanges.push(range);
-                        }
-                    } catch(e) {}
+            const highlightStart = searchMatches.length > SEARCH_HIGHLIGHT_LIMIT ? Math.max(0, currentSearchIdx - Math.floor(SEARCH_HIGHLIGHT_LIMIT / 2)) : 0;
+            const highlightEnd = searchMatches.length > SEARCH_HIGHLIGHT_LIMIT ? Math.min(searchMatches.length, highlightStart + SEARCH_HIGHLIGHT_LIMIT) : searchMatches.length;
+            for (let i = highlightStart; i < highlightEnd; i++) {
+                const range = getRangeForMatch(searchMatches[i]);
+                if (range) {
+                    if (i === currentSearchIdx) {
+                        currentRange = range;
+                        currentRangeRect = range.getBoundingClientRect();
+                    } else {
+                        allRanges.push(range);
+                    }
                 }
             }
-            
+
             if (allRanges.length > 0) CSS.highlights.set("search-match", new Highlight(...allRanges));
             if (currentRange) CSS.highlights.set("search-current", new Highlight(currentRange));
-            
+
+            return true;
+        }
+
+        function selectCurrentSearchFallback() {
+            const range = getRangeForMatch(searchMatches[currentSearchIdx]);
+            if (!range) return false;
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+            searchSelectionActive = true;
+            currentRangeRect = range.getBoundingClientRect();
             return true;
         }
 
         function highlightCurrentMatch(scroll = true) {
             if (currentSearchIdx === -1 || searchMatches.length === 0) {
-                if (window.CSS && CSS.highlights) CSS.highlights.clear();
+                clearPromptSearchHighlights({ clearSelection: true });
                 return;
             }
-            
-            applyHighlights();
+
+            if (!applyHighlights()) selectCurrentSearchFallback();
 
             if (scroll && currentRangeRect) {
                 const rect = currentRangeRect;
-                const boxRect = box.getBoundingClientRect();
+                const boxRect = promptBoxWrap.getBoundingClientRect();
 
                 if (rect.top < boxRect.top || rect.bottom > boxRect.bottom) {
-                    const top = box.scrollTop + (rect.top - boxRect.top) - (boxRect.height / 2);
-                    box.scrollTo({ top, behavior: 'smooth' });
+                    const top = promptBoxWrap.scrollTop + (rect.top - boxRect.top) - (boxRect.height / 2);
+                    promptBoxWrap.scrollTo({ top, behavior: 'smooth' });
+                }
+                if (rect.left < boxRect.left || rect.right > boxRect.right) {
+                    const left = promptBoxWrap.scrollLeft + (rect.left - boxRect.left) - (boxRect.width / 2);
+                    promptBoxWrap.scrollTo({ left, top: promptBoxWrap.scrollTop, behavior: 'smooth' });
                 }
             }
-            
+
             const term = document.getElementById('search-find').value;
             a11yAnnounce(`Match ${currentSearchIdx + 1} of ${searchMatches.length} for "${term}"`);
         }
@@ -3072,85 +4043,158 @@
         function replaceCurrent() {
             if (currentSearchIdx === -1 || searchMatches.length === 0) return;
             if (!box.classList.contains('editing')) startEdit();
-            
+
             const replacement = document.getElementById('search-replace').value;
             const activeEl = document.activeElement;
-            
-            // CSS Highlights don't create a real selection, so we must manually select the text
-            // in order for document.execCommand('insertText') to work.
             const m = searchMatches[currentSearchIdx];
-            const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null, false);
-            let node = walker.nextNode();
-            let charCount = 0;
-            let startNode, endNode, startOffset, endOffset;
-            
-            while (node && charCount + node.length <= m.index) { charCount += node.length; node = walker.nextNode(); }
-            if (node) { startNode = node; startOffset = m.index - charCount; }
-            
-            while (node && charCount + node.length < m.index + m.length) { charCount += node.length; node = walker.nextNode(); }
-            if (node) { endNode = node; endOffset = (m.index + m.length) - charCount; }
-            
-            if (startNode && endNode) {
-                const range = document.createRange();
-                range.setStart(startNode, startOffset);
-                range.setEnd(endNode, endOffset);
+            const range = getRangeForMatch(m);
+
+            if (range) {
+                recordEditorHistoryNow();
                 const sel = window.getSelection();
                 sel.removeAllRanges();
                 sel.addRange(range);
-                
+
                 document.execCommand('insertText', false, replacement);
-                updateSearchStats();
+                searchSelectionActive = false;
+                recordEditorHistoryNow();
+                scheduleUpdateLineNumbers();
+                updateSearchStats(m.index + replacement.length);
+                setSearchReplaceDirty(getEditorText() !== editBaseContent);
             }
-            
+
             if (activeEl && typeof activeEl.focus === 'function') activeEl.focus();
         }
 
-        function replaceAll() {
+        async function replaceAll() {
             if (searchMatches.length === 0) return;
-            if (!box.classList.contains('editing')) startEdit();
-            
             const replacement = document.getElementById('search-replace').value;
             const term = document.getElementById('search-find').value;
             const regex = getSearchRegex(term);
             if (!regex) return;
-            
-            const newText = box.innerText.replace(regex, replacement);
-            
+            const replacedCount = searchMatches.length;
+            const isDeleting = replacement === '';
+            if (isDeleting || replacedCount >= REPLACE_ALL_CONFIRM_MATCH_LIMIT) {
+                const action = isDeleting ? 'delete the matched text from' : 'replace text in';
+                const confirmed = await showConfirm(`Replace All will ${action} ${replacedCount} ${pluralize(replacedCount, 'match', 'matches')}. Continue?`, 'Confirm Replace All');
+                if (!confirmed) return;
+            }
+            if (!box.classList.contains('editing')) startEdit();
+
+            const newText = getPromptTextForSearch().replace(regex, () => replacement);
+
+            recordEditorHistoryNow();
             const sel = window.getSelection();
             const range = document.createRange();
             range.selectNodeContents(box);
             sel.removeAllRanges();
             sel.addRange(range);
-            
+
             document.execCommand('insertText', false, newText);
-            
-            updateSearchStats();
-            closeSearch();
-            showToast("REPLACED ALL OCCURRENCES", "success");
+            searchSelectionActive = false;
+            recordEditorHistoryNow();
+
+            scheduleUpdateLineNumbers();
+            updateSearchStats(0);
+            setSearchReplaceDirty(getEditorText() !== editBaseContent);
+            showToast(`${replacedCount} ${pluralize(replacedCount, 'MATCH', 'MATCHES')} REPLACED IN EDITOR - SAVE TO KEEP CHANGES`, "warning");
         }
 
         function handleSearchKey(e) {
             if (e.key === 'Enter') {
-                e.preventDefault();
+                e.preventDefault(); e.stopPropagation();
+                if (e.shiftKey) findNext(-1); else findNext(1);
+            }
+            if (e.key === 'F3') {
+                e.preventDefault(); e.stopPropagation();
                 if (e.shiftKey) findNext(-1); else findNext(1);
             }
             if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeSearch(); }
         }
 
         function handleReplaceKey(e) {
-            if (e.key === 'Enter') { e.preventDefault(); replaceCurrent(); }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault(); e.stopPropagation();
+                replaceCurrent();
+                return;
+            }
+            if (e.key === 'Enter') {
+                e.preventDefault(); e.stopPropagation();
+                if (e.shiftKey) findNext(-1);
+                else replaceCurrent();
+                return;
+            }
+            if (e.key === 'F3') {
+                e.preventDefault(); e.stopPropagation();
+                if (e.shiftKey) findNext(-1); else findNext(1);
+                return;
+            }
             if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeSearch(); }
         }
 
+        function isVisibleOverlay(selector) {
+            const el = document.querySelector(selector);
+            return Boolean(el && el.classList.contains('visible'));
+        }
+
+        function shouldIgnoreAppSearchShortcut() {
+            const activeEl = document.activeElement;
+            if (!activeEl) return false;
+            if (activeEl === search || activeEl === box || activeEl.closest('#search-overlay')) return false;
+            if (
+                isVisibleOverlay('#wizard-overlay') ||
+                isVisibleOverlay('#group-create-overlay') ||
+                isVisibleOverlay('#bulk-move-overlay') ||
+                isVisibleOverlay('#confirm-modal-overlay') ||
+                isVisibleOverlay('#collision-modal-overlay') ||
+                isVisibleOverlay('#alert-modal-overlay') ||
+                isVisibleOverlay('#select-modal-overlay') ||
+                isVisibleOverlay('#recycle-bin-overlay')
+            ) return true;
+
+            const tagName = activeEl.tagName;
+            return activeEl.isContentEditable || tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT';
+        }
+
+        function shouldHandlePromptHistoryShortcut() {
+            if (!box.classList.contains('editing')) return false;
+            const activeEl = document.activeElement;
+            if (!activeEl) return false;
+            if (activeEl === box || box.contains(activeEl)) return true;
+            return Boolean(activeEl.closest('#search-overlay') && searchReplaceDirty);
+        }
+
         window.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+                const key = e.key.toLowerCase();
+                if (key === 'z' && shouldHandlePromptHistoryShortcut()) {
+                    e.preventDefault(); e.stopPropagation();
+                    if (e.shiftKey) redoPromptEdit(); else undoPromptEdit();
+                    return;
+                }
+                if (key === 'y' && shouldHandlePromptHistoryShortcut()) {
+                    e.preventDefault(); e.stopPropagation();
+                    redoPromptEdit();
+                    return;
+                }
+            }
+
+            if (e.key === 'F3' && isPromptSearchVisible()) {
+                e.preventDefault(); e.stopPropagation();
+                if (e.shiftKey) findNext(-1); else findNext(1);
+                return;
+            }
+
             if (e.ctrlKey || e.metaKey) {
                 if (e.code === 'KeyF' || e.key.toLowerCase() === 'f') {
+                    if (shouldIgnoreAppSearchShortcut()) return;
                     e.preventDefault();
-                    if (view.style.display === 'flex') { openSearch(false); }
+                    if (view.style.display === 'flex') { openSearch(false, getSelectedPromptText()); }
                     else { search.focus(); search.select(); }
                 }
                 if (e.code === 'KeyH' || e.key.toLowerCase() === 'h') {
-                    if (view.style.display === 'flex') { e.preventDefault(); openSearch(true); }
+                    if (shouldIgnoreAppSearchShortcut()) return;
+                    if (view.style.display === 'flex') { e.preventDefault(); openSearch(true, getSelectedPromptText()); }
                 }
                 if (e.key === 'w' && view.style.display === 'flex') {
                     e.preventDefault();
@@ -3160,7 +4204,7 @@
                         if (!isNaN(line) && line > 0) {
                             const lineHeight = parseFloat(getComputedStyle(box).lineHeight) || 24;
                             const targetTop = (line - 1) * lineHeight;
-                            box.scrollTo({ top: targetTop, behavior: 'smooth' });
+                            promptBoxWrap.scrollTo({ top: targetTop, behavior: 'smooth' });
                         }
                     }
                 }
@@ -3168,7 +4212,7 @@
             if (e.key === 'Escape') {
                 const searchOverlay = document.getElementById('search-overlay');
                 if (searchOverlay.classList.contains('visible')) { closeSearch(); return; }
-                
+
                 if (activeGroupDrag || agentDragStarted) { cancelDrag(); return; }
                 const confirmOverlay = document.getElementById('confirm-modal-overlay');
                 const alertOverlay = document.getElementById('alert-modal-overlay');

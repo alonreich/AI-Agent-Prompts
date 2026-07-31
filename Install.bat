@@ -278,7 +278,7 @@ set "AIB_PYW=%PYTHONW_EXE%"
 set "AIB_BRIDGE=%BRIDGE_PY%"
 set "AIB_DIR=%PROJECT_DIR%"
 set "AIB_TASK=%TASK_NAME%"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$q=[char]34; $u=$env:USERDOMAIN+'\'+$env:USERNAME; $a=New-ScheduledTaskAction -Execute $env:AIB_PYW -Argument ($q+$env:AIB_BRIDGE+$q) -WorkingDirectory $env:AIB_DIR; $t=New-ScheduledTaskTrigger -AtLogOn -User $u; $s=New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1); $p=New-ScheduledTaskPrincipal -UserId $u -LogonType Interactive -RunLevel Limited; Register-ScheduledTask -TaskName $env:AIB_TASK -Action $a -Trigger $t -Settings $s -Principal $p -Force | Out-Null" >>"%LOG_FILE%" 2>&1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$q=[char]34; $u=$env:USERDOMAIN+'\'+$env:USERNAME; $a=New-ScheduledTaskAction -Execute $env:AIB_PYW -Argument ('-B '+$q+$env:AIB_BRIDGE+$q) -WorkingDirectory $env:AIB_DIR; $t=New-ScheduledTaskTrigger -AtLogOn -User $u; $s=New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1); $p=New-ScheduledTaskPrincipal -UserId $u -LogonType Interactive -RunLevel Limited; Register-ScheduledTask -TaskName $env:AIB_TASK -Action $a -Trigger $t -Settings $s -Principal $p -Force | Out-Null" >>"%LOG_FILE%" 2>&1
 
 :: Probe: confirm the task really exists before trusting it for next boot
 schtasks /query /tn "%TASK_NAME%" >nul 2>&1
@@ -291,7 +291,7 @@ if %errorLevel% equ 0 (
 
 :: ATTEMPT 2 - Classic schtasks (older systems without the ScheduledTasks module)
 call :LOG "WARNING" "PowerShell task registration failed. Trying classic schtasks..."
-schtasks /create /tn "%TASK_NAME%" /tr "\"%PYTHONW_EXE%\" \"%BRIDGE_PY%\"" /sc onlogon /f >>"%LOG_FILE%" 2>&1
+schtasks /create /tn "%TASK_NAME%" /tr "\"%PYTHONW_EXE%\" -B \"%BRIDGE_PY%\"" /sc onlogon /f >>"%LOG_FILE%" 2>&1
 schtasks /query /tn "%TASK_NAME%" >nul 2>&1
 if %errorLevel% equ 0 (
     call :LOG "OK" "Task Scheduler job '%TASK_NAME%' created via classic schtasks."
@@ -308,7 +308,7 @@ call :LOG "INFO" "Falling back to creating a shortcut in the Startup folder..."
     if not exist "!LOCAL_AUTO_START!" mkdir "!LOCAL_AUTO_START!"
     set "VBS_PATH=!LOCAL_AUTO_START!\silent_start.vbs"
 
-    powershell -NoProfile -Command "$vbs = 'Set WinScriptHost = CreateObject(\"WScript.Shell\")' + [char]10 + 'WinScriptHost.Run Chr(34) & \"%PYTHONW_EXE%\" & Chr(34) & \" \" & Chr(34) & \"%BRIDGE_PY%\" & Chr(34), 0' + [char]10 + 'Set WinScriptHost = Nothing'; $vbs | Out-File -LiteralPath '!VBS_PATH!' -Encoding ascii" >>"%LOG_FILE%" 2>&1
+    powershell -NoProfile -Command "$vbs = 'Set WinScriptHost = CreateObject(\"WScript.Shell\")' + [char]10 + 'WinScriptHost.Run Chr(34) & \"%PYTHONW_EXE%\" & Chr(34) & \" -B \" & Chr(34) & \"%BRIDGE_PY%\" & Chr(34), 0' + [char]10 + 'Set WinScriptHost = Nothing'; $vbs | Out-File -LiteralPath '!VBS_PATH!' -Encoding ascii" >>"%LOG_FILE%" 2>&1
 
     set "STARTUP_FOLDER=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
     set "SHORTCUT_PATH=!STARTUP_FOLDER!\AIAgentPromptBridge.lnk"
@@ -340,13 +340,13 @@ if "%PERSISTENCE_MODE%"=="task" (
     schtasks /run /tn "%TASK_NAME%" >>"%LOG_FILE%" 2>&1
     if !errorLevel! neq 0 (
         call :LOG "WARNING" "Task run command failed. Launching the bridge directly..."
-        start "" "%PYTHONW_EXE%" "%BRIDGE_PY%"
+        start "" "%PYTHONW_EXE%" -B "%BRIDGE_PY%"
     )
 ) else (
     if exist "%VBS_PATH%" (
         wscript.exe "%VBS_PATH%" >>"%LOG_FILE%" 2>&1
     ) else (
-        start "" "%PYTHONW_EXE%" "%BRIDGE_PY%"
+        start "" "%PYTHONW_EXE%" -B "%BRIDGE_PY%"
     )
 )
 

@@ -427,10 +427,19 @@ def get_data():
                 group_list.append((idx or 999, d, title))
             group_list.sort()
             for _, folder_name, title in group_list:
-                data[folder_name] = {"title": title, "agents": {}, "copy_times": {}}
+                data[folder_name] = {"title": title, "agents": {}, "copy_times": {}, "custom_width": None}
                 full_path = os.path.join(DATA_DIR, folder_name)
 
 
+
+                meta_path = os.path.join(full_path, "group_meta.json")
+                if os.path.exists(meta_path):
+                    try:
+                        with open(meta_path, "r", encoding="utf-8") as mf:
+                            meta = json.load(mf)
+                            data[folder_name]["custom_width"] = meta.get("custom_width")
+                    except Exception:
+                        pass
                 group_prompt = os.path.join(full_path, "prompt.txt")
                 agent_subfolder = os.path.join(full_path, clean_filename(title))
                 if os.path.exists(group_prompt) and os.path.isdir(agent_subfolder):
@@ -587,6 +596,49 @@ def save_order():
 
 
 
+
+
+@app.route('/api/save-group-width', methods=['POST'])
+def save_group_width():
+    with migration_lock:
+        try:
+            req = request.get_json(silent=True) or {}
+            group_folder = req.get('group')
+            width = req.get('width')
+            if not group_folder:
+                return jsonify({'status': 'error', 'message': 'Group is required'}), 400
+
+            base = safe_path(DATA_DIR, group_folder)
+            if not base or not os.path.isdir(base):
+                return jsonify({'status': 'error', 'message': 'Invalid group path'}), 403
+
+            meta_path = os.path.join(base, "group_meta.json")
+            meta = {}
+            if os.path.exists(meta_path):
+                try:
+                    with open(meta_path, "r", encoding="utf-8") as f:
+                        meta = json.load(f)
+                except Exception:
+                    pass
+            
+            if width is not None:
+                meta['custom_width'] = width
+            else:
+                meta.pop('custom_width', None)
+                
+            with open(meta_path, "w", encoding="utf-8") as f:
+                json.dump(meta, f)
+                
+            import time
+            time.sleep(0.05)
+            with clients_lock:
+                for client in clients:
+                    try: client.put('sync')
+                    except Exception: pass
+            return jsonify({'status': 'success'})
+        except Exception as e:
+            logger.error(f"save_group_width error: {e}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/api/save', methods=['POST'])
 def save_agent():
