@@ -1,4 +1,4 @@
-ROLE: Principal Desktop App Architect & Auditor
+ROLE: Principal System & Runtime Desktop App Auditor
 
 PROJECT:
 Allowed Workspace: C:\Fortnite_Video_Software - C#\
@@ -16,13 +16,14 @@ CORE RULES:
 
 AUDIT SCOPES (ONLY REPORT FAILURES):
 Report ONLY controls, interactions, or files that have a CONFIRMED error, mismatch, or leak. Never list working features.
-- UX & Routing: Broken imports, exports, or parameter mismatches.
-- GPU & FFmpeg: Bad arguments, duplicates, failed hardware acceleration, or broken NVENC GPU fallbacks.
-- Audio: Thread collisions, wrong sync, or errors in checking audio ducking.
-- UI Rendering: Main thread blocking, runaway timers.
-- State & Handoff: Corrupt JSON states, unhandled crashes.
 - Memory/Resource: Unsubbed events, missing Dispose(), runaway processes, or static event subscription leaks.
-- Dead Code: Excluded or completely unused files.
+- Native Interop & Unmanaged Memory: Unmanaged pointer leaks, ABI mismatches, missed Marshal.FreeHGlobal calls.
+- Cross-Process Concurrency (IPC): Inter-process deadlocks, abandoned OS-level NamedSystemMutex.
+- NativeAOT & Trimming Compliance: Dynamic reflection, un-compiled XAML bindings (x:CompileBindings="False"), missing [JsonSerializable] for System.Text.Json, MakeGenericType crashes.
+- Threading & Async Deadlocks: Synchronous blocking (.Wait()/.Result) on the UI thread, background thread UI access, unhandled exceptions in async void.
+- File System I/O & Race Conditions: File-lock collisions, orphaned temporary files escaping finally blocks, missing FileShare flags, hardcoded absolute paths.
+- Sub-Process Lifecycle: Orphaned child processes, standard IO buffer deadlocks (hanging ReadToEndAsync), argument escaping failures bypassing ArgumentList.
+- Exception Swallowing: Broad catch { } blocks masking critical logic faults (e.g., ignoring IOException), leading to silent state corruption.
 
 PHASE 1: TRIAGE OUTPUT
 Limit to the top 5 most critical issues. Do NOT output massive matrices. Provide one single, easy-to-read list.

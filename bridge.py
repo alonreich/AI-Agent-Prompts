@@ -1,8 +1,68 @@
 import sys
 sys.dont_write_bytecode = True
 import os
-import time
 import shutil
+
+# ===========================================================================
+# NO-CACHE POLICY - this block must stay ABOVE every other import.
+# A third-party import that fails (flask not installed yet, for example)
+# aborts the module, so anything below it would never run - and the .pyc has
+# already been written to disk by then.
+# ===========================================================================
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(ROOT_DIR, 'AI Agent Prompts')
+
+def purge_bytecode_cache():
+    """Delete any Python bytecode cache sitting next to this file.
+
+    WHY THIS EXISTS
+    ---------------
+    Line 2 sets sys.dont_write_bytecode = True, which protects every module
+    bridge.py *imports*. It cannot protect bridge.py *itself*: when anything
+    does `import bridge`, CPython compiles this file and writes
+    __pycache__/bridge.cpython-XXX.pyc BEFORE executing a single line of it.
+    The switch is flipped one step too late, every single time.
+
+    Launching with `python -B bridge.py` avoids it, and Install.bat /
+    UnInstall.bat sweep up afterwards, but neither covers an `import bridge`
+    from a test harness, a REPL or an AI agent inspecting the code.
+
+    So this runs at import time - before any other import, immediately after
+    the .pyc was created - and again on shutdown, which closes the hole even
+    when the import later fails.
+
+    Returns the list of paths it removed.
+    """
+    removed = []
+    candidates = [
+        os.path.join(ROOT_DIR, '__pycache__'),
+        os.path.join(DATA_DIR, '__pycache__'),
+    ]
+    for target in candidates:
+        if os.path.isdir(target):
+            shutil.rmtree(target, ignore_errors=True)
+            if not os.path.isdir(target):
+                removed.append(target)
+
+    try:
+        stray = os.listdir(ROOT_DIR)
+    except OSError:
+        stray = []
+    for name in stray:
+        if name.endswith('.pyc') or name.endswith('.pyo'):
+            try:
+                os.remove(os.path.join(ROOT_DIR, name))
+                removed.append(name)
+            except OSError:
+                pass
+    return removed
+
+
+# Runs on import as well as on direct launch: by the time this line is reached,
+# an `import bridge` has already written the .pyc that we are deleting here.
+_BYTECODE_PURGED = purge_bytecode_cache()
+
+import time
 import logging
 import re
 import json
@@ -15,8 +75,6 @@ from flask_cors import CORS
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(ROOT_DIR, 'AI Agent Prompts')
 RECYCLE_BIN_DIR = os.path.join(ROOT_DIR, '[RECYCLE BIN]')
 HTML_FILE = os.path.join(ROOT_DIR, 'AI Agent Prompts.html')
 PID_FILE = os.path.join(os.environ.get('TMP', os.environ.get('TEMP', 'C:\\Temp')), 'AI-Agent-Prompt', '.bridge.pid')
@@ -59,6 +117,10 @@ handlers_list.append(file_handler)
 
 logging.basicConfig(level=logging.INFO, handlers=handlers_list)
 logger = logging.getLogger(__name__)
+
+if _BYTECODE_PURGED:
+    logger.info("No-cache policy: removed Python bytecode cache -> %s"
+                % ", ".join(str(p) for p in _BYTECODE_PURGED))
 
 app = Flask(__name__)
 
@@ -188,7 +250,138 @@ def robust_rmtree(path, max_retries=10):
         logger.error(f"robust_rmtree PowerShell fallback failed for '{path}': {e}")
         return False
 
+def robust_rename(src, dst, max_retries=8):
+    """os.rename with backoff, for Windows.
+
+    Renaming a directory on Windows fails with WinError 5 (access denied) while
+    anything holds a handle inside it - an antivirus scanning the folder we just
+    touched, the search indexer, or an Explorer window sitting on it. The lock is
+    almost always transient, so a few short retries turn a hard failure into a
+    pause nobody notices. Same reasoning as robust_rmtree above.
+
+    Raises the final OSError if every attempt fails, so callers still roll back.
+    """
+    last = None
+    for i in range(max_retries):
+        try:
+            os.rename(src, dst)
+            return True
+        except (OSError, PermissionError) as e:
+            last = e
+            logger.warning(f"robust_rename retry {i+1}/{max_retries} "
+                           f"'{os.path.basename(src)}' -> '{os.path.basename(dst)}': {e}")
+            time.sleep(0.15 * (i + 1))
+    raise last
+
+
+ORPHAN_PREFIX = ".tmp_re_"      # written by save_order
+TEMP_PREFIX = ".tmp_"           # covers save_order AND migrate_folders_locked
+
+
+def parse_orphan_title(name):
+    """Recover a group's title from a stranded rename temp folder.
+
+    Three formats exist on disk:
+      .tmp_re_<ts>_<i>__Group3 - [FORTNITE]   save_order, current
+      .tmp_<ts>_Group3 - [FORTNITE]           migrate_folders_locked
+      .tmp_re_<i>_<ts>                        save_order, legacy - title lost
+
+    Returns the title, or None when the name alone cannot tell us.
+    """
+    if not name.startswith(TEMP_PREFIX):
+        return None
+    rest = name[len(TEMP_PREFIX):]
+
+    if rest.startswith("re_"):
+        rest = rest[3:]
+        if "__" not in rest:
+            return None                      # legacy: the title was discarded
+        rest = rest.split("__", 1)[1]
+    else:
+        if "_" not in rest:
+            return None
+        rest = rest.split("_", 1)[1]         # drop the timestamp
+
+    _, title = get_group_info(rest)
+    return title or None
+
+
+def adopt_orphan_group_folders():
+    """Rescue groups stranded by an interrupted reorder.
+
+    A reorder renames every group folder to a hidden temp name, then renames
+    each one to its final name. If that second pass dies half way - Windows
+    file locking, antivirus, a killed process - the survivors stay hidden and
+    those groups simply VANISH from the UI, even though every prompt is still
+    sitting safely on disk.
+
+    This runs on every data read, so a stranded group reappears within half a
+    second instead of being invisible until somebody goes digging on disk.
+    Returns the list of folders it brought back.
+    """
+    try:
+        entries = os.listdir(DATA_DIR)
+    except OSError:
+        return []
+
+    orphans = sorted(d for d in entries
+                     if d.startswith(TEMP_PREFIX)
+                     and os.path.isdir(os.path.join(DATA_DIR, d)))
+    if not orphans:
+        return []
+
+    taken = set()
+    for d in entries:
+        idx, _ = get_group_info(d)
+        if idx:
+            taken.add(idx)
+
+    recovered = []
+    for name in orphans:
+        title = parse_orphan_title(name)
+        if not title:
+            # Legacy temp names carry no title, so fall back to the group's own
+            # metadata and finally to a clearly-labelled placeholder. A visible
+            # group with an odd name beats an invisible one every time.
+            try:
+                meta_path = os.path.join(DATA_DIR, name, "group_meta.json")
+                if os.path.exists(meta_path):
+                    with open(meta_path, "r", encoding="utf-8") as f:
+                        title = (json.load(f) or {}).get("title")
+            except Exception:
+                title = None
+            title = title or "RECOVERED GROUP"
+
+        idx = 1
+        while True:
+            while idx in taken:
+                idx += 1
+            target = f"Group{idx} - [{clean_filename(title)}]"
+            dst = os.path.join(DATA_DIR, target)
+            if not os.path.exists(dst):
+                break
+            taken.add(idx)
+            idx += 1
+
+        try:
+            robust_rename(os.path.join(DATA_DIR, name), dst)
+            taken.add(idx)
+            recovered.append(target)
+            logger.warning(
+                f"RECOVERED orphaned group folder '{name}' -> '{target}'. "
+                f"A previous reorder did not finish."
+            )
+        except OSError as e:
+            logger.error(f"Could not recover orphaned folder '{name}': {e}")
+
+    return recovered
+
+
 def migrate_folders_locked():
+    # Bring back anything a half-finished reorder left hidden, before the
+    # re-indexing pass below decides what the board looks like.
+    adopt_orphan_group_folders()
+
     folders = [d for d in os.listdir(DATA_DIR) if os.path.isdir(os.path.join(DATA_DIR, d)) and not d.startswith('.')]
     for d in folders:
         full_p = os.path.join(DATA_DIR, d)
@@ -233,23 +426,30 @@ def migrate_folders_locked():
     temp_renames = []
     try:
         for old_name, final_name in needed:
+            if old_name == final_name:
+                continue                      # already correct, do not touch it
             tmp_name = f".tmp_{ts}_{clean_filename(old_name)}"
             old_p = os.path.join(DATA_DIR, old_name)
             tmp_p = os.path.join(DATA_DIR, tmp_name)
             if os.path.exists(old_p):
-                os.rename(old_p, tmp_p)
+                robust_rename(old_p, tmp_p)
                 temp_renames.append((tmp_p, os.path.join(DATA_DIR, final_name)))
         
         for tmp_p, final_p in temp_renames:
             if os.path.exists(final_p):
-                robust_rmtree(final_p)
-            os.rename(tmp_p, final_p)
+                # Never delete a destination to make room. Every folder is in a
+                # temp name at this point, so anything sitting here is
+                # unexpected and might be a real group full of prompts.
+                raise OSError(f"Destination already exists: {os.path.basename(final_p)}")
+            robust_rename(tmp_p, final_p)
     except (OSError, PermissionError) as e:
         logger.error(f"Migration rename failed: {e}")
         for tmp_p, final_p in temp_renames:
             if os.path.exists(tmp_p) and not os.path.exists(final_p):
-                try: os.rename(tmp_p, final_p)
+                try: robust_rename(tmp_p, final_p)
                 except (OSError, PermissionError): pass
+        # Anything still hidden keeps its original name inside the temp name and
+        # is picked up by adopt_orphan_group_folders() on the next read.
 
 def migrate_folders():
     with migration_lock:
@@ -427,7 +627,8 @@ def get_data():
                 group_list.append((idx or 999, d, title))
             group_list.sort()
             for _, folder_name, title in group_list:
-                data[folder_name] = {"title": title, "agents": {}, "copy_times": {}, "custom_width": None}
+                data[folder_name] = {"title": title, "agents": {}, "copy_times": {},
+                                     "custom_width": None}
                 full_path = os.path.join(DATA_DIR, folder_name)
 
 
@@ -552,44 +753,119 @@ def move_agent():
 
 @app.route('/api/save-order', methods=['POST'])
 def save_order():
+    """Reorder groups.
+
+    Renaming folders into a new sequence is inherently destructive, so this is
+    written defensively:
+
+      * the request must list EVERY group. The previous version renamed only the
+        folders it was given and DELETED whatever occupied a destination, so a
+        partial order (which the UI produced whenever a search filter was
+        active) could permanently destroy a group that was never mentioned.
+      * temp folder names embed the original folder name, so a crash between the
+        two rename passes is always recoverable.
+      * a destination that already exists aborts the operation. Nothing is ever
+        deleted to make room.
+      * any failure rolls every folder back to the name it started with.
+    """
     with migration_lock:
+        req = request.get_json(silent=True) or {}
+        requested = req.get('order', [])
+        if not requested:
+            return jsonify({'status': 'success'})
+
         try:
-            req = request.get_json(silent=True) or {}
-            new_order = req.get('order', [])
-            if not new_order: return jsonify({'status': 'success'})
+            on_disk = set(d for d in os.listdir(DATA_DIR)
+                          if os.path.isdir(os.path.join(DATA_DIR, d)) and not d.startswith('.'))
+        except OSError as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 500
 
+        if len(set(requested)) != len(requested):
+            return jsonify({'status': 'error', 'message': 'Duplicate folder in order'}), 400
 
-            for old_name in new_order:
-                old_p = os.path.join(DATA_DIR, old_name)
-                if not os.path.exists(old_p):
-                    logger.warning(f"save-order: folder '{old_name}' not found on disk, aborting")
-                    return jsonify({'status': 'error', 'message': f'Folder not found: {old_name}'}), 404
+        missing = [d for d in requested if d not in on_disk]
+        if missing:
+            logger.warning(f"save-order: folder not on disk, aborting: {missing}")
+            return jsonify({'status': 'error', 'message': f'Folder not found: {missing[0]}'}), 404
 
-                if not safe_path(DATA_DIR, old_name):
-                    return jsonify({'status': 'error', 'message': 'Invalid folder path'}), 403
+        unlisted = on_disk - set(requested)
+        if unlisted:
+            logger.warning(f"save-order: refusing a partial order, unlisted: {sorted(unlisted)}")
+            return jsonify({'status': 'error',
+                            'message': 'Order must list every group. Nothing was changed.'}), 400
 
-            ts = int(time.time())
-            temp_renames = []
-            
-            for i, old_name in enumerate(new_order):
+        for old_name in requested:
+            if not safe_path(DATA_DIR, old_name):
+                return jsonify({'status': 'error', 'message': 'Invalid folder path'}), 403
+            _, title = get_group_info(old_name)
+            if title is None:
+                return jsonify({'status': 'error', 'message': f'Invalid folder format: {old_name}'}), 400
+
+        ts = int(time.time())
+        moves = []          # (tmp_path, original_path, final_path)
+        try:
+            # Pass 1: everything that actually MOVES goes out of the way into a
+            # recoverable temp name. A group already sitting at its correct name
+            # is left completely alone - renaming it out and back achieved
+            # nothing and was a pure opportunity for Windows to deny the rename.
+            for i, old_name in enumerate(requested):
                 _, title = get_group_info(old_name)
-                if title is None:
-                    return jsonify({'status': 'error', 'message': f'Invalid folder format: {old_name}'}), 400
-                tmp_name = f".tmp_re_{i}_{ts}"
+                final_name = f"Group{i+1} - [{title}]"
+                if old_name == final_name:
+                    continue
+                tmp_name = f"{ORPHAN_PREFIX}{ts}_{i}__{clean_filename(old_name)}"
                 old_p = os.path.join(DATA_DIR, old_name)
                 tmp_p = os.path.join(DATA_DIR, tmp_name)
-                if os.path.exists(old_p):
-                    os.rename(old_p, tmp_p)
-                    temp_renames.append((tmp_p, os.path.join(DATA_DIR, f"Group{i+1} - [{title}]")))
-            
-            for tmp_p, final_p in temp_renames:
+                final_p = os.path.join(DATA_DIR, final_name)
+                robust_rename(old_p, tmp_p)
+                moves.append((tmp_p, old_p, final_p))
+
+            if not moves:
+                return jsonify({'status': 'success', 'unchanged': True})
+
+            # Pass 2: into the new sequence. Every group that moves is in a temp
+            # folder by now, so anything already sitting at a destination is
+            # unexpected and must never be deleted to make room.
+            for tmp_p, _orig_p, final_p in moves:
                 if os.path.exists(final_p):
-                    robust_rmtree(final_p)
-                os.rename(tmp_p, final_p)
-                
-            return jsonify({'status': 'success'})
+                    raise OSError(f"Destination already exists: {os.path.basename(final_p)}")
+                robust_rename(tmp_p, final_p)
+
+            return jsonify({'status': 'success', 'moved': len(moves)})
+
+        except (OSError, PermissionError) as e:
+            logger.error(f"Save order failed, rolling back: {e}")
+            # Roll back in two passes for the same reason the rename needs two:
+            # one group's original name can be another group's new name.
+            for tmp_p, _orig_p, final_p in moves:
+                if os.path.exists(final_p) and not os.path.exists(tmp_p):
+                    try: robust_rename(final_p, tmp_p)
+                    except OSError as err: logger.error(f"Rollback pass 1 failed: {err}")
+
+            stranded = []
+            for tmp_p, orig_p, _final_p in moves:
+                if not os.path.exists(tmp_p):
+                    continue
+                if os.path.exists(orig_p):
+                    stranded.append(os.path.basename(tmp_p))
+                    continue
+                try:
+                    robust_rename(tmp_p, orig_p)
+                except OSError as err:
+                    logger.error(f"Rollback pass 2 failed: {err}")
+                    stranded.append(os.path.basename(tmp_p))
+
+            if stranded:
+                # Left in ORPHAN_PREFIX form on purpose: the names carry their
+                # original folder names and adopt_orphan_group_folders() will
+                # bring them back on the very next data read.
+                logger.error(f"Rollback incomplete, awaiting auto-recovery: {stranded}")
+
+            return jsonify({'status': 'error',
+                            'message': f'Reorder failed and was rolled back: {e}'}), 500
+
         except Exception as e:
-            logger.error(f"Save order failed: {e}")
+            logger.error(f"Save order failed unexpectedly: {e}")
             return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
@@ -625,6 +901,7 @@ def save_group_width():
                 meta['custom_width'] = width
             else:
                 meta.pop('custom_width', None)
+            meta.pop('pin_row', None)      # retired concept, cleaned up on write
                 
             with open(meta_path, "w", encoding="utf-8") as f:
                 json.dump(meta, f)
@@ -638,6 +915,83 @@ def save_group_width():
             return jsonify({'status': 'success'})
         except Exception as e:
             logger.error(f"save_group_width error: {e}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/save-group-widths', methods=['POST'])
+def save_group_widths():
+    """Batch version of /api/save-group-width.
+
+    The TIDY packer rewrites every group's width at once. Doing that as N single
+    calls would fire N SSE syncs and N full re-renders, so this writes them all
+    and broadcasts a single sync at the end.
+
+    Body: {"widths": {"<group folder>": <int|null>, ...}}
+    A null width clears the custom width and returns that group to auto sizing.
+    """
+    with migration_lock:
+        try:
+            req = request.get_json(silent=True) or {}
+            widths = req.get('widths')
+            if not isinstance(widths, dict):
+                return jsonify({'status': 'error', 'message': 'widths object is required'}), 400
+            if len(widths) > 500:
+                return jsonify({'status': 'error', 'message': 'Too many groups in one request'}), 400
+
+            updated, skipped = 0, []
+            for group_folder, width in widths.items():
+                if not group_folder or not isinstance(group_folder, str):
+                    skipped.append(str(group_folder))
+                    continue
+
+                base = safe_path(DATA_DIR, group_folder)
+                if not base or not os.path.isdir(base):
+                    skipped.append(group_folder)
+                    continue
+
+                if width is not None:
+                    try:
+                        width = int(width)
+                    except (TypeError, ValueError):
+                        skipped.append(group_folder)
+                        continue
+                    if width < 1 or width > 20000:
+                        skipped.append(group_folder)
+                        continue
+
+                meta_path = os.path.join(base, "group_meta.json")
+                meta = {}
+                if os.path.exists(meta_path):
+                    try:
+                        with open(meta_path, "r", encoding="utf-8") as f:
+                            meta = json.load(f)
+                    except Exception:
+                        meta = {}
+                if not isinstance(meta, dict):
+                    meta = {}
+
+                if width is None:
+                    meta.pop('custom_width', None)
+                else:
+                    meta['custom_width'] = width
+                meta.pop('pin_row', None)      # retired concept, cleaned up on write
+
+                try:
+                    with open(meta_path, "w", encoding="utf-8") as f:
+                        json.dump(meta, f)
+                    updated += 1
+                except OSError as e:
+                    logger.warning(f"save_group_widths could not write {meta_path}: {e}")
+                    skipped.append(group_folder)
+
+            time.sleep(0.05)
+            with clients_lock:
+                for client in clients:
+                    try: client.put('sync')
+                    except Exception: pass
+
+            return jsonify({'status': 'success', 'updated': updated, 'skipped': skipped})
+        except Exception as e:
+            logger.error(f"save_group_widths error: {e}")
             return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/api/save', methods=['POST'])
@@ -1163,6 +1517,10 @@ def graceful_shutdown(signum=None, frame=None):
     try:
         if os.path.exists(PID_FILE): os.remove(PID_FILE)
     except OSError: pass
+
+    # Never leave a bytecode cache behind (see purge_bytecode_cache).
+    try: purge_bytecode_cache()
+    except Exception: pass
 
     os._exit(0)
 

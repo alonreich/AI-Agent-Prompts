@@ -25,6 +25,8 @@
 | 🎨 **Per-Group Color Coding** | Each group gets a unique subtle accent bar for visual identity |
 | ✏️ **Inline Rename & Edit** | Click to rename groups or edit prompts — no modals for routine work |
 | 🔍 **Live Search** | Filter agents across all groups instantly |
+| 🧲 **Magnetic Group Resize** | Group widths snap to the exact points where a neighbour fits, with a live ghost preview |
+| 🧹 **One-Click TIDY** | Packs every group into justified rows; double-click a resize corner to shrink-wrap one |
 | ♿ **WCAG AA Accessible** | Focus traps, ARIA labels, keyboard navigation, reduced-motion support |
 | 🚀 **Zero Config Startup** | Single-click install, auto-starts on Windows login |
 
@@ -33,6 +35,8 @@
 ```
 Project Root/
 ├── AI Agent Prompts.html    ← Single-file frontend (HTML + CSS + JS)
+├── Restart-Bridge.bat       ← Restarts the bridge process (keeps persistence)
+├── CLAUDE.md                ← Rules auto-loaded by AI agents before any work
 ├── bridge_master.py         ← Backend source of truth (Flask API)
 ├── bridge.py                ← Generated at install time (copy of master)
 ├── Install.bat              ← One-click installer for Windows
@@ -100,6 +104,15 @@ The bridge runs as a **hidden `pythonw.exe` process** via Windows Task Scheduler
 - Auto-cleans the recycle bin of items older than 30 days
 - Logs to `%TMP%\AI-Agent-Prompt\bridge.log` (auto-rotated, max 5 MB)
 
+### Restarting the Bridge
+
+Right-click **`Restart-Bridge.bat`** → **Run as administrator** (it will prompt
+for elevation by itself if you just double-click it).
+
+It ends the `AIAgentPromptBridge` scheduled task, clears anything still holding
+port 5589, restarts the task, and verifies the bridge answers — leaving the
+logon trigger completely intact. Run this after editing `bridge.py`.
+
 ### Stopping the Bridge
 
 ```powershell
@@ -121,6 +134,8 @@ Or re-run `Install.bat` — it kills the old instance before starting a new one.
 | `POST` | `/api/delete` | Permanently delete agents |
 | `POST` | `/api/move` | Move an agent between groups |
 | `POST` | `/api/save-order` | Reorder groups |
+| `POST` | `/api/save-group-width` | Set or clear one group's width |
+| `POST` | `/api/save-group-widths` | Set or clear many group widths in one call |
 | `POST` | `/api/rename-group` | Rename a group |
 | `POST` | `/api/create-group` | Create a new group |
 | `POST` | `/api/delete-group` | Permanently delete a group |

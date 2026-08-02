@@ -1,4 +1,6 @@
 # === Python & Environment ===
+# NO-CACHE POLICY: bytecode caches must never exist in this project.
+# bridge.py deletes them at import and at shutdown (purge_bytecode_cache).
 __pycache__/
 *.py[cod]
 *$py.class
@@ -27,7 +29,7 @@ logs/
 RECYCLE_BIN/
 .openclaw/
 .bridge.pid
-.claude/settings.local.json'
+.claude/settings.local.json
 
 # === System & OS ===
 Thumbs.db

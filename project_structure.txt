@@ -6,14 +6,16 @@
 1. CORE ARCHITECTURE (3-FILE ROOT STRATEGY)
 ===============================================================================
 The project is designed for maximum portability and zero-clutter. The root
-directory contains only 6 permanent files.
+directory contains only 8 permanent files.
 
 ROOT/
 ├── AI Agent Prompts.html   # Monolithic Frontend (Vanilla JS/CSS)
 ├── Install.bat             # Master Setup, Dependency Installer & Health Verifier
 ├── UnInstall.bat           # Removes persistence, processes, and logs
+├── Restart-Bridge.bat      # Bounces the bridge process (persistence untouched)
 ├── README.md               # Public-facing project overview
 ├── project_structure.txt   # This Manual (Architectural Source of Truth)
+├── CLAUDE.md               # Rules auto-loaded by AI agents before any work
 └── bridge.py               # Sequence-Aware Flask Backend
 
 All data is isolated within two root-level directories:
@@ -55,7 +57,42 @@ B. Atomic "Mirror Sync":
    - Any change made directly to folders/files is reflected in the UI within 
      0.5 seconds (bidirectional sync).
 
-C. Atomic Move Operations:
+C. Reorder Safety (/api/save-order)
+   Renaming folders into a new sequence is inherently destructive. Four rules,
+   all of them written after a reorder made three groups disappear:
+   1. The request must list EVERY group. The old code renamed only the folders
+      it was given and DELETED whatever occupied a destination, so a partial
+      order - which the UI produced whenever a search filter was active - could
+      permanently destroy a group it was merely hiding. Partial orders are now
+      rejected with 400 and the frontend refuses to send one at all
+      (group drag is blocked while the board is filtered).
+   2. Temp folder names embed the ORIGINAL folder name
+      (.tmp_re_<ts>_<i>__Group3 - [FORTNITE]), so a crash between the two
+      rename passes is always recoverable. The old name (.tmp_re_<i>_<ts>)
+      threw the title away and made recovery guesswork.
+   3. NOTHING is ever deleted to make room. An occupied destination aborts the
+      operation. This applies to migrate_folders_locked() too.
+   3b. A group whose name is ALREADY correct is never touched. Renaming it out
+      to a temp and straight back achieved nothing and was a pure opportunity
+      for Windows to deny the rename - which it did, failing whole reorders in
+      which that group was not even moving.
+   3c. Every rename goes through robust_rename(), which retries with backoff.
+      Windows returns WinError 5 (access denied) on a directory rename while
+      anything holds a handle inside it: an antivirus scanning the folder that
+      was just touched, the search indexer, or an Explorer window sitting on it.
+      The lock is almost always transient. Same reasoning as robust_rmtree.
+   4. Any failure rolls every folder back to the name it started with, in two
+      passes (one group's original name can be another group's new name).
+
+D. Orphan Recovery (adopt_orphan_group_folders)
+   Runs at the top of migrate_folders_locked(), i.e. on every data read, so a
+   group stranded by an interrupted rename reappears within half a second
+   instead of being invisible until someone digs through the folder on disk.
+   Understands all three temp naming formats; a legacy temp with no recoverable
+   title comes back as "[RECOVERED GROUP]" rather than staying hidden. Every
+   recovery is logged at WARNING level.
+
+E. Atomic Move Operations:
    - Drag-and-drop actions use a dedicated backend `/api/move` endpoint.
    - Relocations are performed as a single disk move (`shutil.move`), 
      eliminating duplicates and ensuring data integrity.
@@ -85,6 +122,17 @@ C. Atomic Move Operations:
   setup it launches the backend and VERIFIES health: it polls /api/ping for up
   to 20 seconds and confirms /api/data serves successfully, reporting loud,
   explicit errors (with log paths) if the backend fails to come online.
+- Restart: 'Restart-Bridge.bat' restarts the bridge PROCESS without touching
+  persistence. It self-elevates via UAC, resolves the task name (tries
+  'AIAgentPromptBridge', then the legacy 'AIAgentBridge', then queries Task
+  Scheduler for any task whose action references bridge.py), ends it, kills
+  the PID from the PID file plus anything still listening on 5589 plus any
+  stray python process holding bridge.py, waits for the port to clear, purges
+  __pycache__, then re-runs the task via 'schtasks /run' so Task Scheduler
+  keeps owning the process and the logon trigger is unchanged. Finally it
+  polls /api/ping for up to 20s and reports the new PID and version.
+  Falls back to the Startup-folder VBS launcher when no task exists.
+  Use Install.bat only for a full (re)install.
 - Security: The API only accepts browser requests originating from its own
   pages (http://127.0.0.1:5589, http://localhost:5589, or the HTML file opened
   from disk). Cross-site requests from foreign websites are rejected (403),
@@ -320,8 +368,322 @@ C. Atomic Move Operations:
 - Frontend: HTML meta tags and Javascript fetch requests enforce `cache: 'no-store'`.
 - Backend: Flask implements an `@app.after_request` hook to inject
   `Cache-Control: no-store, no-cache, must-revalidate, max-age=0` headers on all responses.
-- Python Bytecode: No `__pycache__`/.pyc files are ever written. bridge.py sets
-  `sys.dont_write_bytecode = True` as its first statement, the installer sets
-  `PYTHONDONTWRITEBYTECODE=1` and passes `-B` to every Python invocation, its
-  syntax probe uses `ast.parse` (never `py_compile`, which writes cache files),
-  and both Install.bat and UnInstall.bat delete any stray `__pycache__` folder.
+- Python Bytecode: No `__pycache__`/.pyc files are ever written. Four layers:
+    1. bridge.py sets `sys.dont_write_bytecode = True` as its first statement.
+       This covers every module bridge.py IMPORTS.
+    2. It cannot cover bridge.py ITSELF. CPython compiles and writes
+       __pycache__/bridge.cpython-XXX.pyc BEFORE executing line 1, so an
+       `import bridge` from a test harness, a REPL or an AI agent always
+       produced a .pyc no matter what line 2 said.
+       bridge.py therefore self-heals: `purge_bytecode_cache()` deletes the
+       cache at import time and again inside `graceful_shutdown()`.
+       *** That block must stay ABOVE every other import. *** A third-party
+       import failing higher up (flask not installed) aborts the module before
+       the cleanup would otherwise run, leaving the .pyc behind.
+       Removals are reported in bridge.log ("No-cache policy: removed ...").
+    3. The installer sets `PYTHONDONTWRITEBYTECODE=1` and passes `-B` to every
+       Python invocation; its syntax probe uses `ast.parse`, never
+       `py_compile`, which would write cache files.
+    4. Install.bat and UnInstall.bat delete any stray `__pycache__` folder.
+
+===============================================================================
+9. PROMPT EDITOR (EDIT MODE)
+===============================================================================
+A. Unsaved-Work Protection
+   - getEditorText() (box.textContent) is the ONLY way the app reads the editor.
+     Save, copy, dirty-check, undo history and the line gutter all use it, so the
+     app can never disagree with itself about whether something changed.
+   - hasUnsavedPromptChanges() / hasUnsavedTitleChanges() / hasUnsavedWork()
+     compare against editBaseContent (the text as of entering edit mode).
+   - Escape and the CANCEL button both route through cancelEdit(), which asks for
+     confirmation before discarding. Escape also stops propagation so a single
+     keypress cannot both exit edit mode and leave the prompt view.
+   - A beforeunload handler makes the browser warn before a tab close or refresh
+     that would drop unsaved edits.
+
+B. Keyboard Shortcuts (prompt view)
+   - Ctrl+S ............ Save changes (suppresses the browser "Save page as" box)
+   - Ctrl+Enter ........ Save changes
+   - Ctrl+Z / Ctrl+Y ... Undo / Redo (caret preserving)
+   - Ctrl+F / Ctrl+H ... Find / Replace       F3 - Find next
+   - Ctrl+G ............ Go To Line (styled modal, never window.prompt)
+                         NOTE: Ctrl+W is deliberately NOT bound. Browsers reserve
+                         it to close the tab and ignore preventDefault().
+   - Escape ............ Close search, else cancel edit (with confirmation)
+
+C. Undo / Redo
+   - History is a stack of { text } snapshots, capped by BOTH step count
+     (EDITOR_HISTORY_LIMIT) and total characters (EDITOR_HISTORY_CHAR_BUDGET),
+     so large prompts cannot pin unbounded memory.
+   - caretForTextSwap() derives the caret from the first differing character plus
+     any re-inserted length, so undo/redo returns the cursor to the edit site
+     instead of the end of the document.
+
+D. Line Number Gutter
+   - The gutter is sized by its own rows (align-self: flex-start + min-height:100%),
+     never stretched. A stretched flex item inside a scrolling container only
+     receives the VISIBLE height, which made the divider stop mid-page on long
+     prompts. No JavaScript sets the gutter height.
+   - updateLineNumbers() diffs the new line array against the previous one and
+     re-measures only the changed middle section (common head/tail reuse), and
+     skips layout entirely for lines too short to wrap (monospace char-width
+     fast path). Rows are reused rather than rebuilt. A normal keystroke
+     therefore measures one line, not the whole document.
+   - gutterCache is invalidated on stopEdit(); a ResizeObserver on
+     #prompt-box-wrap re-syncs numbers after resize, zoom or density changes.
+
+===============================================================================
+10. GROUP FIT ENGINE (BOARD LAYOUT)
+===============================================================================
+The board (#main-menu) is a wrapping flex row. The fit engine reproduces the
+browser's greedy wrap in JavaScript so the UI can answer layout questions
+BEFORE the user releases the mouse.
+
+A. Core (pure, unit-tested)
+   - simulateRows(widths, W, gap) -> rows of indices. Mirrors flex-wrap exactly.
+   - predictLayout(...) -> {rows, rects}: where every group would sit, in board
+     coordinates. Group height does not depend on width (agent cards are a
+     single column), so predicted rects are exact.
+   - computeSnapTargets(index, metrics, minWidth): scans every candidate width
+     once and keeps the WIDEST width producing each distinct row grouping.
+     Scanning is used instead of a closed-form formula so the snap points can
+     never disagree with simulateRows.
+   - computeTidyWidths(naturals, W, gap): greedy row packing, then justifies
+     each row by sharing its slack. Capped at TIDY_MAX_STRETCH (1.6x natural).
+     Rows holding a single group are never stretched.
+
+B. Resize Interaction (.custom-resize-handle)
+   - Pointer events (works with mouse, pen and touch); pointer capture is used.
+   - Grip art: the universal three-diagonal-line gripper, drawn as a 135deg
+     repeating-linear-gradient clipped to the lower-right triangle. The stop
+     offsets (0.4 -> 1.9 repeating every 3.4px on a 14x14 box) are derived, not
+     guessed: they are the only values that place three FULL lines inside the
+     revealed half of the gradient axis. Changing the box size or the period
+     without redoing that arithmetic yields two lines and two slivers.
+     Colour is driven by --grip-color so hover and .is-resizing can recolour it.
+     The cursor stays ew-resize because only width is adjustable.
+   - Two kinds of snap target, merged into one list; the NEAREST target wins:
+       * fit targets   (green)  - a width where a neighbour joins the row, or in
+                                  SNUG a width that makes the whole board shorter
+       * align targets (violet) - a width identical to another group's width;
+                                  the matched group is outlined and #snap-vguide
+                                  drops a dashed column line at the shared edge
+   - Magnetic snapping within SNAP_TOLERANCE (16px) of a snap target.
+     Hold ALT while dragging to bypass snapping for a pixel-exact width.
+   - #snap-rail renders a tick per snap target under the group, labelled with
+     the group that would join the row. Colliding labels are hidden.
+   - #fit-ghost renders a dashed outline at the predicted landing position:
+     the incoming group, or (class .self) the dragged group when it is the one
+     jumping up a row.
+   - DOUBLE-CLICK the handle to shrink-wrap: clears custom_width, restores
+     automatic sizing, and POSTs width: null. This is the only way back to auto
+     sizing once a width has been set.
+   - isResizingGroup suppresses renderMenu() so an external file change cannot
+     rebuild the board out from under the cursor mid-drag.
+
+C. TIDY Button (#tidy-btn) - reversible
+   - Always packs for MINIMUM BOARD HEIGHT via computeSnugWidths(): it tries
+     1..6 uniform column widths, packs each with packMasonry() and keeps the
+     shortest board. No group is ever shrunk below its natural width. Heights
+     are measured in the same natural-width pass so the packer is never fed
+     heights belonging to a different width.
+   - Measures every group at its natural width in one pass, packs, justifies,
+     applies immediately, then persists.
+   - Refuses to run while a search filter is active (the board is partial).
+   - Before packing it stores `tidySnapshot`: every group's width exactly as it
+     was, with `null` meaning "had no custom width at all". Restoring null puts
+     the group back to AUTO sizing rather than freezing it at the pixel value it
+     happened to occupy - this is the part that makes the undo lossless.
+   - The button then flips to UNDO TIDY (`.undo-state`, gold, undo icon) and
+     `onTidyButton()` routes to `undoTidy()` instead. Undo rewrites the DOM,
+     the in-memory `groups` state and the backend (nulls clear the width), then
+     disarms the button.
+   - `clearTidySnapshot()` disarms it the moment the board stops matching what
+     TIDY produced: any manual resize drag, or a shrink-wrap double-click. A
+     stale undo is never offered.
+   - Groups deleted between TIDY and UNDO are skipped, not fatal.
+   - Persistence prefers POST /api/save-group-widths (one write pass, ONE SSE
+     broadcast). If that endpoint is missing because the bridge has not been
+     restarted, it falls back to one /api/save-group-width call per group, so
+     TIDY works either way.
+
+E. Board Packing and Per-Group Pinning
+   There is NO layout mode switch. The board ALWAYS packs upward; a group that
+   should sit on a plain straight row is pinned individually instead, because
+   that is a property of the group and not of the whole board.
+   - packMasonry() positions every group absolutely so a short group can rise
+     into a gap left anywhere above it - maximum density, chosen deliberately
+     over order-preserving packing.
+       * CONSEQUENCE: screen position never tracks the running order. Order
+         badges (.group-order-badge) therefore appear on every group while a
+         reorder drag is in progress.
+   - THE ARROW (.group-pin-btn), bottom-left of each group:
+       * UP arrow, shown whenever there is room directly above: moves that ONE
+         group straight up in its OWN COLUMN until it touches something, and
+         stores the result as a hand placement. Its `left` never changes and
+         nothing else on the board moves. highestFreeTop() does the work.
+       * WHY IT WORKS THIS WAY: the arrow used to hand the group back to the
+         automatic packer, which picks the lowest-then-leftmost free slot on the
+         WHOLE board. For a group on the second row that was usually the gap at
+         the top right, so pressing "up" flung it sideways across the screen
+         instead of snugging it up where it stood.
+       * DOWN arrow, shown when there is no room above but the group is being
+         held: releases it, clearing both the hand placement and any row pin so
+         it packs automatically again.
+       * The button is hidden entirely when neither action would do anything.
+   - LEGACY ROW PIN (groups[folder].pin_row):
+       * A pinned group is parked at the rect plain row-wrapping would give it.
+         That line is computed by predictLayout() over EVERY group, pinned or
+         not, so it does not drift as neighbours grow or shrink.
+       * Pinned rects are handed to packMasonry() as `fixed` and placed FIRST as
+         obstacles; everything else flows around them. packAsRows() returns null
+         when the fixed rects do not match the row layout, so that strategy is
+         skipped rather than silently violating a pin.
+       * The arrow points DOWN (push onto the row line) when free and UP
+         (release) when pinned. .can-pin only shows the button when pinning
+         would actually move the group, so it is never a control that visibly
+         does nothing. .is-pinned draws a gold underline so the state is
+         readable without hovering.
+       * Persisted as "pin_row" in <group>/group_meta.json via
+         POST /api/save-group-pin. If that endpoint is missing because the
+         bridge has not been restarted, the frontend keeps the choice in
+         localStorage('pinRow:<folder>') so the feature still works.
+       * packMasonry runs THREE strategies (bottom-left fill, bottom-left fill
+         with left-edge alignment, and plain rows) and keeps the shortest board.
+         Greedy bottom-left alone is myopic - it wedges a wide flat group into a
+         low pocket and blocks the shelf a later group needed, occasionally
+         producing a TALLER board than rows. The three-way search makes SNUG
+         mathematically incapable of losing to ROWS; a 2000-board fuzz test
+         verifies zero overlaps, zero off-board boxes and zero regressions.
+   - applyBoardLayout() measures with the board temporarily back in ROWS layout.
+     An absolutely positioned box with width:fit-content shrinks to the space
+     left of its containing-block edge, so a group parked at x=600 would measure
+     narrower than it is. Measure-in-flex then re-apply happens inside ONE
+     synchronous block, so the browser never paints the intermediate state.
+     Widths are then pinned in px (dataset.snugPin marks a pin as presentation
+     only - it is never written back to custom_width).
+   - The board is re-packed after a render, after shrink-wrap, after
+     TIDY/RESET/UNDO/pin, at the end of a group drag, and whenever the board's
+     own width changes (ResizeObserver, guarded against feedback).
+   - FREE PLACEMENT. A group can be dropped anywhere there is room, including a
+     half-empty bottom row or a slot that is not the next one along. The board
+     is no longer a single left-to-right sequence.
+       * A dropped group becomes an ANCHOR: it keeps exactly the spot it was
+         given (fed to packMasonry as a `fixed` rect) and every group that has
+         NOT been placed by hand flows around it.
+       * DRAGGING NO LONGER RENAMES FOLDERS. A drop records a position and
+         nothing else - no backend call at all. The folder-renaming path, which
+         once made three groups vanish and which Windows regularly denies, is
+         off the drag path entirely. Ctrl+Left / Ctrl+Right on a group's drag
+         handle remains the way to change the real list order, and it builds its
+         list from Object.keys(groups) so it can never be partial.
+       * Placements live in localStorage under `boardPlacement:<width>`, bucketed
+         to PLACEMENT_WIDTH_BUCKET (20px). Return to the same window size and the
+         arrangement comes back; change size and it is ignored, because an
+         arrangement built for 1900px says nothing about 1200px. Nothing is ever
+         written to the prompt folders, so rearranging cannot touch user data.
+       * A drop snaps to neighbouring edges within PLACEMENT_SNAP (12px) and is
+         clamped inside the board and to one gap below the lowest box, so a
+         group cannot be lost off-screen or stretch the board into the distance.
+       * Dropping onto an already-placed group PUSHES it aside
+         (pushOverlappingPlacements): it slides straight down to the nearest
+         free spot and STAYS hand-placed, keeping its column. Releasing it used
+         to throw away the position the user had chosen and let the packer fling
+         it elsewhere. Each move is returned as {folder, from, to}, which is what
+         makes the whole drop undoable.
+       * resolveFixedRects() settles the hand-placed rectangles against EACH
+         OTHER before anything is packed around them. Without it, widening one
+         placed group into another simply stacked them and one vanished behind
+         the other - fixed rects were never compared with each other at all.
+         The `fixedOrder` argument gives the group under the cursor priority, so
+         the one being dragged is never the one shoved aside.
+       * snapPlacement() measures every candidate from the ORIGINAL drop point.
+         It used to compare each candidate against a value it had already
+         modified, so the reference drifted and the same drop gave different
+         answers depending on the order the groups happened to be in. The board's
+         own left, right and top edges are candidates too, so a group can be sat
+         flush in a corner.
+       * Snap references are FROZEN when the drag starts (captureSnapRefs). The
+         board re-packs every frame, so snapping against live positions meant
+         aiming at a target that moved as you approached it.
+       * #place-vguide / #place-hguide draw smart guides whenever the drop rect
+         snaps, so "line this up with that" is visible rather than guessed.
+       * Every drop offers a single UNDO (showUndoToast) restoring both the
+         dropped group and everything it pushed aside. Previously the only way
+         back was RESET LAYOUT, which wipes the entire board.
+       * Storage is pruned: readPlacements() drops folders that no longer exist,
+         and writePlacements() keeps only the PLACEMENT_MAX_BUCKETS most recent
+         window widths. Both used to grow for ever.
+       * The old row-pin concept is GONE. migrateLegacyPins() converts any
+         surviving pin into an ordinary placement once, then the flag is deleted
+         from state, from localStorage and from group_meta.json. /api/save-group-pin
+         has been removed. Two competing notions of "held in place" was one too
+         many.
+       * applyBoardLayout() caches the measured sizes for the duration of a drag
+         (beginDragSizeCache / endDragSizeCache) and re-measures only the element
+         under the cursor, whose width really can change. A drag used to force
+         two full layout reflows every animation frame to learn nothing new.
+       * RESET LAYOUT clears every placement for the current width as well as the
+         widths, and the shared UNDO restores both.
+   - REORDER DRAG (what-you-see-is-what-you-get):
+       * .group-placeholder is packed as if it WERE the dragged group, and the
+         dragged group itself is hidden (.group-dragging) and excluded. The
+         dashed box therefore sits exactly where the group will land, and every
+         other group is already in its final position before the drop.
+       * EVERY element the board lays out must be box-sizing: border-box in its
+         BASE rule. applyBoardLayout() measures the border-box width and writes
+         it back as the width; on a content-box element that re-adds the border
+         each repack, growing the box ~4px per animation frame during a drag.
+         Declaring it only inside .snug-mode does not work, because measuring
+         happens with that class temporarily removed. The anchor element is also
+         skipped by the width-rewrite entirely, as a second line of defence.
+       * The placeholder must be absolutely positioned in the packed board and
+         have its 150px flow minimum cancelled. Left in the document flow it
+         rendered as one giant dashed box across the whole board, and moving it
+         previewed nothing at all, because the other groups take their positions
+         from the packer rather than from the flow.
+       * A move re-packs with the placeholder pinned at the cursor
+         (computeDropRect), the same rect the drop will store, so preview and
+         result cannot disagree. It no longer shuffles the list or renumbers,
+         because dragging cannot change the order any more.
+       * flip() is not used for group dragging. It animates transforms while the
+         board drives left/top, so the two fought each other. flip() is still
+         correct for agent cards inside a group, which are genuinely
+         flow-laid-out.
+       * The drop re-packs BEFORE animateGhostTo(), otherwise the ghost flies to
+         the position the group started from and the board then jumps elsewhere.
+       * The board also re-packs on pick-up so the hole closes immediately.
+   - DURING a resize drag it also repacks live, with the dragged group handed to
+     packMasonry() as a fixed rect at its current position.
+     TWO ORDERING RULES make this safe, and breaking either one silently throws
+     the user's resize away:
+       1. The measure pass restores every group's width from custom_width. It
+          MUST skip the anchored group - custom_width still holds the OLD value
+          until the drag ends, so restoring it mid-drag undoes the resize on
+          every single frame and the group snaps straight back.
+       2. onUp must READ and COMMIT the final width BEFORE calling
+          applyBoardLayout(). Packing first restores the old width, so the
+          measurement comes back equal to custom_width and the save is skipped
+          entirely - the resize is discarded without a word. .no-anim is held on
+     the board for the whole drag so neighbours track the cursor instantly
+     instead of lagging behind a 0.28s transition. Holding it still is
+     what stops the box sliding out from under the cursor while its neighbours
+     reflow around the new width. The repack is coalesced to at most one per
+     animation frame. The old #fit-ghost landing preview was retired: with the
+     whole board reflowing live, a single predicted rectangle contradicted what
+     was already on screen.
+
+F. RESET LAYOUT (#reset-layout-btn)
+   - Confirms first, then clears custom_width on every group so each returns to
+     sizing itself. Group ORDER is never touched - width and order are
+     independent and the backend owns ordering.
+   - Refuses to run while a search filter is active (the board is partial).
+   - Reuses tidySnapshot, so the shared UNDO button restores it; the button
+     reads UNDO RESET rather than UNDO TIDY (tidySnapshot.source).
+
+G. Backend
+   - POST /api/save-group-width   {group, width|null}   - single group
+   - POST /api/save-group-widths  {widths: {folder: width|null}} - batch
+     Both write custom_width into <group>/group_meta.json. A null width pops
+     the key. The batch route validates each folder through safe_path(), caps
+     the request at 500 groups and clamps widths to 1..20000.

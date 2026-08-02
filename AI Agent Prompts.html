@@ -187,6 +187,9 @@
             gap: 14px;
             padding-top: 4px;
             align-items: flex-start;
+            /* Anchor for the snap rail and the fit ghost, which are positioned
+               against the board rather than against any single group. */
+            position: relative;
         }
         .group-container {
             border: 1px solid var(--border);
@@ -211,23 +214,123 @@
             position: absolute;
             bottom: 0;
             right: 0;
-            width: 15px;
-            height: 15px;
+            width: 18px;
+            height: 18px;
             cursor: ew-resize;
             z-index: 10;
+            touch-action: none;
         }
+        .group-container.is-resizing {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 1px var(--blue), 0 10px 30px rgba(0,0,0,0.45);
+            transform: none;
+            transition: none;
+        }
+        .group-container.is-resizing .custom-resize-handle::after { --grip-color: var(--blue); }
+
+        /* Shrink-wrap feedback (double-click the resize corner). */
+        @keyframes snugPulse {
+            0%   { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0.5); }
+            100% { box-shadow: 0 0 0 16px rgba(63, 185, 80, 0); }
+        }
+        .group-container.snug-pulse {
+            animation: snugPulse 0.55s ease-out 1;
+            border-color: var(--success);
+        }
+
+        /* Snap rail: the tick marks showing the widths where a neighbour fits. */
+        #snap-rail {
+            position: absolute;
+            height: 0;
+            pointer-events: none;
+            z-index: 60;
+            display: none;
+        }
+        #snap-rail.visible { display: block; }
+        #snap-rail::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; height: 2px; width: 100%;
+            background: linear-gradient(90deg, rgba(88, 166, 255, 0.55), rgba(88, 166, 255, 0.06));
+            border-radius: 2px;
+        }
+        .snap-tick {
+            position: absolute;
+            top: -6px;
+            width: 2px;
+            height: 14px;
+            margin-left: -1px;
+            background: rgba(88, 166, 255, 0.7);
+            border-radius: 1px;
+            transition: background 0.12s, height 0.12s, top 0.12s;
+        }
+        .snap-tick.active {
+            background: var(--success);
+            height: 20px;
+            top: -9px;
+            box-shadow: 0 0 9px rgba(63, 185, 80, 0.75);
+        }
+        /* Alignment snaps (equal width) are violet so they read differently from
+           the green "a group now fits here" snaps. */
+        .snap-tick.kind-align { background: rgba(190, 150, 255, 0.75); }
+        .snap-tick.kind-align.active {
+            background: rgb(190, 150, 255);
+            box-shadow: 0 0 9px rgba(190, 150, 255, 0.85);
+        }
+        .snap-tick.kind-align.active .snap-tick-label {
+            text-shadow: 0 0 9px rgba(190, 150, 255, 0.9);
+        }
+        .snap-tick-label {
+            position: absolute;
+            top: 16px;
+            left: 1px;
+            transform: translateX(-50%);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            color: rgba(190, 215, 255, 0.7);
+        }
+        .snap-tick.active .snap-tick-label {
+            color: #fff;
+            text-shadow: 0 0 9px rgba(63, 185, 80, 0.85);
+        }
+        .snap-tick-label.hidden { display: none; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .snap-tick { transition: none; }
+            .group-container.snug-pulse { animation: none; }
+        }
+        /* The universal resize gripper: three parallel diagonal lines in the
+           bottom-right corner. A repeating gradient clipped to the lower-right
+           triangle, which is what shortens each line towards the corner and
+           gives the familiar stepped look.
+
+           The stop offsets are not arbitrary. For a 135deg gradient on a 14x14
+           box the gradient axis is 19.8px long and the clip triangle only reveals
+           t = 9.9 .. 19.8. Bands of 0.4->1.9 repeating every 3.4px land at
+           10.6, 14.0 and 17.4 - exactly three full 1.5px lines, none of them
+           clipped into a sliver. Changing the box size or the period without
+           redoing that arithmetic will produce two lines and two slivers. */
         .custom-resize-handle::after {
             content: '';
             position: absolute;
-            bottom: 3px;
-            right: 3px;
-            width: 8px;
-            height: 8px;
-            border-right: 2px solid rgba(255, 255, 255, 0.4);
-            border-bottom: 2px solid rgba(255, 255, 255, 0.4);
+            bottom: 2px;
+            right: 2px;
+            width: 14px;
+            height: 14px;
+            --grip-color: rgba(255, 255, 255, 0.45);
+            background: repeating-linear-gradient(
+                135deg,
+                transparent 0 0.4px,
+                var(--grip-color) 0.4px 1.9px,
+                transparent 1.9px 3.4px
+            );
+            clip-path: polygon(100% 0, 100% 100%, 0 100%);
         }
         .custom-resize-handle:hover::after {
-            border-color: rgba(255, 255, 255, 0.8);
+            --grip-color: rgba(255, 255, 255, 0.9);
         }
         .group-container:hover {
             border-color: rgba(88, 166, 255, 0.25);
@@ -260,6 +363,39 @@
             transition: transform 0.3s ease, opacity 0.3s;
             height: 100%;
             min-height: 150px;
+            /* MUST be border-box, and unconditionally - not only inside the
+               .snug-mode rule. The board measures the border-box width and
+               writes it straight back as the width; on a content-box element
+               that adds the 4px border again on every single repack, so the box
+               grew sideways a few pixels per frame while being dragged. Any
+               element the board lays out has to be border-box for the same
+               reason. */
+            box-sizing: border-box;
+        }
+        /* The board positions every child itself, so the placeholder has to be
+           positioned too - left in the document flow it rendered as one giant
+           dashed box across the whole board. Its size is set inline from the
+           dragged group, so the flow defaults must not fight it. */
+        #main-menu.snug-mode > .group-placeholder {
+            position: absolute;
+            margin: 0;
+            height: auto;
+            min-height: 0;
+            box-sizing: border-box;
+            z-index: 5;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start;
+            transition: left 0.28s cubic-bezier(0.2, 0, 0, 1),
+                        top 0.28s cubic-bezier(0.2, 0, 0, 1);
+        }
+        #main-menu.snug-mode.no-anim > .group-placeholder { transition: none; }
+        /* The placeholder carries the number the group is about to take, so the
+           drop target is unambiguous even though the board is staircased. */
+        .group-placeholder .group-order-badge {
+            display: flex;
+            border-color: var(--blue);
+            background: rgba(88, 166, 255, 0.9);
         }
 
         .agent-placeholder {
@@ -659,9 +795,8 @@
         }
 
         #line-gutter {
-            background:
-                linear-gradient(to right, transparent calc(100% - 1px), var(--border) calc(100% - 1px)),
-                var(--editor-surface);
+            background: var(--editor-surface);
+            border-right: 1px solid var(--border);
             color: #607d8b;
             padding: var(--prompt-pad-y) 10px var(--prompt-pad-y) 0;
             text-align: right;
@@ -669,12 +804,17 @@
             font-size: 14px;
             line-height: var(--prompt-line-height);
             user-select: none;
-            border-right: none;
             min-width: var(--line-gutter-width);
             width: var(--line-gutter-width);
             flex: 0 0 var(--line-gutter-width);
+            /* The gutter is sized by its own rows (flex-start), never stretched to the
+               viewport. A stretched flex item in a scrolling container only gets the
+               VISIBLE height, which is why the divider used to stop half way down the
+               page on long prompts. min-height keeps it full-height when content is
+               shorter than the editor. */
+            align-self: flex-start;
+            height: auto;
             min-height: 100%;
-            align-self: stretch;
             pointer-events: none;
             box-sizing: border-box;
             transition: padding-top 0.2s;
@@ -690,6 +830,31 @@
             line-height: var(--prompt-line-height);
             font-variant-numeric: tabular-nums;
             white-space: nowrap;
+        }
+        .input-modal-field {
+            width: 100%;
+            box-sizing: border-box;
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            color: #fff;
+            border-radius: var(--radius-sm);
+            padding: 9px 12px;
+            font-size: 14px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            outline: none;
+            margin-bottom: 4px;
+        }
+        .input-modal-field:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.18); }
+
+        .line-number-row.goto-flash {
+            animation: gotoFlash 1.2s ease-out 1;
+        }
+        @keyframes gotoFlash {
+            0%, 55% { color: #ffd479; text-shadow: 0 0 9px rgba(255, 212, 121, 0.65); }
+            100% { color: #607d8b; text-shadow: none; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .line-number-row.goto-flash { animation: none; color: #ffd479; }
         }
 
         #prompt-box {
@@ -722,13 +887,6 @@
             background: transparent !important;
             color: inherit !important;
         }
-        #prompt-box-wrap.wrap-lines #prompt-box {
-            min-width: 0;
-            width: 100%;
-            white-space: pre-wrap;
-            overflow-wrap: anywhere;
-        }
-
         /* High-contrast highlight color for search matches */
         ::highlight(search-match) {
             background-color: var(--highlight-match-bg); /* Solid gold for contrast */
@@ -933,6 +1091,182 @@
         }
         .reset-counters-btn:hover { border-color: var(--blue); color: var(--blue); background: rgba(56, 189, 248, 0.1); box-shadow: 0 0 10px var(--border-glow); }
         .reset-counters-btn svg { width: 18px; height: 18px; fill: currentColor; }
+
+        .tidy-btn {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0 14px;
+            border-radius: var(--radius-sm);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            height: 34px;
+            white-space: nowrap;
+        }
+        .tidy-btn:hover { border-color: var(--blue); color: var(--blue); background: rgba(88, 166, 255, 0.1); }
+        .tidy-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .tidy-btn:disabled:hover { border-color: var(--border); color: var(--text); background: rgba(255,255,255,0.04); }
+        .tidy-btn svg { width: 14px; height: 14px; fill: currentColor; }
+        /* ---------------- SNUG (masonry) board ----------------
+           In SNUG mode a JS packer positions every group absolutely, so short
+           groups can float up into gaps that flex-wrap would leave empty. The
+           board height has to be set explicitly because absolute children
+           contribute nothing to it. */
+        #main-menu.snug-mode > .group-container {
+            position: absolute;
+            margin: 0;
+            transition: left 0.28s cubic-bezier(0.2, 0, 0, 1),
+                        top 0.28s cubic-bezier(0.2, 0, 0, 1),
+                        width 0.2s, transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+        }
+        #main-menu.snug-mode > .group-container.is-resizing,
+        #main-menu.snug-mode.no-anim > .group-container {
+            transition: none;
+        }
+        #main-menu.snug-mode > .group-container.drag-ghost { position: fixed; }
+
+        /* Pin arrow: pushes one group down onto the straight row line it would
+           occupy if the board did not pack at all, and back up again. Only shown
+           when it would actually move the group (.can-pin), so it is never a
+           button that visibly does nothing. */
+        .group-pin-btn {
+            position: absolute;
+            bottom: 4px;
+            left: 6px;
+            width: 24px;
+            height: 24px;
+            padding: 0;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: rgba(1, 4, 9, 0.5);
+            color: var(--text-dim);
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s, color 0.2s, border-color 0.2s, background 0.2s;
+            z-index: 12;
+        }
+        .group-container.can-pin .group-pin-btn { display: flex; }
+        .group-container.can-pin:hover .group-pin-btn,
+        .group-pin-btn:focus-visible { opacity: 1; }
+        .group-container.is-pinned .group-pin-btn {
+            opacity: 1;
+            color: var(--gold);
+            border-color: rgba(255, 195, 40, 0.55);
+            background: rgba(255, 195, 40, 0.12);
+        }
+        .group-pin-btn:hover {
+            color: #fff;
+            border-color: var(--blue);
+            background: rgba(88, 166, 255, 0.22);
+        }
+        .group-pin-btn svg { width: 14px; height: 14px; fill: currentColor; }
+
+        /* A pinned group keeps a faint gold underline so its state is readable
+           without hovering it. */
+        .group-container.is-pinned { box-shadow: inset 0 -3px 0 -1px rgba(255, 195, 40, 0.5); }
+
+        /* Order badge: because the board always packs upward, screen position no
+           longer tells you the running order, so the true sequence is surfaced
+           during a drag. */
+        .group-order-badge {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 5px;
+            border-radius: var(--radius-pill);
+            background: rgba(1, 4, 9, 0.82);
+            border: 1px solid var(--blue);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 800;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 40;
+            pointer-events: none;
+            letter-spacing: 0.4px;
+        }
+        #main-menu.show-order-badges .group-order-badge { display: flex; }
+
+        /* Equal-width match: the group whose width you are currently matching. */
+        .group-container.width-match {
+            outline: 2px dashed rgba(190, 150, 255, 0.85);
+            outline-offset: 3px;
+        }
+
+        /* Smart guides while placing a group - the same idea the resize drag
+           uses, so "line this up with that" is visible rather than guessed. */
+        .placement-guide {
+            position: absolute;
+            pointer-events: none;
+            z-index: 58;
+            display: none;
+        }
+        .placement-guide.visible { display: block; }
+        .placement-guide.vertical {
+            top: 0;
+            width: 0;
+            border-left: 2px dashed rgba(88, 166, 255, 0.85);
+        }
+        .placement-guide.horizontal {
+            left: 0;
+            height: 0;
+            border-top: 2px dashed rgba(88, 166, 255, 0.85);
+        }
+
+        /* A toast that carries a single action. */
+        .toast.undo-toast {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .toast-undo-btn {
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            color: #fff;
+            font-weight: 800;
+            font-size: 11px;
+            letter-spacing: 0.6px;
+            padding: 3px 10px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .toast-undo-btn:hover { background: rgba(255, 255, 255, 0.32); }
+
+        /* Vertical guide dropped down the board at the dragged right edge. */
+        #snap-vguide {
+            position: absolute;
+            width: 0;
+            border-left: 2px dashed rgba(190, 150, 255, 0.8);
+            pointer-events: none;
+            z-index: 58;
+            display: none;
+        }
+        #snap-vguide.visible { display: block; }
+
+        /* Armed to undo: the board is still exactly as TIDY left it. */
+        .tidy-btn.undo-state {
+            border-color: var(--gold);
+            color: var(--gold);
+            background: rgba(255, 195, 40, 0.12);
+        }
+        .tidy-btn.undo-state:hover {
+            border-color: var(--gold);
+            color: #fff;
+            background: rgba(255, 195, 40, 0.26);
+        }
 
         .density-toggle-btn {
             background: none; border: 1px solid var(--border); color: var(--text);
@@ -1145,25 +1479,6 @@
             display: none !important;
         }
 
-        .wrap-toggle-btn {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 0 14px;
-            border-radius: var(--radius-sm);
-            font-size: 11px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: 0.2s;
-            display: none;
-            align-items: center;
-            gap: 7px;
-            height: 34px;
-        }
-        .wrap-toggle-btn:hover { border-color: var(--blue); color: var(--blue); background: rgba(88, 166, 255, 0.08); }
-        .wrap-toggle-btn.active { background: rgba(88, 166, 255, 0.18); border-color: var(--blue); color: #fff; }
-        .wrap-toggle-btn svg { width: 14px; height: 14px; fill: currentColor; }
-
         .ai-review-btn {
             background: rgba(147, 112, 219, 0.1); border: 1px solid rgba(147, 112, 219, 0.4);
             color: #bfa3ff; padding: 0 16px; border-radius: 15px;
@@ -1229,9 +1544,13 @@
         <symbol id="icon-bin-full" viewBox="0 0 24 24"><path d="M16 9h-2.1l-1.9-3.4c-.2-.4-.6-.6-1-.6s-.8.2-1 .6L8.1 9H6c-1.1 0-2 .9-2 2v9c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-9c0-1.1-.9-2-2-2zm-6-2l1.7 3H8.3L10 7zm8 13H6v-9h12v9z"/></symbol>
         <symbol id="icon-edit" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></symbol>
         <symbol id="icon-copy" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></symbol>
+        <symbol id="icon-reset" viewBox="0 0 24 24"><path d="M12 5V2L8 6l4 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></symbol>
+        <symbol id="icon-pin-down" viewBox="0 0 24 24"><path d="M11 3h2v9.2l3.6-3.6L18 10l-6 6-6-6 1.4-1.4L11 12.2V3zM5 19h14v2H5v-2z"/></symbol>
+        <symbol id="icon-pin-up" viewBox="0 0 24 24"><path d="M13 21h-2v-9.2l-3.6 3.6L6 14l6-6 6 6-1.4 1.4L13 11.8V21zM5 3h14v2H5V3z"/></symbol>
+        <symbol id="icon-undo" viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62A7.94 7.94 0 0 1 12.5 11c3.54 0 6.55 2.31 7.6 5.5l2.37-.78A10.51 10.51 0 0 0 12.5 8z"/></symbol>
+        <symbol id="icon-tidy" viewBox="0 0 24 24"><path d="M3 4h8v6H3V4zm10 0h8v3h-8V4zm0 5h8v3h-8V9zM3 12h8v8H3v-8zm10 2h8v6h-8v-6z"/></symbol>
         <symbol id="icon-counter" viewBox="0 0 512 512"><path fill="currentColor" fill-rule="evenodd" d="M105.21 256c0-82.475 64.576-149.333 144.235-149.333c79.658 0 144.234 66.858 144.234 149.333v12.501l-26.642-27.584l-29.135 30.166l76.382 79.082l76.383-79.082l-29.136-30.166l-26.642 27.584V256c0-106.048-83.017-192-185.444-192C147.017 64 64 149.952 64 256s83.017 192 185.445 192c43.826 0 84.171-15.765 115.923-42.112l-25.777-33.301c-24.705 20.501-56.025 32.746-90.146 32.746c-79.659 0-144.235-66.858-144.235-149.333m129.457-43.833v129.166h42.666V170.667h-38.291l-56.625 33.25l18 29.625z" clip-rule="evenodd"/></symbol>
         <symbol id="icon-search" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></symbol>
-        <symbol id="icon-wrap" viewBox="0 0 24 24"><path d="M4 6h11a4 4 0 0 1 0 8H8.8l2.6 2.6L10 18l-5-5 5-5 1.4 1.4L8.8 12H15a2 2 0 0 0 0-4H4V6zm0 12h4v-2H4v2z"/></symbol>
         <symbol id="icon-drag" viewBox="0 0 24 24"><path d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></symbol>
         <symbol id="icon-logo" viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm0 3.45l8.15 14.1H3.85L12 5.45zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></symbol>
     </svg>
@@ -1289,6 +1608,14 @@
 
                     <div class="control-right" style="position: relative;">
                         <div class="desktop-actions" style="display: flex; gap: 8px; align-items: center;">
+                            <button class="tidy-btn" id="reset-layout-btn" onclick="resetBoardLayout()" aria-label="Reset every group to its default width" title="Put every group back to its default width. Order is never changed.">
+                                <svg aria-hidden="true"><use href="#icon-reset"/></svg>
+                                RESET LAYOUT
+                            </button>
+                            <button class="tidy-btn" id="tidy-btn" onclick="onTidyButton()" aria-label="Tidy group widths" title="Pack groups into tidy rows. Double-click a group's bottom-right corner to shrink-wrap just that one.">
+                                <svg aria-hidden="true" id="tidy-btn-icon"><use href="#icon-tidy"/></svg>
+                                <span id="tidy-btn-label">TIDY</span>
+                            </button>
                             <button class="density-toggle-btn active" id="density-toggle-btn" onclick="toggleDensityMode()" aria-pressed="true" title="Toggle density">COMPACT</button>
                             <button class="reset-counters-btn" onclick="resetAllCopyTimestamps()" aria-label="Reset All Copy Timestamps" title="Reset All Copy Timestamps">
                                 <svg aria-hidden="true"><use href="#icon-counter"/></svg>
@@ -1358,12 +1685,8 @@
                     <svg aria-hidden="true"><use href="#icon-edit"/></svg>
                     EDIT PROMPT
                 </button>
-                <button id="wrap-toggle-btn" class="wrap-toggle-btn" onclick="toggleLineWrap()" aria-pressed="false" title="Toggle line wrapping">
-                    <svg aria-hidden="true"><use href="#icon-wrap"/></svg>
-                    WRAP
-                </button>
                 <button id="save-btn" class="btn btn-success save-btn" style="display:none" onclick="saveEdit()">SAVE CHANGES</button>
-                <button id="cancel-btn" class="btn btn-secondary cancel-btn" style="display:none" onclick="stopEdit()">CANCEL</button>
+                <button id="cancel-btn" class="btn btn-secondary cancel-btn" style="display:none" onclick="cancelEdit()">CANCEL</button>
                 <button class="ai-review-btn" onclick="reviewPromptWithAI()" title="Allow AI to review and improve this AI Agent prompt">
                     <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                     AI REVIEW
@@ -1509,6 +1832,18 @@
             <div class="modal-actions">
                 <button class="wiz-save" id="select-modal-ok">OK</button>
                 <button class="wiz-cancel" id="select-modal-cancel">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="input-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="input-modal-title">
+        <div class="modal-card">
+            <h3 id="input-modal-title">Go To Line</h3>
+            <p id="input-modal-text">Enter a line number:</p>
+            <input type="text" id="input-modal-field" class="input-modal-field" inputmode="numeric" autocomplete="off" aria-label="Value">
+            <div class="modal-actions">
+                <button class="wiz-save" id="input-modal-ok">OK</button>
+                <button class="wiz-cancel" id="input-modal-cancel">CANCEL</button>
             </div>
         </div>
     </div>
@@ -1763,27 +2098,29 @@
             view.classList.toggle('editing-active', isEditing);
         }
 
-        let wrapLines = true;
-
-        function updateWrapToggle() {
-            wrapLines = true;
-            promptBoxWrap.classList.add('wrap-lines');
-            const btn = document.getElementById('wrap-toggle-btn');
-            if (btn) {
-                btn.classList.add('active');
-                btn.setAttribute('aria-pressed', 'true');
-                btn.title = 'Line wrapping is always on';
-            }
-            updateLineNumbers();
-        }
-
-        function toggleLineWrap() {
-            wrapLines = true;
-            updateWrapToggle();
-        }
-
         function apiErrorMessage(res, fallback) {
             return (res && typeof res.message === 'string' && res.message.trim()) ? res.message : fallback;
+        }
+
+        /* A toast carrying a single action. Used so a mis-drop costs one click
+           to fix instead of RESET LAYOUT, which wipes the whole board. */
+        function showUndoToast(message, onUndo, ms = 6000) {
+            const host = document.getElementById('toast-container') || document.body;
+            const toast = document.createElement('div');
+            toast.className = 'toast success undo-toast';
+            const label = document.createElement('span');
+            label.textContent = message;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'toast-undo-btn';
+            btn.textContent = 'UNDO';
+            const close = () => { toast.remove(); };
+            btn.onclick = () => { close(); try { onUndo(); } catch (e) { console.error(e); } };
+            toast.appendChild(label);
+            toast.appendChild(btn);
+            host.appendChild(toast);
+            setTimeout(close, ms);
+            return toast;
         }
 
         function showApiError(res, fallback) {
@@ -1800,6 +2137,7 @@
         let activeGroupDrag = null;
         let groupGhost = null;
         let groupPlaceholder = null;
+        let pendingDropRect = null;
         let dragStartX = 0, dragStartY = 0;
         let ghostOffsetX = 0, ghostOffsetY = 0;
         let groupOriginalParent = null;
@@ -1985,6 +2323,41 @@
             });
         }
 
+        async function showInputPrompt(titleText, messageText, opts = {}) {
+            return new Promise((resolve) => {
+                const overlay = document.getElementById('input-modal-overlay');
+                document.getElementById('input-modal-title').innerText = titleText;
+                document.getElementById('input-modal-text').innerText = messageText;
+                const field = document.getElementById('input-modal-field');
+                const okBtn = document.getElementById('input-modal-ok');
+                const cancelBtn = document.getElementById('input-modal-cancel');
+                field.value = opts.value || '';
+                field.placeholder = opts.placeholder || '';
+                field.setAttribute('aria-label', opts.label || titleText);
+                overlay.style.display = 'flex';
+                setTimeout(() => {
+                    overlay.classList.add('visible');
+                    setTimeout(() => { field.focus(); field.select(); }, 50);
+                }, 10);
+                trapFocusIn(overlay, () => cancelBtn.click());
+
+                const cleanup = (val) => {
+                    overlay.classList.remove('visible');
+                    setTimeout(() => overlay.style.display = 'none', 200);
+                    okBtn.onclick = null; cancelBtn.onclick = null; field.onkeydown = null;
+                    releaseFocusTrap(overlay);
+                    resolve(val);
+                };
+
+                field.onkeydown = (e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); cleanup(field.value); }
+                    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cleanup(null); }
+                };
+                okBtn.onclick = () => cleanup(field.value);
+                cancelBtn.onclick = () => cleanup(null);
+            });
+        }
+
         const ILLEGAL_CHARS = /[<>:"\/\\|?*\x00-\x1F]/g;
         
         const menu = document.getElementById('main-menu');
@@ -1999,6 +2372,7 @@
         const promptBoxWrap = document.getElementById('prompt-box-wrap');
         const gutter = document.getElementById('line-gutter');
         const EDITOR_HISTORY_LIMIT = 120;
+        const EDITOR_HISTORY_CHAR_BUDGET = 4000000;
         let editorUndoStack = [];
         let editorRedoStack = [];
         let editorHistoryTimer = null;
@@ -2020,58 +2394,166 @@
         }
         updateDensityMode();
 
+        // Single source of truth for reading the editor. textContent is used
+        // everywhere (save, dirty check, history, line numbers) so the app can never
+        // disagree with itself about whether something changed.
         function getEditorText() {
             return box.textContent || '';
         }
 
+        function hasUnsavedPromptChanges() {
+            if (!box.classList.contains('editing')) return false;
+            return getEditorText() !== editBaseContent;
+        }
+
+        function hasUnsavedTitleChanges() {
+            const saveBtn = document.getElementById('title-save-btn');
+            if (!saveBtn || saveBtn.style.display !== 'flex') return false;
+            return title.innerText.trim() !== currentAgent;
+        }
+
+        function hasUnsavedWork() {
+            return hasUnsavedPromptChanges() || hasUnsavedTitleChanges();
+        }
+
+        /* ---------- caret position helpers (plain character offsets) ---------- */
+
+        function getEditorCaretOffset() {
+            const sel = window.getSelection();
+            if (!sel || sel.rangeCount === 0) return null;
+            const range = sel.getRangeAt(0);
+            if (!box.contains(range.startContainer)) return null;
+            try {
+                const pre = range.cloneRange();
+                pre.selectNodeContents(box);
+                pre.setEnd(range.startContainer, range.startOffset);
+                return pre.toString().length;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function locateEditorOffset(offset) {
+            const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null, false);
+            let remaining = Math.max(0, offset);
+            let node = walker.nextNode();
+            let last = null;
+            while (node) {
+                const len = node.nodeValue.length;
+                if (remaining <= len) return { node, offset: remaining };
+                remaining -= len;
+                last = node;
+                node = walker.nextNode();
+            }
+            return last ? { node: last, offset: last.nodeValue.length } : null;
+        }
+
+        function setEditorCaretOffset(offset) {
+            const sel = window.getSelection();
+            if (!sel) return;
+            const point = locateEditorOffset(offset);
+            const range = document.createRange();
+            if (point) {
+                range.setStart(point.node, point.offset);
+                range.collapse(true);
+            } else {
+                range.selectNodeContents(box);
+                range.collapse(true);
+            }
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+
+        function scrollEditorCaretIntoView() {
+            const sel = window.getSelection();
+            if (!sel || sel.rangeCount === 0 || !promptBoxWrap) return;
+            const rect = sel.getRangeAt(0).getBoundingClientRect();
+            if (!rect || (rect.top === 0 && rect.bottom === 0)) return;
+            const wrapRect = promptBoxWrap.getBoundingClientRect();
+            const margin = 48;
+            if (rect.top < wrapRect.top + margin) {
+                promptBoxWrap.scrollTop -= (wrapRect.top + margin - rect.top);
+            } else if (rect.bottom > wrapRect.bottom - margin) {
+                promptBoxWrap.scrollTop += (rect.bottom - (wrapRect.bottom - margin));
+            }
+        }
+
+        /* -------------------- undo / redo (caret aware) -------------------- */
+
+        function trimEditorHistory() {
+            while (editorUndoStack.length > EDITOR_HISTORY_LIMIT) editorUndoStack.shift();
+            let total = 0;
+            for (const entry of editorUndoStack) total += entry.text.length;
+            // A 500 KB prompt x 120 snapshots would pin ~60 MB of memory, so the
+            // history is also capped by total characters, not just step count.
+            while (editorUndoStack.length > 2 && total > EDITOR_HISTORY_CHAR_BUDGET) {
+                total -= editorUndoStack.shift().text.length;
+            }
+        }
+
+        // Works out where the caret belongs after swapping oldText for newText:
+        // the first character that differs, plus anything that was just re-inserted.
+        // That is the spot the user was working at, for both undo and redo.
+        function caretForTextSwap(oldText, newText) {
+            const max = Math.min(oldText.length, newText.length);
+            let prefix = 0;
+            while (prefix < max && oldText.charCodeAt(prefix) === newText.charCodeAt(prefix)) prefix++;
+            return Math.min(newText.length, prefix + Math.max(0, newText.length - oldText.length));
+        }
+
         function initializeEditorHistory(text = getEditorText()) {
-            editorUndoStack = [String(text || '')];
+            editorUndoStack = [{ text: String(text || '') }];
             editorRedoStack = [];
-            if (editorHistoryTimer) clearTimeout(editorHistoryTimer);
+            if (editorHistoryTimer) { clearTimeout(editorHistoryTimer); editorHistoryTimer = null; }
         }
 
         function recordEditorHistoryNow() {
             if (!box.classList.contains('editing')) return;
             const text = getEditorText();
-            if (editorUndoStack[editorUndoStack.length - 1] === text) return;
-            editorUndoStack.push(text);
-            if (editorUndoStack.length > EDITOR_HISTORY_LIMIT) editorUndoStack.shift();
+            const top = editorUndoStack[editorUndoStack.length - 1];
+            if (top && top.text === text) return;
+            editorUndoStack.push({ text });
+            trimEditorHistory();
             editorRedoStack = [];
         }
 
         function scheduleEditorHistoryRecord() {
             if (editorHistoryTimer) clearTimeout(editorHistoryTimer);
-            editorHistoryTimer = setTimeout(recordEditorHistoryNow, 250);
+            editorHistoryTimer = setTimeout(() => {
+                editorHistoryTimer = null;
+                recordEditorHistoryNow();
+            }, 250);
         }
 
-        function movePromptCaretToEnd() {
-            if (!box.classList.contains('editing')) return;
-            const range = document.createRange();
-            range.selectNodeContents(box);
-            range.collapse(false);
-            const sel = window.getSelection();
-            sel.removeAllRanges();
-            sel.addRange(range);
-        }
-
-        function applyEditorHistoryText(text) {
+        function applyEditorHistoryEntry(text) {
+            const boxHadFocus = document.activeElement === box || box.contains(document.activeElement);
+            const caret = caretForTextSwap(getEditorText(), text);
             box.textContent = text;
-            scheduleUpdateLineNumbers();
+            updateLineNumbers();
             if (isPromptSearchVisible()) updateSearchStats(false);
-            movePromptCaretToEnd();
+            // Put the caret back where the change happened instead of dumping it at
+            // the bottom of the document.
+            setEditorCaretOffset(Math.max(0, Math.min(caret, text.length)));
+            if (boxHadFocus) {
+                box.focus({ preventScroll: true });
+                scrollEditorCaretIntoView();
+            }
         }
 
         function undoPromptEdit() {
             if (!box.classList.contains('editing')) return false;
             const activeEl = document.activeElement;
+            if (editorHistoryTimer) { clearTimeout(editorHistoryTimer); editorHistoryTimer = null; }
             const current = getEditorText();
-            if (editorUndoStack[editorUndoStack.length - 1] !== current) recordEditorHistoryNow();
+            const top = editorUndoStack[editorUndoStack.length - 1];
+            if (!top || top.text !== current) recordEditorHistoryNow();
             if (editorUndoStack.length <= 1) return false;
             const popped = editorUndoStack.pop();
             editorRedoStack.push(popped);
-            applyEditorHistoryText(editorUndoStack[editorUndoStack.length - 1]);
+            const target = editorUndoStack[editorUndoStack.length - 1];
+            applyEditorHistoryEntry(target.text);
             if (activeEl && activeEl.closest && activeEl.closest('#search-overlay')) activeEl.focus();
-            const isDirty = getEditorText() !== editBaseContent;
+            const isDirty = hasUnsavedPromptChanges();
             setSearchReplaceDirty(isDirty, isDirty ? 'Unsaved edit undone. Save changes to keep the current text.' : '');
             return true;
         }
@@ -2079,12 +2561,13 @@
         function redoPromptEdit() {
             if (!box.classList.contains('editing') || editorRedoStack.length === 0) return false;
             const activeEl = document.activeElement;
-            const text = editorRedoStack.pop();
-            editorUndoStack.push(text);
-            if (editorUndoStack.length > EDITOR_HISTORY_LIMIT) editorUndoStack.shift();
-            applyEditorHistoryText(text);
+            if (editorHistoryTimer) { clearTimeout(editorHistoryTimer); editorHistoryTimer = null; }
+            const entry = editorRedoStack.pop();
+            editorUndoStack.push(entry);
+            trimEditorHistory();
+            applyEditorHistoryEntry(entry.text);
             if (activeEl && activeEl.closest && activeEl.closest('#search-overlay')) activeEl.focus();
-            const isDirty = getEditorText() !== editBaseContent;
+            const isDirty = hasUnsavedPromptChanges();
             setSearchReplaceDirty(isDirty, isDirty ? 'Unsaved edit redone. Save changes to keep the current text.' : '');
             return true;
         }
@@ -2099,115 +2582,174 @@
 
 
         let lineUpdateTimer = null;
+        let lineUpdateFrame = null;
+        let editorCharWidth = 0;
+        // Remembers the last rendered lines and their measured heights so a keystroke
+        // only re-measures the line that actually changed.
+        let gutterCache = { width: -1, lines: [], heights: [] };
+
         function scheduleUpdateLineNumbers() {
             if (lineUpdateTimer) clearTimeout(lineUpdateTimer);
-            lineUpdateTimer = setTimeout(updateLineNumbers, 60);
+            lineUpdateTimer = setTimeout(() => {
+                lineUpdateTimer = null;
+                if (lineUpdateFrame) cancelAnimationFrame(lineUpdateFrame);
+                lineUpdateFrame = requestAnimationFrame(() => {
+                    lineUpdateFrame = null;
+                    updateLineNumbers();
+                });
+            }, 50);
+        }
+
+        function invalidateGutterCache() {
+            gutterCache = { width: -1, lines: [], heights: [] };
+        }
+
+        // The editor font is monospace, so one character measurement tells us how many
+        // characters fit on a row. Any line shorter than that cannot wrap and needs no
+        // layout work at all.
+        function measureEditorCharWidth() {
+            try {
+                const probe = document.createElement('span');
+                probe.textContent = '0'.repeat(100);
+                probe.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;left:-9999px;top:0;';
+                probe.style.font = getComputedStyle(box).font;
+                document.body.appendChild(probe);
+                const w = probe.getBoundingClientRect().width / 100;
+                probe.remove();
+                return w > 0 ? w : 0;
+            } catch (e) {
+                return 0;
+            }
         }
 
         function updateLineNumbers() {
             if (!gutter || !box) return;
-            const text = box.textContent || '';
+            const text = getEditorText();
             const lines = text.split('\n');
-            const lineHeight = parseFloat(getComputedStyle(box).lineHeight) || 24;
-            const textNodes = [];
-            const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null, false);
-            let node = walker.nextNode();
-            let runningOffset = 0;
+            const boxStyles = getComputedStyle(box);
+            const lineHeight = parseFloat(boxStyles.lineHeight) || 24;
+            const availWidth = box.clientWidth
+                - (parseFloat(boxStyles.paddingLeft) || 0)
+                - (parseFloat(boxStyles.paddingRight) || 0);
 
-            while (node) {
-                const length = node.nodeValue.length;
-                textNodes.push({
-                    node,
-                    start: runningOffset,
-                    end: runningOffset + length
-                });
-                runningOffset += length;
-                node = walker.nextNode();
+            const widthChanged = Math.abs(availWidth - gutterCache.width) > 0.5;
+            if (widthChanged || !editorCharWidth) editorCharWidth = measureEditorCharWidth();
+            // One character of slack so a line sitting exactly on the boundary is
+            // still measured properly rather than assumed.
+            const safeChars = editorCharWidth > 0 ? Math.floor(availWidth / editorCharWidth) - 1 : -1;
+
+            const prevLines = widthChanged ? [] : gutterCache.lines;
+            const prevHeights = widthChanged ? [] : gutterCache.heights;
+
+            // Reuse heights for the unchanged head and tail of the document. Typing on
+            // one line leaves every other line untouched, so this collapses the work
+            // from "measure the whole prompt" to "measure one line".
+            let head = 0;
+            const maxHead = Math.min(prevLines.length, lines.length);
+            while (head < maxHead && prevLines[head] === lines[head]) head++;
+            let tail = 0;
+            const maxTail = Math.min(prevLines.length - head, lines.length - head);
+            while (tail < maxTail
+                   && prevLines[prevLines.length - 1 - tail] === lines[lines.length - 1 - tail]) tail++;
+
+            const heights = new Array(lines.length);
+            for (let i = 0; i < head; i++) heights[i] = prevHeights[i];
+            for (let t = 0; t < tail; t++) {
+                heights[lines.length - 1 - t] = prevHeights[prevLines.length - 1 - t];
             }
 
-            const resolveTextOffset = (offset) => {
-                if (!textNodes.length) return null;
-                for (const item of textNodes) {
-                    if (offset <= item.end) {
-                        return {
-                            node: item.node,
-                            offset: Math.max(0, Math.min(item.node.nodeValue.length, offset - item.start))
-                        };
+            const starts = new Array(lines.length);
+            let acc = 0;
+            for (let i = 0; i < lines.length; i++) { starts[i] = acc; acc += lines[i].length + 1; }
+
+            const dirtyEnd = lines.length - tail;
+            let needsMeasure = false;
+            for (let i = head; i < dirtyEnd; i++) {
+                if (safeChars >= 0 && lines[i].length <= safeChars) heights[i] = lineHeight;
+                else needsMeasure = true;
+            }
+
+            if (needsMeasure) {
+                const textNodes = [];
+                const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null, false);
+                let node = walker.nextNode();
+                let running = 0;
+                while (node) {
+                    const length = node.nodeValue.length;
+                    textNodes.push({ node, start: running, end: running + length });
+                    running += length;
+                    node = walker.nextNode();
+                }
+
+                const resolveTextOffset = (offset) => {
+                    if (!textNodes.length) return null;
+                    for (const item of textNodes) {
+                        if (offset <= item.end) {
+                            return {
+                                node: item.node,
+                                offset: Math.max(0, Math.min(item.node.nodeValue.length, offset - item.start))
+                            };
+                        }
+                    }
+                    const last = textNodes[textNodes.length - 1];
+                    return { node: last.node, offset: last.node.nodeValue.length };
+                };
+
+                // Falls back to a single row on any measurement failure, so a broken
+                // measurement can never blank out the gutter.
+                const getVisualLineHeight = (start, end) => {
+                    if (end <= start || !textNodes.length) return lineHeight;
+                    const startPoint = resolveTextOffset(start);
+                    const endPoint = resolveTextOffset(end);
+                    if (!startPoint || !endPoint) return lineHeight;
+                    try {
+                        const range = document.createRange();
+                        range.setStart(startPoint.node, startPoint.offset);
+                        range.setEnd(endPoint.node, endPoint.offset);
+                        const rects = Array.from(range.getClientRects())
+                            .filter(rect => rect.width > 0 && rect.height > 0);
+                        if (!rects.length) return lineHeight;
+
+                        const tops = [];
+                        let minTop = Infinity;
+                        let maxBottom = -Infinity;
+                        rects.forEach(rect => {
+                            minTop = Math.min(minTop, rect.top);
+                            maxBottom = Math.max(maxBottom, rect.bottom);
+                            if (!tops.some(top => Math.abs(top - rect.top) < 2)) tops.push(rect.top);
+                        });
+                        const rowsFromExtent = Math.max(1, Math.ceil((maxBottom - minTop - 1) / lineHeight));
+                        return Math.max(1, tops.length, rowsFromExtent) * lineHeight;
+                    } catch (e) {
+                        return lineHeight;
+                    }
+                };
+
+                for (let i = head; i < dirtyEnd; i++) {
+                    if (heights[i] === undefined) {
+                        heights[i] = getVisualLineHeight(starts[i], starts[i] + lines[i].length);
                     }
                 }
-                const last = textNodes[textNodes.length - 1];
-                return { node: last.node, offset: last.node.nodeValue.length };
-            };
+            }
 
-            const rangeForOffsets = (start, end) => {
-                if (end <= start || !textNodes.length) return null;
-                const startPoint = resolveTextOffset(start);
-                const endPoint = resolveTextOffset(end);
-                if (!startPoint || !endPoint) return null;
-                try {
-                    const range = document.createRange();
-                    range.setStart(startPoint.node, startPoint.offset);
-                    range.setEnd(endPoint.node, endPoint.offset);
-                    return range;
-                } catch (e) {
-                    return null;
+            // Reuse the existing rows instead of rebuilding thousands of DOM nodes on
+            // every keystroke.
+            while (gutter.children.length > lines.length) gutter.lastChild.remove();
+            for (let i = 0; i < lines.length; i++) {
+                let row = gutter.children[i];
+                if (!row) {
+                    row = document.createElement('div');
+                    row.className = 'line-number-row';
+                    gutter.appendChild(row);
                 }
-            };
+                const label = String(i + 1);
+                if (row.textContent !== label) row.textContent = label;
+                const h = `${heights[i] || lineHeight}px`;
+                if (row.style.height !== h) row.style.height = h;
+            }
 
-            const getVisualLineHeight = (start, end) => {
-                const range = rangeForOffsets(start, end);
-                if (!range) return lineHeight;
-
-                const rects = Array.from(range.getClientRects()).filter(rect => rect.width > 0 && rect.height > 0);
-                if (!rects.length) return lineHeight;
-
-                const tops = [];
-                let minTop = Infinity;
-                let maxBottom = -Infinity;
-                rects.forEach(rect => {
-                    minTop = Math.min(minTop, rect.top);
-                    maxBottom = Math.max(maxBottom, rect.bottom);
-                    if (!tops.some(top => Math.abs(top - rect.top) < 2)) tops.push(rect.top);
-                });
-
-                const rowsFromExtent = Math.max(1, Math.ceil((maxBottom - minTop - 1) / lineHeight));
-                const visualRows = Math.max(1, tops.length, rowsFromExtent);
-                return visualRows * lineHeight;
-            };
-
-            const fragment = document.createDocumentFragment();
-            let lineStart = 0;
-            lines.forEach((line, index) => {
-                const lineEnd = lineStart + line.length;
-                const row = document.createElement('div');
-                row.className = 'line-number-row';
-                row.textContent = String(index + 1);
-                row.style.height = `${getVisualLineHeight(lineStart, lineEnd)}px`;
-                fragment.appendChild(row);
-                lineStart = lineEnd + 1;
-            });
-
-            gutter.replaceChildren(fragment);
             gutter.dataset.count = String(lines.length);
-            updateGutterHeight();
-            syncGutterScroll();
-        }
-
-        function updateGutterHeight() {
-            if (!gutter || !box || !promptBoxWrap) return;
-            requestAnimationFrame(() => {
-                const height = Math.max(
-                    promptBoxWrap.clientHeight,
-                    promptBoxWrap.scrollHeight,
-                    box.scrollHeight,
-                    box.offsetHeight
-                );
-                gutter.style.minHeight = `${height}px`;
-            });
-        }
-
-        function syncGutterScroll() {
-            // Native scrolling now handles this perfectly via sticky gutter.
+            gutterCache = { width: availWidth, lines, heights };
         }
 
         async function api(endpoint, method = 'GET', body = null) {
@@ -2250,8 +2792,28 @@
             window.addEventListener('pointermove', handleAgentPointerMove);
             window.addEventListener('pointerup', handleAgentPointerUp);
             window.addEventListener('resize', scheduleUpdateLineNumbers);
-            updateWrapToggle();
+            updateLineNumbers();
+            updateTidyButton();
+            applyBoardLayout(true);
 
+            // The board re-packs when its own width changes (window resize, zoom,
+            // density toggle, sidebar). Guarded so the height we set ourselves
+            // cannot feed back into another pass.
+            if (window.ResizeObserver && menu) {
+                let lastBoardWidth = -1;
+                new ResizeObserver(() => {
+                    const w = menu.clientWidth;
+                    if (Math.abs(w - lastBoardWidth) < 1) return;
+                    lastBoardWidth = w;
+                    scheduleBoardLayout();
+                }).observe(menu);
+            }
+
+            // Keeps numbers glued to their lines when the editor is resized by the
+            // window, the density toggle, or a zoom change.
+            if (window.ResizeObserver && promptBoxWrap) {
+                new ResizeObserver(() => scheduleUpdateLineNumbers()).observe(promptBoxWrap);
+            }
 
             window.addEventListener('contextmenu', (e) => {
                 if (activeGroupDrag || agentDragStarted) {
@@ -2260,8 +2822,6 @@
                 }
             });
 
-
-            box.addEventListener('scroll', syncGutterScroll);
         });
 
         async function cancelDrag() {
@@ -2317,12 +2877,26 @@
             globalTrash.classList.remove('active', 'drag-over');
             activeGroupDrag = null; agentDragStarted = false; agentSourceCard = null;
             isGroupDragging = false; draggedAgent = null; draggedFromGroup = null;
+            pendingDropRect = null;
+            hidePlacementGuides();
+            dragSnapRefs = [];
+            endDragSizeCache();
+            setOrderBadgesVisible(false);
+            applyBoardLayout();
         }
 
         function handleManualDragStart(e, folderName, container) {
             e.preventDefault();
+            // Dragging used to send a list of every group to be renamed on disk,
+            // and a filtered board could only send a partial one - which is what
+            // destroyed groups. A drag now just records a position in this
+            // browser, so no guard is needed and a hidden group cannot be
+            // affected. The keyboard reorder still renames folders, but it builds
+            // its list from Object.keys(groups), so it is complete regardless of
+            // what the board happens to be showing.
             activeGroupDrag = folderName;
             isGroupDragging = true;
+            setOrderBadgesVisible(true);
             groupOriginalParent = container.parentNode;
             groupOriginalNextSibling = container.nextSibling;
 
@@ -2342,10 +2916,121 @@
             groupPlaceholder.className = 'group-placeholder';
             groupPlaceholder.style.width = rect.width + 'px';
             groupPlaceholder.style.height = rect.height + 'px';
+            const phBadge = document.createElement('div');
+            phBadge.className = 'group-order-badge';
+            groupPlaceholder.appendChild(phBadge);
 
             container.classList.add('group-dragging');
             container.parentNode.insertBefore(groupPlaceholder, container);
             globalTrash.classList.add('active');
+            // Pack immediately so the hole the group leaves behind closes up at
+            // once, instead of only after the drop.
+            applyBoardLayout();
+            refreshOrderBadges();
+            // Freeze what we snap against, and start reusing measurements.
+            captureSnapRefs();
+            beginDragSizeCache();
+        }
+
+        /* Where the ghost currently sits, in board coordinates, snapped to the
+           neighbours and clamped inside the board. This is both the live preview
+           position and the position that gets saved on release, so the two can
+           never disagree. */
+        /* Snap references are frozen when the drag starts.
+
+           The board re-packs every frame, so the unplaced groups move as the
+           placeholder moves. Snapping against their live positions meant aiming
+           at a target that shifted the moment you got near it, which could
+           oscillate. These are the positions as they were when you picked the
+           group up: stable for the whole drag. */
+        let dragSnapRefs = [];
+
+        function captureSnapRefs() {
+            dragSnapRefs = Array.from(menu.querySelectorAll('.group-container'))
+                .filter(el => !el.classList.contains('drag-ghost')
+                           && !el.classList.contains('group-dragging'))
+                .map(el => ({
+                    left: parseFloat(el.style.left) || 0,
+                    top: parseFloat(el.style.top) || 0,
+                    width: Math.round(el.getBoundingClientRect().width),
+                    height: Math.round(el.getBoundingClientRect().height)
+                }));
+        }
+
+        function computeDropRect() {
+            if (!groupGhost || !menu) return null;
+            const boardRect = menu.getBoundingClientRect();
+            const cs = getComputedStyle(menu);
+            const padLeft = parseFloat(cs.paddingLeft) || 0;
+            const padTop = parseFloat(cs.paddingTop) || 0;
+            const gap = parseFloat(cs.columnGap) || parseFloat(cs.gap) || 14;
+            const W = currentBoardWidth();
+
+            const gRect = groupGhost.getBoundingClientRect();
+            const raw = {
+                left: gRect.left - boardRect.left - padLeft,
+                top: gRect.top - boardRect.top - padTop,
+                width: Math.round(gRect.width),
+                height: Math.round(gRect.height)
+            };
+
+            const others = dragSnapRefs;
+            const snapped = snapPlacement(raw, others, gap, W);
+            // Never further than one screen below the lowest box - a drop way off
+            // in empty space should not stretch the board into the distance.
+            const floor = others.reduce((m, o) => Math.max(m, o.top + o.height), 0);
+            const clamped = clampPlacement(
+                { left: snapped.left, top: snapped.top, width: raw.width, height: raw.height },
+                W, floor + gap);
+            return { left: clamped.left, top: clamped.top,
+                     width: raw.width, height: raw.height,
+                     snappedX: snapped.snappedX, snappedY: snapped.snappedY };
+        }
+
+        /* Smart guides while placing, matching the ones the resize drag draws. */
+        function ensurePlacementGuides() {
+            let v = document.getElementById('place-vguide');
+            if (!v) {
+                v = document.createElement('div');
+                v.id = 'place-vguide';
+                v.className = 'placement-guide vertical';
+                v.setAttribute('aria-hidden', 'true');
+                menu.appendChild(v);
+            }
+            let h = document.getElementById('place-hguide');
+            if (!h) {
+                h = document.createElement('div');
+                h.id = 'place-hguide';
+                h.className = 'placement-guide horizontal';
+                h.setAttribute('aria-hidden', 'true');
+                menu.appendChild(h);
+            }
+            return { v, h };
+        }
+
+        function updatePlacementGuides(drop) {
+            const { v, h } = ensurePlacementGuides();
+            if (!drop) { v.classList.remove('visible'); h.classList.remove('visible'); return; }
+            const cs = getComputedStyle(menu);
+            const padLeft = parseFloat(cs.paddingLeft) || 0;
+            const padTop = parseFloat(cs.paddingTop) || 0;
+            if (drop.snappedX) {
+                v.style.left = `${padLeft + drop.left}px`;
+                v.style.height = `${Math.max(menu.scrollHeight, menu.clientHeight)}px`;
+                v.classList.add('visible');
+            } else v.classList.remove('visible');
+            if (drop.snappedY) {
+                h.style.top = `${padTop + drop.top}px`;
+                h.style.width = `${Math.max(0, menu.clientWidth)}px`;
+                h.classList.add('visible');
+            } else h.classList.remove('visible');
+        }
+
+        function hidePlacementGuides() {
+            const v = document.getElementById('place-vguide');
+            const h = document.getElementById('place-hguide');
+            if (v) v.classList.remove('visible');
+            if (h) h.classList.remove('visible');
         }
 
         let dragMoveRAF = null;
@@ -2361,14 +3046,13 @@
                 groupGhost.style.left = (lastClientX - ghostOffsetX) + 'px';
                 groupGhost.style.top = (lastClientY - ghostOffsetY) + 'px';
 
-                const target = document.elementFromPoint(lastClientX, lastClientY)?.closest('.group-container:not(.group-dragging)');
-                if (target && target.dataset.folder !== activeGroupDrag) {
-                    const rect = target.getBoundingClientRect();
-                    const next = (lastClientX > rect.left + rect.width / 2);
-                    flip(menu, () => {
-                        if (next) menu.insertBefore(groupPlaceholder, target.nextSibling);
-                        else menu.insertBefore(groupPlaceholder, target);
-                    });
+                // The group lands wherever it is dropped, so the preview simply
+                // follows the cursor. No slot to work out, no list to reorder.
+                const drop = computeDropRect();
+                if (drop) {
+                    pendingDropRect = drop;
+                    applyBoardLayout(true, { el: groupPlaceholder, left: drop.left, top: drop.top });
+                    updatePlacementGuides(drop);
                 }
 
                 const trashRect = globalTrash.getBoundingClientRect();
@@ -2402,16 +3086,49 @@
                 const original = document.querySelector(`.group-container[data-folder="${folder}"]`);
                 if (original) {
                     activeGroupDrag = null;
-                    flip(menu, () => {
-                        menu.insertBefore(original, groupPlaceholder);
-                        if (groupPlaceholder) { groupPlaceholder.remove(); groupPlaceholder = null; }
-                        original.classList.remove('group-dragging');
-                    });
-                    const folders = Array.from(menu.querySelectorAll('.group-container:not(.drag-ghost)'))
-                                        .map(el => el.dataset.folder).filter(f => f);
+                    const drop = pendingDropRect;
+                    if (groupPlaceholder) { groupPlaceholder.remove(); groupPlaceholder = null; }
+                    original.classList.remove('group-dragging');
+
+                    /* Dropping a group is now a PURELY VISUAL act. It records a
+                       position for this browser at this board width and nothing
+                       else. Folders on disk are never renamed, so the operation
+                       that once lost three groups - and that Windows regularly
+                       denies - is no longer on the drag path at all.
+                       Ctrl+Left / Ctrl+Right still change the real list order. */
+                    if (drop) {
+                        const W = currentBoardWidth();
+                        const gap = getMenuMetrics().gap;
+                        const previous = readPlacements(W)[folder] || null;
+                        // Anything this lands on slides aside and stays placed.
+                        const pushed = pushOverlappingPlacements(folder, drop, gap);
+                        setGroupPlacement(folder, drop);
+
+                        const message = pushed.length
+                            ? `PLACED - ${pushed.length} MOVED ASIDE`
+                            : 'GROUP PLACED';
+                        showUndoToast(message, () => {
+                            // Put everything back exactly as it was.
+                            const map = readPlacements(currentBoardWidth());
+                            for (const m of pushed) map[m.folder] = m.from;
+                            if (previous) map[folder] = previous;
+                            else delete map[folder];
+                            writePlacements(currentBoardWidth(), map);
+                            applyBoardLayout();
+                            showToast('MOVE UNDONE', 'success');
+                        });
+                        a11yAnnounce(`${groups[folder] ? groups[folder].title : folder} placed. `
+                            + 'This position is remembered for this window size.');
+                    }
+                    pendingDropRect = null;
+                    hidePlacementGuides();
+                    dragSnapRefs = [];
+
+                    // Pack BEFORE animating the ghost, so it flies onto the group
+                    // in its final position rather than a stale one.
+                    applyBoardLayout(true);
+                    refreshOrderBadges();
                     animateGhostTo(original);
-                    api('save-order', 'POST', { order: folders });
-                    a11yAnnounce(`Group ${groups[folder] ? groups[folder].title : folder} reordered.`);
                 } else { cleanupDragState(); }
             }
         }
@@ -2582,7 +3299,7 @@
                 saveScroll();
                 const promptVisible = (view.style.display === 'flex'), wasEditing = box.classList.contains('editing');
                 groups = data;
-                if (!isGroupDragging && !agentDragStarted && !isAnimating) renderMenu(search.value);
+                if (!isGroupDragging && !agentDragStarted && !isAnimating && !isResizingGroup) renderMenu(search.value);
                 if (isDeleteMode) updateDeleteCount();
                 updateBinBadge();
                 if (promptVisible && currentGroup && currentAgent) {
@@ -2618,6 +3335,1364 @@
             return false;
         }
 
+
+        /* ==================================================================
+           GROUP FIT ENGINE
+           The board is a wrapping flex row. These helpers reproduce the
+           browser's greedy wrap in JavaScript so the app can answer two
+           questions before the user lets go of the mouse:
+             1. which widths make a neighbour fit on my row (snap targets)
+             2. where exactly would that neighbour land (ghost preview)
+           ================================================================== */
+
+        let isResizingGroup = false;
+        const SNAP_TOLERANCE = 16;      // px of magnetism around a snap target
+        const MIN_GROUP_WIDTH = 220;    // matches .group-container min-width
+        const TIDY_MAX_STRETCH = 1.6;   // a packed group never grows past this
+
+        function getMenuMetrics() {
+            const items = Array.from(menu.querySelectorAll('.group-container:not(.drag-ghost)'));
+            const cs = getComputedStyle(menu);
+            const gap = parseFloat(cs.columnGap) || parseFloat(cs.gap) || 14;
+            const rowGap = parseFloat(cs.rowGap) || gap;
+            const padLeft = parseFloat(cs.paddingLeft) || 0;
+            const padTop = parseFloat(cs.paddingTop) || 0;
+            const W = Math.max(0, menu.clientWidth - padLeft - (parseFloat(cs.paddingRight) || 0));
+            return {
+                items, gap, rowGap, padLeft, padTop, W,
+                widths: items.map(el => Math.round(el.getBoundingClientRect().width)),
+                heights: items.map(el => Math.round(el.getBoundingClientRect().height))
+            };
+        }
+
+        // Greedy left-to-right wrap, exactly what flex-wrap does.
+        function simulateRows(widths, W, gap) {
+            const rows = [];
+            let row = [], used = 0;
+            for (let i = 0; i < widths.length; i++) {
+                const w = widths[i];
+                if (row.length && used + gap + w > W + 0.5) {
+                    rows.push(row);
+                    row = [i];
+                    used = w;
+                } else {
+                    used = row.length ? used + gap + w : w;
+                    row.push(i);
+                }
+            }
+            if (row.length) rows.push(row);
+            return rows;
+        }
+
+        // Where every group would sit, in board coordinates.
+        function predictLayout(widths, heights, W, gap, rowGap, padLeft, padTop) {
+            const rows = simulateRows(widths, W, gap);
+            const rects = [];
+            let top = padTop;
+            for (const row of rows) {
+                let left = padLeft, rowH = 0;
+                for (const i of row) {
+                    rects[i] = { left, top, width: widths[i], height: heights[i] };
+                    left += widths[i] + gap;
+                    rowH = Math.max(rowH, heights[i]);
+                }
+                top += rowH + rowGap;
+            }
+            return { rows, rects };
+        }
+
+        function rowContaining(rows, index) {
+            return rows.find(r => r.indexOf(index) !== -1) || [index];
+        }
+
+        function shortGroupLabel(text, max = 16) {
+            const t = String(text || '').trim();
+            return t.length > max ? t.slice(0, max - 1) + '…' : t;
+        }
+
+        /* Scans every possible width once, at drag start, and keeps the widest
+           width that produces each distinct row grouping. Scanning beats deriving
+           a formula because it can never disagree with simulateRows. */
+        function computeSnapTargets(index, metrics, minWidth) {
+            const { items, gap, W, widths } = metrics;
+            if (index < 0 || index >= items.length) return [];
+            const maxWidth = Math.max(minWidth, Math.floor(W));
+            const seen = new Map();
+            for (let w = maxWidth; w >= minWidth; w--) {
+                const test = widths.slice();
+                test[index] = w;
+                const row = rowContaining(simulateRows(test, W, gap), index);
+                const sig = row.join(',');
+                if (!seen.has(sig)) seen.set(sig, { width: w, row: row.slice() });
+            }
+
+            const folderOf = (i) => items[i] && items[i].dataset.folder;
+            const titleOf = (i) => {
+                const f = folderOf(i);
+                return (f && groups[f] && groups[f].title) || 'GROUP';
+            };
+
+            return Array.from(seen.values())
+                .filter(t => t.row.length > 1)
+                .map(t => {
+                    const others = t.row.filter(x => x !== index);
+                    return {
+                        width: t.width,
+                        row: t.row,
+                        label: others.length === 1
+                            ? shortGroupLabel(titleOf(others[0]))
+                            : `${others.length} GROUPS`
+                    };
+                })
+                .sort((a, b) => b.width - a.width)
+                .slice(0, 6);
+        }
+
+
+        /* ==================================================================
+           SNUG MODE - maximum-density masonry packing
+           ==================================================================
+           Bottom-left bin packing: each group takes the lowest, then leftmost,
+           free slot that fits inside the board width. Because a group claims
+           the best free slot rather than the next slot in a row, a short group
+           can rise into a gap left anywhere above it - the "any group fills
+           any gap" behaviour. Screen position therefore no longer tracks the
+           running order, which is why order badges appear during a drag.
+           Pure function: no DOM, fully unit-tested. */
+        /* Two hand-placed groups cannot both own the same pixels.
+
+           Fixed rectangles used to be pushed straight into the packer without
+           ever being checked against EACH OTHER, so widening one placed group
+           into another simply stacked them and one vanished behind the other.
+           Here the fixed set is settled first, in priority order: the first
+           entry keeps exactly its spot and any later one that collides is
+           pushed straight down (keeping its left) until it is clear.
+
+           `order` lets the caller say which rectangle wins - the group just
+           dropped should never be the one that gets moved. */
+        function resolveFixedRects(fixed, board, gap, order) {
+            if (!fixed) return null;
+            const keys = Object.keys(fixed).map(Number);
+            const priority = Array.isArray(order) ? order.filter(i => keys.indexOf(i) !== -1) : [];
+            const rest = keys.filter(i => priority.indexOf(i) === -1).sort((a, b) => a - b);
+            const settled = [];
+            const out = {};
+
+            for (const i of priority.concat(rest)) {
+                const r = fixed[i];
+                const width = Math.min(r.width, Math.max(1, board));
+                const left = Math.max(0, Math.min(r.left, Math.max(0, board - width)));
+                let top = Math.max(0, r.top);
+
+                for (let guard = 0; guard < 500; guard++) {
+                    const box = { left, top, right: left + width, bottom: top + r.height };
+                    const hit = settled.find(sx => !(
+                        box.right + gap <= sx.left + 0.5 || sx.right + gap <= box.left + 0.5 ||
+                        box.bottom + gap <= sx.top + 0.5 || sx.bottom + gap <= box.top + 0.5
+                    ));
+                    if (!hit) break;
+                    top = hit.bottom + gap;      // shove it below whatever it hit
+                }
+
+                settled.push({ left, top, right: left + width, bottom: top + r.height });
+                out[i] = { left, top, width, height: r.height };
+            }
+            return out;
+        }
+
+        function packBottomLeft(widths, heights, W, gap, alignLeftEdges, fixed) {
+            const placed = [];
+            const rects = [];
+            const overlaps = (a, b) => !(
+                a.right + gap <= b.left + 0.5 || b.right + gap <= a.left + 0.5 ||
+                a.bottom + gap <= b.top + 0.5 || b.bottom + gap <= a.top + 0.5
+            );
+            const board = Math.max(1, W);
+
+            // Pinned groups are parked first and become obstacles. Everything
+            // else then flows around them, which is what lets a pinned group sit
+            // on its plain-row line while its neighbours still float upward.
+            if (fixed) {
+                for (const key of Object.keys(fixed)) {
+                    const i = Number(key);
+                    const r = fixed[key];
+                    const box = { left: r.left, top: r.top, right: r.left + r.width, bottom: r.top + r.height };
+                    placed.push(box);
+                    rects[i] = { left: r.left, top: r.top, width: r.width, height: r.height };
+                }
+            }
+
+            for (let i = 0; i < widths.length; i++) {
+                if (rects[i]) continue;          // already parked as a fixed rect
+                const w = widths[i];
+                const h = heights[i];
+
+                const xs = [0], ys = [0];
+                for (const p of placed) {
+                    xs.push(p.right + gap);
+                    if (alignLeftEdges) xs.push(p.left);
+                    ys.push(p.bottom + gap);
+                }
+                const xList = Array.from(new Set(xs)).sort((a, b) => a - b);
+                const yList = Array.from(new Set(ys)).sort((a, b) => a - b);
+
+                let best = null;
+                for (const y of yList) {
+                    for (const x of xList) {
+                        if (x + w > board + 0.5) continue;
+                        const cand = { left: x, top: y, right: x + w, bottom: y + h };
+                        let clash = false;
+                        for (const p of placed) { if (overlaps(cand, p)) { clash = true; break; } }
+                        if (!clash) { best = cand; break; }
+                    }
+                    if (best) break;
+                }
+                if (!best) {
+                    const floor = placed.reduce((m, p) => Math.max(m, p.bottom + gap), 0);
+                    best = { left: 0, top: floor, right: w, bottom: floor + h };
+                }
+                placed.push(best);
+                rects[i] = { left: best.left, top: best.top, width: w, height: h };
+            }
+            return { rects, height: placed.reduce((m, p) => Math.max(m, p.bottom), 0) };
+        }
+
+        function packAsRows(widths, heights, W, gap, fixed) {
+            const { rects } = predictLayout(widths, heights, W, gap, gap, 0, 0);
+            // Plain rows already put every pinned group exactly where its pin
+            // wants it, so this strategy is valid whenever the fixed rects match
+            // the row layout. When they do not (a group anchored under the
+            // cursor mid-resize) the strategy is skipped by returning null.
+            if (fixed) {
+                for (const key of Object.keys(fixed)) {
+                    const i = Number(key);
+                    const f = fixed[key], r = rects[i];
+                    if (!r || Math.abs(r.left - f.left) > 0.5 || Math.abs(r.top - f.top) > 0.5) return null;
+                }
+            }
+            return { rects, height: rects.reduce((m, r) => Math.max(m, r.top + r.height), 0) };
+        }
+
+        /* Greedy bottom-left packing is fast but myopic: it will wedge a wide flat
+           group into a low pocket and, in doing so, block the shelf a later group
+           needed - occasionally producing a TALLER board than plain rows. So three
+           strategies are run and the shortest board wins. This makes SNUG
+           mathematically incapable of being worse than ROWS, which is verified by
+           a 200-board fuzz test. */
+        function packMasonry(widths, heights, W, gap, fixed, fixedOrder) {
+            if (!widths.length) return { rects: [], height: 0 };
+            const board = Math.max(1, W);
+            const wds = widths.map(x => Math.min(x, board));
+            // Settle the hand-placed rectangles against each other BEFORE anything
+            // else is packed around them, so two of them can never overlap.
+            fixed = resolveFixedRects(fixed, board, gap, fixedOrder);
+
+            const attempts = [
+                packBottomLeft(wds, heights, board, gap, false, fixed),
+                packBottomLeft(wds, heights, board, gap, true, fixed),
+                packAsRows(wds, heights, board, gap, fixed)
+            ].filter(Boolean);
+            // Earlier strategies win ties, so the denser-looking layout is preferred
+            // and the result stays deterministic.
+            let best = attempts[0];
+            for (const a of attempts) if (a.height < best.height - 0.5) best = a;
+            return best;
+        }
+
+        /* The board always packs upward. There is no mode switch: a group that
+           should sit on a plain straight row is PINNED individually instead
+           (groups[folder].pin_row), which is a property of that group rather
+           than of the whole board. */
+
+
+        /* ==================================================================
+           FREE PLACEMENT
+           ==================================================================
+           A group can be dropped anywhere there is room - including a half
+           empty bottom row, or a slot that is not the next one along. A placed
+           group becomes an anchor: it keeps exactly the spot it was given and
+           every group that has NOT been placed by hand flows around it.
+
+           Placements are a look-and-feel thing, so they live in this browser
+           only and are filed under the width of the board. Come back to the
+           same window size and the arrangement returns; change the size and it
+           is quietly ignored, because an arrangement built for 1900px says
+           nothing useful about 1200px. Nothing is ever written to the prompt
+           folders, so rearranging the board cannot touch your data.
+
+           Dragging a group NO LONGER renames folders on disk. Use Ctrl+Left /
+           Ctrl+Right on a group's drag handle to change the actual list order.
+           ================================================================== */
+
+        const PLACEMENT_WIDTH_BUCKET = 20;   // px - tolerates tiny window nudges
+        const PLACEMENT_SNAP = 12;           // px - magnet to a neighbour's edge
+
+        function placementKey(boardWidth) {
+            const bucket = Math.round(boardWidth / PLACEMENT_WIDTH_BUCKET) * PLACEMENT_WIDTH_BUCKET;
+            return `boardPlacement:${bucket}`;
+        }
+
+        const PLACEMENT_MAX_BUCKETS = 8;    // window sizes worth remembering
+
+        function readPlacements(boardWidth) {
+            try {
+                const raw = localStorage.getItem(placementKey(boardWidth));
+                if (!raw) return {};
+                const parsed = JSON.parse(raw);
+                if (!parsed || typeof parsed !== 'object') return {};
+                // Drop positions for groups that no longer exist. Without this
+                // a deleted group's coordinates stayed in storage for ever.
+                const known = Object.keys(groups || {});
+                if (!known.length) return parsed;
+                const clean = {};
+                let dropped = 0;
+                for (const folder of Object.keys(parsed)) {
+                    if (known.indexOf(folder) !== -1) clean[folder] = parsed[folder];
+                    else dropped++;
+                }
+                if (dropped) writePlacements(boardWidth, clean);
+                return clean;
+            } catch (e) { return {}; }
+        }
+
+        /* Every window width ever used created a storage entry that was never
+           removed. Keep only the most recently touched few. */
+        function prunePlacementBuckets(keepKey) {
+            try {
+                const order = JSON.parse(localStorage.getItem('boardPlacementOrder') || '[]');
+                const next = [keepKey].concat(order.filter(k => k !== keepKey));
+                while (next.length > PLACEMENT_MAX_BUCKETS) {
+                    const old = next.pop();
+                    localStorage.removeItem(old);
+                }
+                localStorage.setItem('boardPlacementOrder', JSON.stringify(next));
+            } catch (e) {}
+        }
+
+        function writePlacements(boardWidth, map) {
+            try {
+                const key = placementKey(boardWidth);
+                const keys = Object.keys(map || {});
+                if (!keys.length) localStorage.removeItem(key);
+                else {
+                    localStorage.setItem(key, JSON.stringify(map));
+                    prunePlacementBuckets(key);
+                }
+            } catch (e) {}
+        }
+
+        function currentBoardWidth() {
+            if (!menu) return 0;
+            const cs = getComputedStyle(menu);
+            return Math.max(0, menu.clientWidth
+                - (parseFloat(cs.paddingLeft) || 0)
+                - (parseFloat(cs.paddingRight) || 0));
+        }
+
+        function setGroupPlacement(folder, rect) {
+            const W = currentBoardWidth();
+            const map = readPlacements(W);
+            map[folder] = { left: Math.round(rect.left), top: Math.round(rect.top) };
+            writePlacements(W, map);
+        }
+
+        function clearGroupPlacement(folder) {
+            const W = currentBoardWidth();
+            const map = readPlacements(W);
+            if (!(folder in map)) return false;
+            delete map[folder];
+            writePlacements(W, map);
+            return true;
+        }
+
+        function clearAllPlacements() {
+            const W = currentBoardWidth();
+            const had = Object.keys(readPlacements(W)).length;
+            writePlacements(W, {});
+            return had;
+        }
+
+        /* Aligns a dropped box with the boxes already on the board, so hand
+           placement produces clean edges instead of three-pixel offsets. */
+        function snapPlacement(rect, others, gap, boardWidth) {
+            /* Every candidate is measured from the ORIGINAL drop point.
+
+               The previous version compared each candidate against a value it
+               had already modified, so snapping chained: the reference point
+               moved as it went. The same drop with the same neighbours gave a
+               different answer depending purely on the order the groups
+               happened to be in. Collect first, then choose once. */
+            const originLeft = rect.left, originTop = rect.top;
+
+            const xs = [0];                                  // the board's left edge
+            const ys = [0];                                  // and its top edge
+            if (Number.isFinite(boardWidth) && boardWidth > 0) {
+                xs.push(Math.max(0, boardWidth - rect.width));   // flush right
+            }
+            for (const o of others) {
+                xs.push(o.left);                             // left edges align
+                xs.push(o.left + o.width + gap);             // sit just right of it
+                xs.push(o.left + o.width - rect.width);      // right edges align
+                ys.push(o.top);                              // top edges align
+                ys.push(o.top + o.height + gap);             // sit just below it
+                ys.push(o.top + o.height - rect.height);     // bottom edges align
+            }
+
+            let left = originLeft, top = originTop;
+            let bestX = PLACEMENT_SNAP + 1, bestY = PLACEMENT_SNAP + 1;
+            for (const c of xs) {
+                const d = Math.abs(c - originLeft);
+                if (d < bestX) { bestX = d; left = c; }
+            }
+            for (const c of ys) {
+                const d = Math.abs(c - originTop);
+                if (d < bestY) { bestY = d; top = c; }
+            }
+            // snappedX/Y tell the caller whether to draw an alignment guide.
+            return { left, top,
+                     snappedX: bestX <= PLACEMENT_SNAP,
+                     snappedY: bestY <= PLACEMENT_SNAP };
+        }
+
+        function clampPlacementRect(rect, boardWidth) {
+            return {
+                left: Math.max(0, Math.min(rect.left, Math.max(0, boardWidth - rect.width))),
+                top: Math.max(0, rect.top),
+                width: rect.width,
+                height: rect.height
+            };
+        }
+
+        function clampPlacement(rect, boardWidth, maxTop) {
+            return {
+                left: Math.max(0, Math.min(rect.left, Math.max(0, boardWidth - rect.width))),
+                top: Math.max(0, Math.min(rect.top, maxTop))
+            };
+        }
+
+        /* Two hand-placed groups cannot both own the same pixels. The group just
+           dropped wins, and anything it lands on is PUSHED ASIDE rather than
+           released: it slides straight down to the nearest free spot and stays
+           hand-placed. Releasing it used to throw away the position the user had
+           chosen for it and let the packer fling it somewhere else entirely.
+
+           Returns [{folder, from, to}] for each group that had to move, which is
+           what makes the whole thing undoable. */
+        function pushOverlappingPlacements(folder, rect, gap) {
+            const W = currentBoardWidth();
+            const map = readPlacements(W);
+            const moved = [];
+            const blockers = [{ left: rect.left, top: rect.top,
+                                right: rect.left + rect.width, bottom: rect.top + rect.height }];
+
+            // Nearest first, so the closest neighbour is the one that yields.
+            const neighbours = Object.keys(map)
+                .filter(other => other !== folder && findGroupContainer(other))
+                .sort((a, b) => (map[a].top - map[b].top) || (map[a].left - map[b].left));
+
+            for (const other of neighbours) {
+                const el = findGroupContainer(other);
+                const r = el.getBoundingClientRect();
+                const width = Math.round(r.width), height = Math.round(r.height);
+                const from = { left: map[other].left, top: map[other].top };
+                let top = from.top;
+
+                for (let guard = 0; guard < 500; guard++) {
+                    const box = { left: from.left, top,
+                                  right: from.left + width, bottom: top + height };
+                    const hit = blockers.find(b => !(
+                        box.right + gap <= b.left + 0.5 || b.right + gap <= box.left + 0.5 ||
+                        box.bottom + gap <= b.top + 0.5 || b.bottom + gap <= box.top + 0.5
+                    ));
+                    if (!hit) break;
+                    top = hit.bottom + gap;
+                }
+
+                blockers.push({ left: from.left, top,
+                                right: from.left + width, bottom: top + height });
+                if (Math.abs(top - from.top) > 0.5) {
+                    map[other] = { left: from.left, top: Math.round(top) };
+                    moved.push({ folder: other, from, to: { left: from.left, top: Math.round(top) } });
+                }
+            }
+            if (moved.length) writePlacements(W, map);
+            return moved;
+        }
+
+        /* The old "pin to the plain row line" concept is gone. Free placement
+           replaced it and having two competing notions of "held in place" was a
+           second source of truth nobody could see. Anything still carrying a pin
+           is converted ONCE into an ordinary placement at the row position it
+           was pinned to, then forgotten about. */
+        function migrateLegacyPins(items, classicRects) {
+            let migrated = 0;
+            const W = currentBoardWidth();
+            const map = readPlacements(W);
+            items.forEach((el, i) => {
+                const folder = el.dataset.folder;
+                if (!folder || map[folder] || !classicRects[i]) return;
+                let pinned = false;
+                if (groups[folder] && groups[folder].pin_row) pinned = true;
+                try { if (localStorage.getItem('pinRow:' + folder) === '1') pinned = true; } catch (e) {}
+                if (!pinned) return;
+                map[folder] = { left: Math.round(classicRects[i].left),
+                                top: Math.round(classicRects[i].top) };
+                if (groups[folder]) delete groups[folder].pin_row;
+                try { localStorage.removeItem('pinRow:' + folder); } catch (e) {}
+                migrated++;
+            });
+            if (migrated) writePlacements(W, map);
+            return migrated;
+        }
+
+        /* Move this one group straight up into the space above it, staying in
+           its own column. Nothing else on the board moves. */
+        function floatGroupUp(folder) {
+            const items = boardLayoutItems();
+            const index = items.findIndex(el => el.dataset.folder === folder);
+            const me = lastPackedRects[index];
+            if (index === -1 || !me) return;
+
+            const target = highestFreeTop(lastPackedRects, index, lastPackedGap);
+            if (target >= me.top - 1) {
+                showToast('ALREADY AS HIGH AS IT FITS', 'warning');
+                return;
+            }
+            setGroupPlacement(folder, { left: me.left, top: target });
+            applyBoardLayout();
+            showToast(`MOVED UP ${Math.round(me.top - target)}PX`, 'success');
+            a11yAnnounce(`${groups[folder].title} moved up into the space above it.`);
+        }
+
+        /* Hand the group back to automatic placement: forget both the hand
+           position and any row pin. */
+        function releaseGroup(folder) {
+            if (!folder || !groups[folder]) return;
+            const W = currentBoardWidth();
+            const before = readPlacements(W)[folder] || null;
+            if (!clearGroupPlacement(folder)) {
+                showToast('NOTHING TO RELEASE', 'warning');
+                return;
+            }
+            applyBoardLayout();
+            showUndoToast('RELEASED - PACKS AUTOMATICALLY AGAIN', () => {
+                if (before) setGroupPlacement(folder, before);
+                applyBoardLayout();
+            });
+            a11yAnnounce(`${groups[folder].title} released and packs automatically again.`);
+        }
+
+        function onPinButton(folder) {
+            const items = boardLayoutItems();
+            const index = items.findIndex(el => el.dataset.folder === folder);
+            if (index !== -1 && groupCanRise(index)) return floatGroupUp(folder);
+            return releaseGroup(folder);
+        }
+
+        let boardLayoutFrame = null;
+        function scheduleBoardLayout() {
+            if (boardLayoutFrame) cancelAnimationFrame(boardLayoutFrame);
+            boardLayoutFrame = requestAnimationFrame(() => {
+                boardLayoutFrame = null;
+                applyBoardLayout();
+            });
+        }
+
+        /* The drop placeholder is packed as if it were the dragged group, which
+           is what makes the drag preview identical to the result. The dragged
+           group itself is hidden (.group-dragging) and stands aside. */
+        function boardLayoutItems() {
+            return Array.from(menu.querySelectorAll('.group-container, .group-placeholder')).filter(el =>
+                !el.classList.contains('drag-ghost') && !el.classList.contains('group-dragging'));
+        }
+
+        /* Numbers must follow the placeholder while it moves, otherwise they say
+           where a group WAS during the one action where that is most misleading. */
+        function refreshOrderBadges() {
+            const items = boardLayoutItems();
+            items.forEach((el, i) => {
+                const badge = el.querySelector('.group-order-badge');
+                if (badge) badge.textContent = String(i + 1);
+            });
+        }
+
+        /* Measuring has to happen with the board in ROWS layout.
+           An absolutely positioned box with width:fit-content shrinks to the space
+           left of its containing block edge, so a group parked at x=600 would
+           measure narrower than it really is. Dropping back to flex for the
+           measurement avoids that entirely. All of this runs inside one
+           synchronous block, so the browser never paints the intermediate state
+           and there is no flicker. */
+        /* A drag re-packs every animation frame, but only ONE rectangle moves and
+           no sizes change. Measuring the whole board each time meant two forced
+           layout reflows per frame for nothing. The sizes are taken once when the
+           drag starts and reused; only the element under the cursor is measured
+           live, because a resize really does change its width. */
+        let dragSizeCache = null;
+
+        function beginDragSizeCache() { dragSizeCache = null; }
+        function endDragSizeCache() { dragSizeCache = null; }
+
+        function applyBoardLayout(instant = false, anchor = null) {
+            if (!menu) return;
+
+            const items = boardLayoutItems();
+            if (!items.length) {
+                menu.classList.add('snug-mode');
+                menu.style.height = '';
+                return;
+            }
+
+            const cached = dragSizeCache && dragSizeCache.count === items.length ? dragSizeCache : null;
+            let widths, heights, cs, gap, rowGap, padLeft, padTop, W;
+
+            if (cached) {
+                // Reuse everything except the anchor, whose width can be changing
+                // under the cursor right now.
+                ({ gap, rowGap, padLeft, padTop, W } = cached);
+                widths = cached.widths.slice();
+                heights = cached.heights.slice();
+                if (anchor) {
+                    const ai = items.indexOf(anchor.el);
+                    if (ai !== -1) {
+                        const r = anchor.el.getBoundingClientRect();
+                        widths[ai] = Math.round(r.width);
+                        heights[ai] = Math.round(r.height);
+                    }
+                }
+            } else {
+                // --- measure in rows layout ---
+                menu.classList.remove('snug-mode');
+                items.forEach(el => {
+                    // NEVER touch the width of the group currently being dragged.
+                    // custom_width still holds its OLD value until the drag ends, so
+                    // restoring from it here would undo the resize on every frame.
+                    if (anchor && el === anchor.el) return;
+                    if (el.dataset.snugPin) { el.style.width = ''; delete el.dataset.snugPin; }
+                    const folder = el.dataset.folder;
+                    const cw = folder && groups[folder] && groups[folder].custom_width;
+                    if (Number.isFinite(cw)) el.style.width = `${cw}px`;
+                });
+                cs = getComputedStyle(menu);
+                gap = parseFloat(cs.columnGap) || parseFloat(cs.gap) || 14;
+                rowGap = parseFloat(cs.rowGap) || gap;
+                padLeft = parseFloat(cs.paddingLeft) || 0;
+                padTop = parseFloat(cs.paddingTop) || 0;
+                W = Math.max(0, menu.clientWidth - padLeft - (parseFloat(cs.paddingRight) || 0));
+                widths = items.map(el => Math.round(el.getBoundingClientRect().width));
+                heights = items.map(el => Math.round(el.getBoundingClientRect().height));
+                if (dragSizeCache === null && isGroupDragging) {
+                    dragSizeCache = { count: items.length, widths: widths.slice(),
+                                      heights: heights.slice(), gap, rowGap, padLeft, padTop, W };
+                }
+            }
+
+            /* Pinned groups are parked at the position plain row-wrapping would
+               give them - a fixed line that does not drift as neighbours grow or
+               shrink, which is the whole point of pinning. The classic layout is
+               computed from EVERY group, pinned or not, so the line is stable. */
+            const classic = predictLayout(widths, heights, W, gap, rowGap, 0, 0);
+            if (migrateLegacyPins(items, classic.rects)) {
+                showToast('OLD ROW PINS CONVERTED TO POSITIONS', 'success');
+            }
+            const placements = readPlacements(W);
+            const fixed = {};
+            items.forEach((el, i) => {
+                const folder = el.dataset.folder;
+                // A hand-placed position wins over a row pin: it is the more
+                // explicit instruction and the more recent one.
+                const p = folder && placements[folder];
+                if (p) {
+                    fixed[i] = clampPlacementRect(
+                        { left: p.left, top: p.top, width: widths[i], height: heights[i] }, W);
+                }
+            });
+            // While a resize drag is in flight the dragged group is held still so
+            // the box cannot slide out from under the cursor; its neighbours
+            // reflow around it live.
+            if (anchor) {
+                const ai = items.indexOf(anchor.el);
+                if (ai !== -1) {
+                    fixed[ai] = { left: anchor.left, top: anchor.top, width: widths[ai], height: heights[ai] };
+                }
+            }
+
+            // --- pack and apply ---
+            if (instant) menu.classList.add('no-anim');
+            menu.classList.add('snug-mode');
+            // The anchor is whatever the cursor is holding, so it must never be
+            // the rectangle that gets shoved aside.
+            const priority = [];
+            if (anchor) {
+                const ai = items.indexOf(anchor.el);
+                if (ai !== -1) priority.push(ai);
+            }
+            const packed = packMasonry(widths, heights, W, gap, fixed, priority);
+            lastPackedTops = packed.rects.map(r => (r ? r.top : 0));
+            lastClassicTops = classic.rects.map(r => (r ? r.top : 0));
+            lastPackedRects = packed.rects;
+            lastPackedGap = gap;
+            items.forEach((el, i) => {
+                // Pin the width so shrink-to-fit cannot re-measure it once the box
+                // is absolutely positioned. This is presentation only and is never
+                // written back to custom_width.
+                // The anchor is skipped: it is the element under the cursor and
+                // its width is already explicit, so re-writing a measured value
+                // over it can only introduce drift.
+                if (!anchor || el !== anchor.el) {
+                    if (!el.style.width) el.dataset.snugPin = '1';
+                    el.style.width = `${widths[i]}px`;
+                }
+                el.style.left = `${padLeft + packed.rects[i].left}px`;
+                el.style.top = `${padTop + packed.rects[i].top}px`;
+            });
+            menu.style.height = `${padTop + packed.height}px`;
+            if (instant) requestAnimationFrame(() => menu.classList.remove('no-anim'));
+            updatePinButtons();
+        }
+
+        /* The pin arrow is only worth showing when it would actually move the
+           group - otherwise it is a button that visibly does nothing. */
+        let lastPackedTops = [], lastClassicTops = [];
+        let lastPackedRects = [], lastPackedGap = 14;
+
+        /* How far UP a group can go without leaving its column.
+
+           This is the whole point of the arrow: "snug it up from where it is".
+           Handing the group back to the global packer instead made it teleport,
+           because bottom-left fill picks the lowest-then-leftmost free slot on
+           the WHOLE board - which for a group on the second row was usually the
+           gap at the top right. Keeping `left` fixed and only lowering `top` is
+           what the user means by moving up. */
+        function highestFreeTop(rects, index, gap) {
+            const me = rects[index];
+            if (!me) return 0;
+            const others = rects.filter((r, k) => r && k !== index);
+            const candidates = [0];
+            for (const o of others) candidates.push(o.top + o.height + gap);
+            candidates.sort((a, b) => a - b);
+
+            for (const t of candidates) {
+                if (t > me.top + 0.5) break;          // never push it downwards
+                const box = { left: me.left, top: t,
+                              right: me.left + me.width, bottom: t + me.height };
+                const clash = others.some(o => !(
+                    box.right + gap <= o.left + 0.5 ||
+                    o.left + o.width + gap <= box.left + 0.5 ||
+                    box.bottom + gap <= o.top + 0.5 ||
+                    o.top + o.height + gap <= box.top + 0.5
+                ));
+                if (!clash) return t;
+            }
+            return me.top;
+        }
+
+        function groupCanRise(index) {
+            const me = lastPackedRects[index];
+            if (!me) return false;
+            return highestFreeTop(lastPackedRects, index, lastPackedGap) < me.top - 1;
+        }
+        function updatePinButtons() {
+            const items = boardLayoutItems();
+            const placements = readPlacements(currentBoardWidth());
+            items.forEach((el, i) => {
+                const folder = el.dataset.folder;
+                if (!folder) return;
+                const held = Boolean(placements[folder]);
+                const canRise = groupCanRise(i);
+
+                el.classList.toggle('is-pinned', held);
+                // The arrow is only offered when it has something to do: either
+                // there is room above, or the group is being held somewhere and
+                // can be let go.
+                el.classList.toggle('can-pin', canRise || held);
+
+                const btn = el.querySelector('.group-pin-btn');
+                if (!btn) return;
+                const use = btn.querySelector('use');
+                if (use) use.setAttribute('href', canRise ? '#icon-pin-up' : '#icon-pin-down');
+                btn.setAttribute('aria-pressed', held ? 'true' : 'false');
+                btn.title = canRise
+                    ? 'Move this group up into the space above it'
+                    : 'Release this group so it packs automatically again';
+                btn.setAttribute('aria-label', btn.title);
+            });
+        }
+
+        /* Order badges: in max-density SNUG mode a group's position on screen no
+           longer tells you where it sits in the running order, so the true
+           sequence is surfaced while a reorder drag is in progress. */
+        function setOrderBadgesVisible(visible) {
+            if (!menu) return;
+            menu.classList.toggle('show-order-badges', Boolean(visible));
+        }
+
+        /* Snaps that line this group up with another group's width. These are
+           alignment aids rather than fit aids, so they are drawn in violet and
+           the matched group is outlined while the snap is active. */
+        function computeWidthMatchTargets(index, metrics, minWidth) {
+            const { items, W, widths } = metrics;
+            const maxWidth = Math.max(minWidth, Math.floor(W));
+            const seen = new Set();
+            const out = [];
+            for (let i = 0; i < items.length; i++) {
+                if (i === index) continue;
+                const w = widths[i];
+                if (!Number.isFinite(w) || w < minWidth || w > maxWidth) continue;
+                if (seen.has(w)) continue;
+                seen.add(w);
+                const folder = items[i].dataset && items[i].dataset.folder;
+                const title = (folder && groups[folder] && groups[folder].title) || 'GROUP';
+                out.push({ width: w, kind: 'align', matchIndex: i, label: '= ' + shortGroupLabel(title, 14) });
+            }
+            return out.sort((a, b) => b.width - a.width);
+        }
+
+        /* SNUG equivalent of computeSnapTargets: the widths at which the whole
+           board gets shorter. Scanned in 2px steps because each probe runs a full
+           packing pass. */
+        function computeSnugSnapTargets(index, metrics, minWidth) {
+            const { W, gap, widths, heights } = metrics;
+            // Every probe is a full packing pass, so the scan is coarse (4px) and
+            // skipped entirely on very large boards. 4px costs nothing in practice:
+            // the magnet is 16px wide, and a target 3px narrower than the true
+            // optimum still produces the same board height.
+            if (widths.length > 24) return [];
+            const maxWidth = Math.max(minWidth, Math.floor(W));
+            const current = packMasonry(widths, heights, W, gap).height;
+            const bestForHeight = new Map();
+            for (let w = maxWidth; w >= minWidth; w -= 4) {
+                const test = widths.slice();
+                test[index] = w;
+                const h = Math.round(packMasonry(test, heights, W, gap).height);
+                if (!bestForHeight.has(h)) bestForHeight.set(h, w);
+            }
+            const out = [];
+            for (const [h, w] of bestForHeight.entries()) {
+                if (h >= current - 0.5) continue;
+                out.push({ width: w, kind: 'fit', label: `${Math.round(current - h)}PX SHORTER` });
+            }
+            return out.sort((a, b) => b.width - a.width).slice(0, 5);
+        }
+
+        /* One merged, de-duplicated list. Nearest target wins at drag time, so the
+           only job here is to make sure two kinds never sit on the exact same
+           pixel with conflicting labels. */
+        function buildSnapTargetList(index, metrics, minWidth) {
+            // Both kinds of fit target are useful now: "the board gets shorter"
+            // for free-floating groups, and "a neighbour joins the row" for the
+            // straight line that pinned groups sit on.
+            const shorter = computeSnugSnapTargets(index, metrics, minWidth);
+            const rowFit = computeSnapTargets(index, metrics, minWidth).map(t => Object.assign({ kind: 'fit' }, t));
+            const align = computeWidthMatchTargets(index, metrics, minWidth);
+            const byWidth = new Map();
+            for (const t of shorter) byWidth.set(t.width, t);
+            for (const t of rowFit) if (!byWidth.has(t.width)) byWidth.set(t.width, t);
+            for (const t of align) if (!byWidth.has(t.width)) byWidth.set(t.width, t);
+            return Array.from(byWidth.values()).sort((a, b) => b.width - a.width).slice(0, 8);
+        }
+
+        /* ---------------------------- snap rail ---------------------------- */
+
+        function ensureFitOverlays() {
+            let rail = document.getElementById('snap-rail');
+            if (!rail) {
+                rail = document.createElement('div');
+                rail.id = 'snap-rail';
+                rail.setAttribute('aria-hidden', 'true');
+                menu.appendChild(rail);
+            }
+            return { rail };
+        }
+
+        function buildSnapRail(container, targets, metrics) {
+            const { rail } = ensureFitOverlays();
+            rail.replaceChildren();
+            if (!targets.length) { rail.classList.remove('visible'); return rail; }
+
+            rail.style.left = `${container.offsetLeft}px`;
+            rail.style.top = `${container.offsetTop + container.offsetHeight + 6}px`;
+            rail.style.width = `${Math.max(...targets.map(t => t.width))}px`;
+
+            targets.forEach(t => {
+                const tick = document.createElement('div');
+                tick.className = 'snap-tick' + (t.kind === 'align' ? ' kind-align' : '');
+                tick.style.left = `${t.width}px`;
+                tick.dataset.width = String(t.width);
+                const label = document.createElement('div');
+                label.className = 'snap-tick-label';
+                label.textContent = t.label;
+                tick.appendChild(label);
+                rail.appendChild(tick);
+            });
+            rail.classList.add('visible');
+            hideCollidingRailLabels(rail);
+            return rail;
+        }
+
+        // Labels are small but titles are not; drop any that would overlap.
+        function hideCollidingRailLabels(rail) {
+            const labels = Array.from(rail.querySelectorAll('.snap-tick-label'));
+            labels.forEach(l => l.classList.remove('hidden'));
+            const placed = [];
+            // Widest tick first so the outermost snap keeps its name.
+            labels.sort((a, b) => parseFloat(b.parentNode.style.left) - parseFloat(a.parentNode.style.left));
+            labels.forEach(l => {
+                const r = l.getBoundingClientRect();
+                if (placed.some(p => r.left < p.right + 8 && r.right + 8 > p.left)) l.classList.add('hidden');
+                else placed.push(r);
+            });
+        }
+
+        function highlightSnapTick(rail, width) {
+            rail.querySelectorAll('.snap-tick').forEach(tick => {
+                tick.classList.toggle('active', Math.abs(parseFloat(tick.dataset.width) - width) < 0.5);
+            });
+        }
+
+        function ensureVGuide() {
+            let guide = document.getElementById('snap-vguide');
+            if (!guide) {
+                guide = document.createElement('div');
+                guide.id = 'snap-vguide';
+                guide.setAttribute('aria-hidden', 'true');
+                menu.appendChild(guide);
+            }
+            return guide;
+        }
+
+        /* Shows the column line and outlines the group whose width is being
+           matched, so "same width as that one" is visible rather than implied. */
+        function updateWidthMatchGuide(container, target, metrics) {
+            const guide = ensureVGuide();
+            menu.querySelectorAll('.group-container.width-match')
+                .forEach(el => el.classList.remove('width-match'));
+
+            if (!target || target.kind !== 'align') {
+                guide.classList.remove('visible');
+                return;
+            }
+            const match = metrics.items[target.matchIndex];
+            if (match && match.classList) match.classList.add('width-match');
+
+            const x = container.offsetLeft + target.width;
+            guide.style.left = `${x}px`;
+            guide.style.top = '0px';
+            guide.style.height = `${Math.max(menu.scrollHeight, menu.clientHeight)}px`;
+            guide.classList.add('visible');
+        }
+
+        function clearFitOverlays() {
+            const rail = document.getElementById('snap-rail');
+            const guide = document.getElementById('snap-vguide');
+            if (rail) { rail.classList.remove('visible'); rail.replaceChildren(); }
+            if (guide) guide.classList.remove('visible');
+            if (menu) menu.querySelectorAll('.group-container.width-match')
+                .forEach(el => el.classList.remove('width-match'));
+        }
+
+        /* --------------------------- resize drag --------------------------- */
+
+        function attachGroupResize(container, handle, folderName, groupData) {
+            let startX = 0, startWidth = 0, dragging = false, moved = false;
+            let targets = [], metrics = null, baselineRow = [], rail = null;
+            let minWidth = MIN_GROUP_WIDTH, lastWidth = 0, pointerId = null;
+            let anchorRect = null, livePackFrame = null;
+
+            /* Repack live so the consequence of this width is visible while
+               dragging, with the dragged group held still under the cursor.
+               A full measure-and-pack per pointermove would be wasteful, so it
+               is coalesced down to at most one per animation frame. */
+            const scheduleLivePack = () => {
+                if (livePackFrame) return;
+                livePackFrame = requestAnimationFrame(() => {
+                    livePackFrame = null;
+                    if (dragging) applyBoardLayout(false, anchorRect);
+                });
+            };
+
+            const onMove = (e) => {
+                if (!dragging) return;
+                const raw = Math.max(minWidth, Math.round(startWidth + (e.clientX - startX)));
+                if (Math.abs(raw - startWidth) > 2) moved = true;
+
+                // Alt bypasses magnetism for pixel-exact widths.
+                // Nearest target wins, whichever kind it is.
+                let width = raw;
+                let active = null;
+                if (!e.altKey) {
+                    let bestDist = SNAP_TOLERANCE + 1;
+                    for (const t of targets) {
+                        const d = Math.abs(t.width - raw);
+                        if (d < bestDist) { bestDist = d; active = t; }
+                    }
+                    if (active) width = active.width;
+                }
+
+                lastWidth = width;
+                container.style.width = `${width}px`;
+                if (rail) highlightSnapTick(rail, width);
+                updateWidthMatchGuide(container, active, metrics);
+                scheduleLivePack();
+            };
+
+            const onUp = () => {
+                if (!dragging) return;
+                dragging = false;
+                isResizingGroup = false;
+                container.classList.remove('is-resizing');
+                clearFitOverlays();
+                window.removeEventListener('pointermove', onMove);
+                window.removeEventListener('pointerup', onUp);
+                window.removeEventListener('pointercancel', onUp);
+                if (pointerId !== null && handle.releasePointerCapture) {
+                    try { handle.releasePointerCapture(pointerId); } catch (err) {}
+                    pointerId = null;
+                }
+                if (livePackFrame) { cancelAnimationFrame(livePackFrame); livePackFrame = null; }
+                menu.classList.remove('no-anim');
+
+                // Read and commit the new width BEFORE re-packing. applyBoardLayout()
+                // restores widths from custom_width, so packing first would hand back
+                // the old value and the resize would be silently discarded.
+                const finalWidth = Math.round(container.getBoundingClientRect().width);
+                if (moved && finalWidth !== groupData.custom_width) {
+                    // The board no longer matches what TIDY produced, so "undo tidy"
+                    // would no longer restore a state the user recognises.
+                    clearTidySnapshot();
+                    groupData.custom_width = finalWidth;
+                    api('save-group-width', 'POST', { group: folderName, width: finalWidth })
+                        .catch(console.error);
+                }
+
+                anchorRect = null;
+                applyBoardLayout();
+            };
+
+            handle.addEventListener('pointerdown', (e) => {
+                if (e.button !== undefined && e.button !== 0) return;
+                e.preventDefault();
+                e.stopPropagation();
+                dragging = true;
+                moved = false;
+                isResizingGroup = true;
+                pointerId = e.pointerId;
+                if (handle.setPointerCapture && pointerId !== undefined) {
+                    try { handle.setPointerCapture(pointerId); } catch (err) {}
+                }
+                startX = e.clientX;
+                startWidth = Math.round(container.getBoundingClientRect().width);
+                lastWidth = startWidth;
+                container.classList.add('is-resizing');
+                // Transitions stay off for the whole drag so neighbours track the
+                // cursor instantly rather than lagging a third of a second behind.
+                menu.classList.add('no-anim');
+                anchorRect = {
+                    el: container,
+                    left: parseFloat(container.style.left) || container.offsetLeft,
+                    top: parseFloat(container.style.top) || container.offsetTop
+                };
+
+                minWidth = MIN_GROUP_WIDTH;
+                metrics = getMenuMetrics();
+                const index = metrics.items.indexOf(container);
+                baselineRow = rowContaining(simulateRows(metrics.widths, metrics.W, metrics.gap), index);
+                targets = buildSnapTargetList(index, metrics, minWidth);
+                rail = buildSnapRail(container, targets, metrics);
+
+                window.addEventListener('pointermove', onMove);
+                window.addEventListener('pointerup', onUp);
+                window.addEventListener('pointercancel', onUp);
+            });
+
+            // Double-click the corner to shrink-wrap and hand sizing back to the app.
+            handle.addEventListener('dblclick', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dragging = false;
+                moved = false;
+                isResizingGroup = false;
+                container.classList.remove('is-resizing');
+                clearFitOverlays();
+                clearTidySnapshot();
+                container.style.width = '';
+                delete groupData.custom_width;
+                container.classList.remove('snug-pulse');
+                void container.offsetWidth;
+                container.classList.add('snug-pulse');
+                setTimeout(() => container.classList.remove('snug-pulse'), 600);
+                applyBoardLayout();
+                showToast('SHRINK-WRAPPED TO CONTENT', 'success');
+                a11yAnnounce('Group width reset to automatic');
+                const res = await api('save-group-width', 'POST', { group: folderName, width: null });
+                if (!res || res.status === 'error') showApiError(res, 'COULD NOT RESET WIDTH');
+            });
+        }
+
+        /* ------------------------------- TIDY ------------------------------ */
+
+        async function persistGroupWidths(widthMap) {
+            const res = await api('save-group-widths', 'POST', { widths: widthMap });
+            if (res && res.status === 'success') return true;
+            // Older bridge that has not been restarted yet: fall back to one call
+            // per group so TIDY still works without a backend restart.
+            const entries = Object.entries(widthMap);
+            for (const [folder, width] of entries) {
+                const single = await api('save-group-width', 'POST', { group: folder, width });
+                if (!single || single.status !== 'success') return false;
+            }
+            return true;
+        }
+
+        /* Packs the board like justified text: measure what each group naturally
+           wants, greedily fill rows, then share each row's leftover space so the
+           right edges line up. The stretch cap stops a lonely group on the last
+           row from ballooning across the screen. */
+        function computeTidyWidths(naturals, W, gap, maxStretch = TIDY_MAX_STRETCH) {
+            const rows = simulateRows(naturals, W, gap);
+            const out = naturals.slice();
+            for (const row of rows) {
+                // A row holding a single group is left alone. Stretching a lone
+                // group to fill the screen is the opposite of tidy, the same way
+                // justified text never stretches its last line.
+                if (row.length < 2) continue;
+                const natural = row.reduce((sum, i) => sum + naturals[i], 0);
+                const slack = W - natural - gap * (row.length - 1);
+                if (slack <= 0) continue;
+                const headroom = row.map(i => Math.floor(naturals[i] * maxStretch) - naturals[i]);
+                const totalHeadroom = headroom.reduce((a, b) => a + b, 0);
+                if (totalHeadroom <= 0) continue;
+                const share = Math.min(slack, totalHeadroom);
+                let handed = 0;
+                row.forEach((i, k) => {
+                    const add = k === row.length - 1
+                        ? share - handed
+                        : Math.floor(share * (headroom[k] / totalHeadroom));
+                    const capped = Math.max(0, Math.min(add, headroom[k]));
+                    out[i] = naturals[i] + capped;
+                    handed += capped;
+                });
+            }
+            return out;
+        }
+
+        /* TIDY is reversible. The snapshot records every group's width exactly as
+           it was the instant before packing - including "no custom width at all",
+           stored as null, so a group that was auto-sizing goes back to auto-sizing
+           rather than being frozen at whatever pixels it happened to occupy. */
+        let tidySnapshot = null;
+
+        function clearTidySnapshot() {
+            if (!tidySnapshot) return;
+            tidySnapshot = null;
+            updateTidyButton();
+        }
+
+        function updateTidyButton() {
+            const btn = document.getElementById('tidy-btn');
+            if (!btn) return;
+            const armed = Boolean(tidySnapshot);
+            const label = document.getElementById('tidy-btn-label');
+            const icon = btn.querySelector('#tidy-btn-icon use');
+            btn.classList.toggle('undo-state', armed);
+            const what = (tidySnapshot && tidySnapshot.source === 'reset') ? 'RESET' : 'TIDY';
+            if (label) label.textContent = armed ? `UNDO ${what}` : 'TIDY';
+            if (icon) icon.setAttribute('href', armed ? '#icon-undo' : '#icon-tidy');
+            btn.setAttribute('aria-label', armed
+                ? 'Undo tidy and restore the previous group widths'
+                : 'Tidy group widths');
+            btn.title = armed
+                ? `Put every group back to the exact width it had before ${what}.`
+                : "Pack groups into tidy rows. Double-click a group's bottom-right corner to shrink-wrap just that one.";
+        }
+
+        function onTidyButton() {
+            return tidySnapshot ? undoTidy() : tidyGroupWidths();
+        }
+
+        /* RESET LAYOUT: every group back to the width it sizes itself to.
+           Order is never touched - width and order are independent, and the
+           backend owns the ordering. Reuses the TIDY snapshot so the same UNDO
+           button restores it. */
+        async function resetBoardLayout() {
+            if (search && search.value.trim()) {
+                showToast('CLEAR THE SEARCH FIRST', 'warning');
+                return;
+            }
+            const btn = document.getElementById('reset-layout-btn');
+            const metrics = getMenuMetrics();
+            const folders = metrics.items.map(el => el.dataset.folder).filter(Boolean);
+            const customCount = folders.filter(f =>
+                groups[f] && Number.isFinite(groups[f].custom_width)).length;
+
+            if (!customCount && !Object.keys(readPlacements(currentBoardWidth())).length) {
+                showToast('ALREADY AT DEFAULT LAYOUT', 'warning');
+                return;
+            }
+            const placedNow = Object.keys(readPlacements(currentBoardWidth())).length;
+            const okToGo = await showConfirm(
+                `Reset ${customCount} group${customCount === 1 ? '' : 's'} back to default width`
+                + (placedNow ? ` and release ${placedNow} hand-placed group${placedNow === 1 ? '' : 's'}` : '')
+                + '? The order of your groups is not changed.',
+                'Reset Layout');
+            if (!okToGo) return;
+
+            const snapshot = {};
+            const widthMap = {};
+            const placedBefore = readPlacements(currentBoardWidth());
+            metrics.items.forEach(el => {
+                const folder = el.dataset.folder;
+                if (!folder || !groups[folder]) return;
+                const cw = groups[folder].custom_width;
+                snapshot[folder] = Number.isFinite(cw) ? cw : null;
+                delete groups[folder].custom_width;
+                delete el.dataset.snugPin;
+                el.style.width = '';
+                widthMap[folder] = null;
+            });
+            const placedCount = clearAllPlacements();
+
+            tidySnapshot = { widths: snapshot, source: 'reset', placements: placedBefore };
+            updateTidyButton();
+            applyBoardLayout();
+
+            showToast(`RESET ${customCount} GROUP${customCount === 1 ? '' : 'S'}`
+                + (placedCount ? ` AND ${placedCount} PLACEMENT${placedCount === 1 ? '' : 'S'}` : '')
+                + ' - UNDO AVAILABLE', 'success');
+            a11yAnnounce('All group widths reset to default. Undo is available.');
+
+            if (btn) btn.disabled = true;
+            const saved = await persistGroupWidths(widthMap);
+            if (btn) btn.disabled = false;
+            if (!saved) showToast('RESET APPLIED BUT NOT SAVED', 'error');
+        }
+
+        function findGroupContainer(folder) {
+            // Folder names contain spaces, brackets and ampersands, so match on the
+            // dataset rather than building an attribute selector out of them.
+            for (const el of menu.querySelectorAll('.group-container')) {
+                if (el.dataset.folder === folder) return el;
+            }
+            return null;
+        }
+
+        async function undoTidy() {
+            if (!tidySnapshot) return;
+            const btn = document.getElementById('tidy-btn');
+            const snap = tidySnapshot.widths;
+            const snapshotPlacements = tidySnapshot.placements || null;
+            const widthMap = {};
+            let restored = 0, vanished = 0;
+
+            for (const folder of Object.keys(snap)) {
+                if (!groups[folder]) { vanished++; continue; }   // deleted since TIDY
+                const width = snap[folder];
+                const el = findGroupContainer(folder);
+                if (width === null) {
+                    delete groups[folder].custom_width;
+                    if (el) el.style.width = '';
+                } else {
+                    groups[folder].custom_width = width;
+                    if (el) el.style.width = `${width}px`;
+                }
+                widthMap[folder] = width;   // null clears the width on the backend
+                restored++;
+            }
+
+            if (snapshotPlacements) writePlacements(currentBoardWidth(), snapshotPlacements);
+            tidySnapshot = null;
+            updateTidyButton();
+            applyBoardLayout();
+
+            showToast(`RESTORED ${restored} GROUP${restored === 1 ? '' : 'S'}`
+                + (vanished ? ` (${vanished} NO LONGER EXIST)` : ''), 'success');
+            a11yAnnounce('Tidy undone, previous widths restored');
+
+            if (btn) btn.disabled = true;
+            const saved = await persistGroupWidths(widthMap);
+            if (btn) btn.disabled = false;
+            if (!saved) showToast('RESTORED BUT NOT SAVED', 'error');
+        }
+
+        /* SNUG TIDY: instead of justifying row edges (invisible once groups
+           float), search for the width set that makes the whole board shortest.
+           Tries 1..6 uniform column widths, packs each, keeps the best. Heights
+           are measured at natural width; widening a group can only reduce its
+           height (its title wraps less), so the search never underestimates. */
+        function computeSnugWidths(naturals, heights, W, gap, maxColumns = 6) {
+            let best = null;
+            for (let k = 1; k <= maxColumns; k++) {
+                const col = Math.floor((W - gap * (k - 1)) / k);
+                if (k > 1 && col < MIN_GROUP_WIDTH) continue;
+                const widths = naturals.map(n => (n <= col ? col : n));
+                const height = Math.round(packMasonry(widths, heights, W, gap).height);
+                const filled = widths.reduce((a, b) => a + b, 0);
+                if (!best || height < best.height ||
+                    (height === best.height && filled > best.filled)) {
+                    best = { widths, height, filled, columns: k };
+                }
+            }
+            return best || { widths: naturals.slice(), height: 0, filled: 0, columns: 1 };
+        }
+
+        async function tidyGroupWidths() {
+            const btn = document.getElementById('tidy-btn');
+            if (search && search.value.trim()) {
+                showToast('CLEAR THE SEARCH FIRST', 'warning');
+                return;
+            }
+            const metrics = getMenuMetrics();
+            if (metrics.items.length < 2) {
+                showToast('NOTHING TO TIDY', 'warning');
+                return;
+            }
+
+            // Snapshot the exact "before" state so UNDO TIDY is lossless.
+            const snapshot = {};
+            metrics.items.forEach(el => {
+                const folder = el.dataset.folder;
+                if (!folder) return;
+                const cw = groups[folder] && groups[folder].custom_width;
+                snapshot[folder] = Number.isFinite(cw) ? cw : null;
+            });
+
+            // Measure every group at its natural size in one pass.
+            const previous = metrics.items.map(el => el.style.width);
+            metrics.items.forEach(el => { el.style.width = ''; });
+            const naturals = metrics.items.map(el => Math.max(MIN_GROUP_WIDTH, Math.ceil(el.getBoundingClientRect().width)));
+            // Heights are read in the same pass, at natural width, so the SNUG
+            // packer is not fed heights that belong to a different width.
+            const naturalHeights = metrics.items.map(el => Math.round(el.getBoundingClientRect().height));
+            metrics.items.forEach((el, i) => { el.style.width = previous[i]; });
+
+            const heights = naturalHeights;
+            const widths = computeSnugWidths(naturals, heights, metrics.W, metrics.gap).widths;
+            const widthMap = {};
+            metrics.items.forEach((el, i) => {
+                const folder = el.dataset.folder;
+                if (!folder) return;
+                el.style.width = `${widths[i]}px`;
+                if (groups[folder]) groups[folder].custom_width = widths[i];
+                widthMap[folder] = widths[i];
+            });
+
+            tidySnapshot = { widths: snapshot };
+            updateTidyButton();
+
+            applyBoardLayout();
+            const after = Math.round(packMasonry(widths, heights, metrics.W, metrics.gap).height);
+            const beforeH = Math.round(packMasonry(metrics.widths, heights, metrics.W, metrics.gap).height);
+            showToast(beforeH > after
+                ? `BOARD ${beforeH - after}PX SHORTER - UNDO AVAILABLE`
+                : 'ALREADY AS SHORT AS IT GETS - UNDO AVAILABLE', 'success');
+            a11yAnnounce(`Board packed to ${after} pixels tall. Undo tidy is available.`);
+
+            if (btn) btn.disabled = true;
+            const saved = await persistGroupWidths(widthMap);
+            if (btn) btn.disabled = false;
+            if (!saved) showToast('WIDTHS APPLIED BUT NOT SAVED', 'error');
+        }
+
         function renderMenu(filter = '') {
             menu.innerHTML = '';
             const searchState = buildDashboardSearchState(filter);
@@ -2639,34 +4714,23 @@
 
                 const resizeHandle = document.createElement('div');
                 resizeHandle.className = 'custom-resize-handle';
-                resizeHandle.title = 'Drag to resize group width';
-                
-                let startX, startWidth;
-                resizeHandle.addEventListener('mousedown', (e) => {
-                    e.preventDefault();
-                    startX = e.clientX;
-                    startWidth = container.offsetWidth;
-                    
-                    const onMouseMove = (moveEvent) => {
-                        const newWidth = Math.max(220, startWidth + (moveEvent.clientX - startX));
-                        container.style.width = newWidth + 'px';
-                    };
-                    
-                    const onMouseUp = () => {
-                        window.removeEventListener('mousemove', onMouseMove);
-                        window.removeEventListener('mouseup', onMouseUp);
-                        const finalWidth = container.offsetWidth;
-                        if (finalWidth !== groupData.custom_width) {
-                            groupData.custom_width = finalWidth;
-                            api('save-group-width', 'POST', { group: folderName, width: finalWidth })
-                                .catch(console.error);
-                        }
-                    };
-                    
-                    window.addEventListener('mousemove', onMouseMove);
-                    window.addEventListener('mouseup', onMouseUp);
-                });
+                resizeHandle.title = 'Drag to resize \u2014 snaps where a neighbour fits. Hold Alt for free resize. Double-click to shrink-wrap.';
+                attachGroupResize(container, resizeHandle, folderName, groupData);
                 container.appendChild(resizeHandle);
+
+                const pinBtn = document.createElement('button');
+                pinBtn.type = 'button';
+                pinBtn.className = 'group-pin-btn';
+                pinBtn.innerHTML = '<svg aria-hidden="true"><use href="#icon-pin-down"/></svg>';
+                pinBtn.onclick = (e) => { e.stopPropagation(); onPinButton(folderName); };
+                pinBtn.onpointerdown = (e) => e.stopPropagation();
+                container.appendChild(pinBtn);
+
+                const orderBadge = document.createElement('div');
+                orderBadge.className = 'group-order-badge';
+                orderBadge.textContent = String(index + 1);
+                orderBadge.title = `Position ${index + 1} in your group order`;
+                container.appendChild(orderBadge);
 
                 const colorBar = document.createElement('div');
                 colorBar.className = 'group-color-bar';
@@ -2718,7 +4782,12 @@
                         const reordered = [...allFolders];
                         reordered.splice(idx, 1);
                         reordered.splice(newIdx, 0, folderName);
-                        api('save-order', 'POST', { order: reordered }).then(() => {
+                        api('save-order', 'POST', { order: reordered }).then((res) => {
+                            if (res && res.status === 'error') {
+                                showApiError(res, 'REORDER FAILED');
+                                syncFromBridge();
+                                return;
+                            }
                             showToast('GROUP REORDERED', 'success');
                             syncFromBridge();
                         });
@@ -2841,6 +4910,9 @@
                 menu.appendChild(emptyState);
             }
             if (isDeleteMode) menu.classList.add('delete-mode');
+            // A render replaces every box, so positions are recomputed without
+            // animation - otherwise brand new nodes would slide in from 0,0.
+            applyBoardLayout(true);
         }
 
         let filterDebounceTimer = null;
@@ -3004,17 +5076,13 @@
             initializeEditorHistory(editBaseContent);
             updateLineNumbers();
             if (isPromptSearchVisible()) updateSearchStats(true);
-            updateWrapToggle();
             setSearchReplaceDirty(false);
             setPromptBoxEditing(false);
             updateNavArrows(); updateBreadcrumb(); updateEditorTimestamp();
         }
 
         function showMenu() {
-            const storedPrompt = groups[currentGroup]?.agents?.[currentAgent];
-            const hasRealChanges = (box.classList.contains('editing') && box.innerText !== storedPrompt) ||
-                                   (document.getElementById('title-save-btn').style.display === 'flex' && title.innerText !== currentAgent);
-            if (hasRealChanges) {
+            if (hasUnsavedWork()) {
                 showConfirm('Discard unsaved changes?', "Unsaved Changes").then(res => {
                     if (res) {
                         stopEdit(); cancelTitleEdit(); view.style.display = 'none';
@@ -3040,10 +5108,7 @@
         function navigateAgent(dir) {
             const list = buildGroupAgentsList(), idx = list.findIndex(i => i.f === currentGroup && i.a === currentAgent);
             const newIdx = idx + dir; if (newIdx < 0 || newIdx >= list.length) return;
-            const storedPrompt = groups[currentGroup]?.agents?.[currentAgent];
-            const hasRealChanges = (box.classList.contains('editing') && box.innerText !== storedPrompt) ||
-                                   (document.getElementById('title-save-btn').style.display === 'flex' && title.innerText !== currentAgent);
-            if (hasRealChanges) {
+            if (hasUnsavedWork()) {
                 showConfirm('Discard unsaved changes?', "Unsaved Changes").then(res => {
                     if (res) showPrompt(list[newIdx].f, list[newIdx].a);
                 });
@@ -3111,7 +5176,7 @@
 
         function startEdit() {
             if (box.classList.contains('editing')) return;
-            editBaseContent = groups[currentGroup]?.agents?.[currentAgent] ?? box.innerText;
+            editBaseContent = groups[currentGroup]?.agents?.[currentAgent] ?? getEditorText();
             initializeEditorHistory(editBaseContent);
             latestExternalContent = '';
             hasExternalEditConflict = false;
@@ -3139,9 +5204,70 @@
                     if (searchOverlay && searchOverlay.classList.contains('visible')) {
                         e.preventDefault(); e.stopPropagation(); closeSearch(); return;
                     }
-                    e.preventDefault(); stopEdit();
+                    // stopPropagation matters: without it this same keypress also
+                    // bubbled up and kicked the user out of the prompt entirely.
+                    e.preventDefault(); e.stopPropagation();
+                    cancelEdit();
                 }
             };
+        }
+
+        async function cancelEdit() {
+            if (hasUnsavedPromptChanges()) {
+                const ok = await showConfirm('Discard unsaved changes to this prompt?', 'Unsaved Changes');
+                if (!ok) {
+                    if (box.classList.contains('editing')) box.focus({ preventScroll: true });
+                    return false;
+                }
+            }
+            stopEdit();
+            return true;
+        }
+
+        async function openGoToLine() {
+            const total = getEditorText().split('\n').length;
+            const answer = await showInputPrompt(
+                'Go To Line',
+                `Enter a line number between 1 and ${total}.`,
+                { placeholder: `1 - ${total}`, label: 'Line number' }
+            );
+            if (answer === null) return;
+            const line = parseInt(String(answer).trim(), 10);
+            if (!Number.isFinite(line) || line < 1) {
+                showToast('ENTER A VALID LINE NUMBER', 'warning');
+                return;
+            }
+            goToLine(Math.min(line, total));
+        }
+
+        function goToLine(line) {
+            updateLineNumbers();
+            const row = gutter.children[line - 1];
+            if (!row || !promptBoxWrap) return;
+
+            if (box.classList.contains('editing')) {
+                const lines = getEditorText().split('\n');
+                let offset = 0;
+                for (let i = 0; i < line - 1; i++) offset += lines[i].length + 1;
+                box.focus({ preventScroll: true });
+                setEditorCaretOffset(offset);
+            }
+
+            // Measured from the real rows, so wrapped lines never push the target off
+            // by a few screens the way a flat line-height guess did.
+            const delta = row.getBoundingClientRect().top - promptBoxWrap.getBoundingClientRect().top;
+            const target = Math.max(0, promptBoxWrap.scrollTop + delta - 12);
+            if (typeof promptBoxWrap.scrollTo === 'function') {
+                promptBoxWrap.scrollTo({ top: target, behavior: 'smooth' });
+            } else {
+                promptBoxWrap.scrollTop = target;
+            }
+
+            row.classList.remove('goto-flash');
+            void row.offsetWidth;
+            row.classList.add('goto-flash');
+            setTimeout(() => row.classList.remove('goto-flash'), 1400);
+            a11yAnnounce(`Line ${line} of ${gutter.children.length}`);
         }
 
         async function deleteCurrentAgent() {
@@ -3156,7 +5282,7 @@
         }
 
         async function reviewPromptWithAI() {
-            const rawPrompt = box.innerText;
+            const rawPrompt = getEditorText();
             if (!rawPrompt.trim()) { showToast('PROMPT IS EMPTY', 'warning'); return; }
             const alreadyAccepted = (() => {
                 try { return localStorage.getItem('aiReviewPrivacyAck') === '1'; } catch (e) { return false; }
@@ -3195,7 +5321,7 @@
             document.getElementById('delete-agent-btn').style.display = 'flex';
             title.removeAttribute('role');
             if (newName && newName !== prev) {
-                const res = await api('save', 'POST', { group: currentGroup, name: newName, content: box.innerText, old_name: prev });
+                const res = await api('save', 'POST', { group: currentGroup, name: newName, content: getEditorText(), old_name: prev });
                 if (res && res.status === 'success') {
                     currentAgent = newName; await syncFromBridge(); title.innerText = newName;
                     showToast("AGENT RENAMED", "success"); updateNavArrows(); updateBreadcrumb(); updateEditorTimestamp();
@@ -3213,6 +5339,7 @@
         }
 
         function stopEdit() {
+            invalidateGutterCache();
             box.contentEditable = false; box.classList.remove('editing'); title.contentEditable = false; box.onkeydown = null;
             setPromptBoxEditing(false);
             editBaseContent = '';
@@ -3228,21 +5355,28 @@
                 title.innerText = currentAgent; box.textContent = groups[currentGroup].agents[currentAgent];
             }
             initializeEditorHistory(getEditorText());
+            // Cancelling restores the stored text, so the gutter has to be rebuilt or
+            // it keeps showing numbers for lines that no longer exist.
+            updateLineNumbers();
             setSearchReplaceDirty(false);
             if (typeof updateEditorTimestamp === 'function') updateEditorTimestamp();
         }
 
+        let saveInFlight = false;
         async function saveEdit(forceSave = false) {
+            if (saveInFlight) return;
+            if (!box.classList.contains('editing')) return;
             if (hasExternalEditConflict && !forceSave) {
                 const confirmed = await showConfirm('This prompt changed outside this editor. Save your version over the newer file?', 'External Change');
                 if (!confirmed) return;
                 forceSave = true;
             }
+            saveInFlight = true;
             const saveBtn = document.getElementById('save-btn');
             const originalText = saveBtn.innerText;
             saveBtn.innerText = "SAVING...";
             saveBtn.disabled = true;
-            const newContent = box.innerText;
+            const newContent = getEditorText();
             const res = await api('save', 'POST', {
                 group: currentGroup,
                 name: currentAgent,
@@ -3253,6 +5387,7 @@
             });
             saveBtn.innerText = originalText;
             saveBtn.disabled = false;
+            saveInFlight = false;
             if (res && res.status === 'conflict') {
                 latestExternalContent = typeof res.current_content === 'string' ? res.current_content : latestExternalContent;
                 hasExternalEditConflict = true;
@@ -3371,7 +5506,7 @@
                 }
             }
         }
-        function copyPrompt() { copyToClipboard(box.innerText, currentGroup, currentAgent); }
+        function copyPrompt() { copyToClipboard(getEditorText(), currentGroup, currentAgent); }
 
         function showToast(m, t = 'info') {
             const el = document.getElementById('toast'); el.innerText = m; el.className = 'toast visible ' + t;
@@ -4137,20 +6272,32 @@
             return Boolean(el && el.classList.contains('visible'));
         }
 
+        function isBlockingOverlayOpen() {
+            return isVisibleOverlay('#wizard-overlay') ||
+                   isVisibleOverlay('#group-create-overlay') ||
+                   isVisibleOverlay('#bulk-move-overlay') ||
+                   isVisibleOverlay('#confirm-modal-overlay') ||
+                   isVisibleOverlay('#collision-modal-overlay') ||
+                   isVisibleOverlay('#alert-modal-overlay') ||
+                   isVisibleOverlay('#select-modal-overlay') ||
+                   isVisibleOverlay('#input-modal-overlay') ||
+                   isVisibleOverlay('#recycle-bin-overlay');
+        }
+
+        // The browser will not let a page suppress a tab close, but it will ask the
+        // user first if the page reports unsaved work.
+        window.addEventListener('beforeunload', (e) => {
+            if (!hasUnsavedWork()) return;
+            e.preventDefault();
+            e.returnValue = '';
+            return '';
+        });
+
         function shouldIgnoreAppSearchShortcut() {
             const activeEl = document.activeElement;
             if (!activeEl) return false;
             if (activeEl === search || activeEl === box || activeEl.closest('#search-overlay')) return false;
-            if (
-                isVisibleOverlay('#wizard-overlay') ||
-                isVisibleOverlay('#group-create-overlay') ||
-                isVisibleOverlay('#bulk-move-overlay') ||
-                isVisibleOverlay('#confirm-modal-overlay') ||
-                isVisibleOverlay('#collision-modal-overlay') ||
-                isVisibleOverlay('#alert-modal-overlay') ||
-                isVisibleOverlay('#select-modal-overlay') ||
-                isVisibleOverlay('#recycle-bin-overlay')
-            ) return true;
+            if (isBlockingOverlayOpen()) return true;
 
             const tagName = activeEl.tagName;
             return activeEl.isContentEditable || tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT';
@@ -4165,6 +6312,16 @@
         }
 
         window.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey
+                && (e.code === 'KeyS' || e.key.toLowerCase() === 's')
+                && view.style.display === 'flex' && !isBlockingOverlayOpen()) {
+                // Without this the browser opens its "Save page as..." download box.
+                e.preventDefault(); e.stopPropagation();
+                if (box.classList.contains('editing')) saveEdit();
+                else showToast('CLICK EDIT PROMPT FIRST', 'warning');
+                return;
+            }
+
             if ((e.ctrlKey || e.metaKey) && !e.altKey) {
                 const key = e.key.toLowerCase();
                 if (key === 'z' && shouldHandlePromptHistoryShortcut()) {
@@ -4196,17 +6353,12 @@
                     if (shouldIgnoreAppSearchShortcut()) return;
                     if (view.style.display === 'flex') { e.preventDefault(); openSearch(true, getSelectedPromptText()); }
                 }
-                if (e.key === 'w' && view.style.display === 'flex') {
-                    e.preventDefault();
-                    const lineStr = window.prompt("Jump to line number:");
-                    if (lineStr) {
-                        const line = parseInt(lineStr, 10);
-                        if (!isNaN(line) && line > 0) {
-                            const lineHeight = parseFloat(getComputedStyle(box).lineHeight) || 24;
-                            const targetTop = (line - 1) * lineHeight;
-                            promptBoxWrap.scrollTo({ top: targetTop, behavior: 'smooth' });
-                        }
-                    }
+                // Ctrl+G, not Ctrl+W: browsers reserve Ctrl+W to close the tab and
+                // ignore preventDefault, so the old binding just closed the window.
+                if ((e.code === 'KeyG' || e.key.toLowerCase() === 'g')
+                    && view.style.display === 'flex' && !isBlockingOverlayOpen()) {
+                    e.preventDefault(); e.stopPropagation();
+                    openGoToLine();
                 }
             }
             if (e.key === 'Escape') {
@@ -4218,13 +6370,16 @@
                 const alertOverlay = document.getElementById('alert-modal-overlay');
                 const bulkOverlay = document.getElementById('bulk-move-overlay');
                 const selectOverlay = document.getElementById('select-modal-overlay');
+                const inputOverlay = document.getElementById('input-modal-overlay');
                 if (document.getElementById('wizard-overlay').classList.contains('visible')) closeWizard();
                 else if (document.getElementById('group-create-overlay').classList.contains('visible')) closeGroupCreate();
                 else if (confirmOverlay.classList.contains('visible')) { document.getElementById('confirm-modal-no').click(); }
                 else if (alertOverlay.classList.contains('visible')) closeAlertModal();
                 else if (bulkOverlay.classList.contains('visible')) closeBulkMove();
                 else if (selectOverlay && selectOverlay.classList.contains('visible')) { document.getElementById('select-modal-cancel').click(); }
+                else if (inputOverlay && inputOverlay.classList.contains('visible')) { document.getElementById('input-modal-cancel').click(); }
                 else if (document.getElementById('recycle-bin-overlay').classList.contains('visible')) closeRecycleBin();
+                else if (box.classList.contains('editing')) { cancelEdit(); }
                 else if (view.style.display === 'flex') showMenu();
                 else if (isDeleteMode) cancelDeleteMode();
             }
