@@ -16,14 +16,13 @@ CORE RULES:
 
 AUDIT SCOPES (ONLY REPORT FAILURES):
 Report ONLY controls, interactions, or files that have a CONFIRMED error, mismatch, or leak. Never list working features.
-- UX & Routing: Broken imports, exports, or parameter mismatches.
-- GPU & FFmpeg: Bad arguments, duplicates, failed hardware acceleration, or broken NVENC GPU fallbacks.
+- UX, Display & Routing: Broken imports/exports, dynamic focus order, gestures, and validation messages. Localization and RTL layout errors. Overlay focus trapping and background blocking failures. Subjective visual quality and information density drops.
+- UI Rendering & OS Integration: Main thread blocking, runaway timers, rendering, resizing, overflow, and clipping issues. Failures in OS themes, window snapping, and multi-monitor DPI changes. Hardcoded hex colors and fixed Width/Height properties.
+- GPU & FFmpeg (CRITICAL): Bad arguments, failed hardware acceleration. Animation smoothness and GPU performance. MUST verify that the GPU does most of the heavy lifting in FFmpeg video/audio export. Frames MUST stay in GPU VRAM during processing; zero unnecessary PCI/bus bottlenecks traveling back to CPU RAM until finished.
 - Audio: Thread collisions, wrong sync, or errors in checking audio ducking.
-- UI Rendering: Main thread blocking, runaway timers.
-- XAML & UI Scaling Compliance: Hardcoded hex colors (missing DynamicResource tokens), fixed Width/Height properties (missing MinWidth/MinHeight for font scaling).
 - State & Handoff: Corrupt JSON states, unhandled crashes.
-- Mathematical Precision: Divide-by-zero in Frac struct, integer overflow in ms/ticks conversions, float-to-int rounding drift causing pixel-clipping.
-- Data Integrity & JSON: NullReferenceException on JsonNode.Parse, schema version logic flaws wiping user data, unsanitized string inputs.
+- Mathematical Precision: Divide-by-zero in Frac struct, integer overflow in conversions, float-to-int rounding drift causing pixel-clipping.
+- Data Integrity: NullReferenceException on JsonNode.Parse, schema version flaws, unsanitized inputs.
 - Dead Code: Excluded or completely unused files.
 
 PHASE 1: TRIAGE OUTPUT

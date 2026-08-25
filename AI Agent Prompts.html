@@ -2416,6 +2416,20 @@
             return hasUnsavedPromptChanges() || hasUnsavedTitleChanges();
         }
 
+        function insertTextAtCursor(text) {
+            const sel = window.getSelection();
+            if (!sel.rangeCount) return;
+            const range = sel.getRangeAt(0);
+            range.deleteContents();
+            // We use a TextNode to strictly force plain text and prevent Chrome from using <br> or <div>.
+            const textNode = document.createTextNode(text.replace(/\r\n/g, '\n'));
+            range.insertNode(textNode);
+            range.setStartAfter(textNode);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+
         /* ---------- caret position helpers (plain character offsets) ---------- */
 
         function getEditorCaretOffset() {
@@ -2576,7 +2590,7 @@
             e.preventDefault();
             if (box.classList.contains('editing')) recordEditorHistoryNow();
             const text = (e.originalEvent || e).clipboardData.getData('text/plain');
-            document.execCommand('insertText', false, text);
+            insertTextAtCursor(text);
             scheduleEditorHistoryRecord();
         });
 
@@ -5195,7 +5209,7 @@
             box.onkeydown = (e) => {
                 if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
                     e.preventDefault();
-                    document.execCommand('insertText', false, '\n');
+                    insertTextAtCursor('\n');
                     return;
                 }
                 if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveEdit(); return; }
@@ -6190,7 +6204,7 @@
                 sel.removeAllRanges();
                 sel.addRange(range);
 
-                document.execCommand('insertText', false, replacement);
+                try { insertTextAtCursor(replacement); } catch (err) { document.execCommand('insertText', false, replacement); }
                 searchSelectionActive = false;
                 recordEditorHistoryNow();
                 scheduleUpdateLineNumbers();
@@ -6225,7 +6239,7 @@
             sel.removeAllRanges();
             sel.addRange(range);
 
-            document.execCommand('insertText', false, newText);
+            try { insertTextAtCursor(newText); } catch (err) { document.execCommand('insertText', false, newText); }
             searchSelectionActive = false;
             recordEditorHistoryNow();
 

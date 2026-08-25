@@ -7,7 +7,7 @@ Baseline layout overview is inside `.\project_structure.txt`.
 CRITICAL: `C:\Fortnite_Video_Software\` is completely out of bounds.
 
 MISSION:
-Statically audit Avalonia XAML markup, Styles, ResourceDictionaries, ControlTemplates, and view-model state bindings to identify architectural flaws, UX/UI fragmentation, and layout performance issues. Explicitly flag static analysis blind spots as runtime risks. Wait for me to provide the file content before starting your audit.
+Statically audit Avalonia XAML markup, Styles, ResourceDictionaries, ControlTemplates, and view-model state bindings to identify architectural flaws, UX/UI fragmentation, and layout performance issues. Explicitly flag static analysis blind spots as runtime risks.
 
 AUDIT CATEGORIES:
 1. DESIGN SYSTEM & STYLE BREAKAGE: Hardcoded assets, resource key duplication, broken ThemeVariant inheritance, and disconnected style selectors.

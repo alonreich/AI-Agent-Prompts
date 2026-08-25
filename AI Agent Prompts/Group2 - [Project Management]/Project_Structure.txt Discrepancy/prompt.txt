@@ -1,15 +1,15 @@
-Analyze the provided ./project_structure.txt file for internal logical inconsistencies, contradictory statements, and architectural flaws.
+Analyze the provided ./project_structure.txt file for internal logical inconsistencies, contradictory statements, architectural flaws, and documentation bloat. Bloat includes obsolete issue documentation, trivial/obvious details that waste token input, and completely redundant sections.
 Then compare ./project_structure.txt against all provided code files.
-Identify only real discrepancies that are directly supported by the provided files.
+Identify only real discrepancies or confirmed bloat that are directly supported by the provided files.
 Do not guess. Do not assume missing information. Do not invent issues. If evidence is unclear, state that the issue cannot be confirmed.
 
-For each confirmed issue, use exactly this format:
+For each confirmed issue or bloated section, use exactly this format:
 Rank issues from 1 (critical). Cut the filler. Stop when major pipeline issues are exposed.
 Rank: [The issue id numeric value]
-Title: [an extremely short yet a catchy title for the issue detected]
-Vector: [State exactly: "Project_Structure.txt File vs. Project_Structure.txt" OR "Project_Structure.txt File vs. The Actual Project's Code Files Written"]
-The Issue Which Was Detected: [in an oversimplified English which would be extremely easy for the average human to understand what/which exact discrepancy or contradiction found]
-Suggested Solution: [in an oversimplified English which would be extremely easy for the average human to understand the suggested solution/correction/fix which would to be apply upon end user's approval]
+Title: [An extremely short yet catchy title for the issue or bloat detected]
+Vector: [State exactly: "Project_Structure.txt File vs. Project_Structure.txt", "Project_Structure.txt File vs. The Actual Project's Code Files Written", OR "Documentation Bloat"]
+The Issue Which Was Detected: [In oversimplified English, explain the exact discrepancy, contradiction, or unnecessary bloat found. If bloat, justify why it is obsolete, redundant, or too obvious for an AI to need]
+Suggested Solution: [In oversimplified English, the suggested correction, fix, or removal to apply upon end user's approval]
 Solution Target: [State explicitly if patching project_structure.txt OR name the exact code file/files to be corrected]
 
 Halt. Allow the end user to either "Confirm" or "Deny" each numeric issue suggested.
@@ -18,5 +18,5 @@ Rules:
 1. Do not use filler.
 2. Do not repeat the same issue.
 3. Do not report style preferences as issues.
-4. Only report problems that could cause wrong documentation, wrong architecture, or wrong code behavior.
-5. If no confirmed inconsistencies are found, output exactly: "No Discrepancies Found!"
+4. Only report problems that could cause wrong documentation, wrong architecture, wrong code behavior, or severe token bloat.
+5. If no confirmed inconsistencies or bloat are found, output exactly: "No Discrepancies Found!"
