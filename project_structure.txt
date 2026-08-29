@@ -454,9 +454,6 @@ A. Core (pure, unit-tested)
      once and keeps the WIDEST width producing each distinct row grouping.
      Scanning is used instead of a closed-form formula so the snap points can
      never disagree with simulateRows.
-   - computeTidyWidths(naturals, W, gap): greedy row packing, then justifies
-     each row by sharing its slack. Capped at TIDY_MAX_STRETCH (1.6x natural).
-     Rows holding a single group are never stretched.
 
 B. Resize Interaction (.custom-resize-handle)
    - Pointer events (works with mouse, pen and touch); pointer capture is used.

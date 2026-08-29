@@ -66,33 +66,24 @@
         #menu-container { display: flex; flex-direction: column; min-height: 100vh; padding: 12px 20px; box-sizing: border-box; align-items: center; position: relative; }
 
 
-        .add-btn, .group-btn, .copy-btn, .save-btn {
+        .add-btn, .copy-btn, .save-btn {
             background: var(--blue);
             color: #0c162c;
             border: none;
         }
-        .add-btn:hover, .group-btn:hover, .copy-btn:hover, .save-btn:hover {
+        .add-btn:hover, .copy-btn:hover, .save-btn:hover {
             background: var(--blue-hover);
         }
 
 
-        .btn-secondary, .back-btn, .wiz-cancel, .cancel-btn, .cancel-del-btn, .title-cancel-btn {
+        .btn-secondary, .back-btn, .wiz-cancel, .cancel-btn, .title-cancel-btn {
             background: var(--btn-secondary-bg);
             color: var(--text);
             border: 1px solid var(--border);
         }
-        .btn-secondary:hover, .back-btn:hover, .wiz-cancel:hover, .cancel-btn:hover, .cancel-del-btn:hover, .title-cancel-btn:hover {
+        .btn-secondary:hover, .back-btn:hover, .wiz-cancel:hover, .cancel-btn:hover, .title-cancel-btn:hover {
             background: var(--btn-secondary-hover); /* Darkened for WCAG contrast */
             border-color: var(--text-dim);
-        }
-
-        .btn-danger, .del-btn {
-            background: var(--danger);
-            color: #fff;
-            border: none;
-        }
-        .btn-danger:hover, .del-btn:hover {
-            background: var(--danger-hover);
         }
 
         .btn-success, .title-save-btn, .wiz-save { background: var(--success); color: #fff; border: none; }
@@ -104,12 +95,6 @@
         }
         .confirm-del-btn:hover { background: var(--danger-hover); box-shadow: 0 0 10px rgba(248, 81, 73, 0.3); }
         .confirm-del-btn.disabled { opacity: 0.5; cursor: not-allowed; }
-
-        .del-badge {
-            background: #fff; color: var(--error-dark); border-radius: 50%; min-width: 18px; height: 18px;
-            font-size: 11px; display: inline-flex; align-items: center; justify-content: center;
-            font-weight: 700;
-        }
 
         .control-bar {
             display: flex; align-items: center; justify-content: space-between;
@@ -398,15 +383,6 @@
             background: rgba(88, 166, 255, 0.9);
         }
 
-        .agent-placeholder {
-            width: 150px;
-            height: 35px;
-            background: rgba(88, 166, 255, 0.1);
-            border: 1px dashed var(--blue);
-            border-radius: var(--radius-sm);
-            margin: 0;
-            transition: all 0.2s ease;
-        }
 
         #main-menu > * {
             transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1), opacity 0.3s;
@@ -597,7 +573,7 @@
             user-select: none;
             box-shadow: var(--shadow-sm);
             outline: none;
-            /* IDEA_9: skip painting off-screen cards; the browser remembers each
+            /* Skip painting off-screen cards; the browser remembers each
                card's real size after its first paint (auto), so the board only
                renders what you can actually see. */
             content-visibility: auto;
@@ -674,9 +650,6 @@
 
         .breadcrumb { font-size: 12px; color: var(--text-dim); margin-left: 12px; white-space: nowrap; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
 
-        .nav-cross-hint { font-size: 11px; color: var(--text-dim); opacity: 0; transition: 0.2s; white-space: nowrap; }
-        .nav-arrow:hover + .nav-cross-hint { opacity: 0.8; }
-
         .back-btn { background: var(--border); color: var(--text); border: 1px solid transparent; border-radius: var(--radius-sm); cursor: pointer; font-weight: 500; font-size: 12px; transition: 0.2s; height: 34px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; }
         .back-btn:hover { background: var(--secondary-hover); border-color: #8b949e; }
 
@@ -739,7 +712,7 @@
         #prompt-box-wrap.editing-state { --editor-surface: var(--edit-bg); border-color: var(--blue); box-shadow: 0 0 15px rgba(88, 166, 255, 0.1); background: var(--editor-surface); }
         #prompt-box-wrap.editing-state #prompt-box { color: var(--edit-text); }
 
-        /* IDEA_8: live prompt size meter — bottom status bar, visible only inside the prompt view */
+        /* Live prompt size meter — bottom status bar, visible only inside the prompt view */
         #prompt-status-bar {
             flex: none;
             display: flex;
@@ -1086,16 +1059,6 @@
 
 
 
-
-
-        .move-selected-btn {
-            background: rgba(88, 166, 255, 0.1); color: var(--blue); border-color: rgba(88, 166, 255, 0.4);
-            padding: 8px 16px; border-radius: var(--radius-sm); display: none; align-items: center;
-            justify-content: center; font-weight: 500; font-size: 13px; transition: 0.2s; cursor: pointer;
-            border: 1px solid;
-        }
-        .move-selected-btn:hover { background: var(--blue); color: #fff; }
-        .move-selected-btn.disabled { opacity: 0.4; cursor: not-allowed; }
 
         .wiz-inline-add {
             display: flex; align-items: center; gap: 8px; margin-top: 8px;
@@ -2116,7 +2079,6 @@
         let scrollAnchorId = null;
         function saveScroll() {
             const containers = menu.querySelectorAll('.group-container');
-            const viewportTop = window.scrollY;
             for (const c of containers) {
                 if (c.getBoundingClientRect().top >= 0 && c.getBoundingClientRect().top < window.innerHeight) {
                     scrollAnchorId = c.dataset.folder; break;
@@ -2184,7 +2146,6 @@
         let groupGhost = null;
         let groupPlaceholder = null;
         let pendingDropRect = null;
-        let dragStartX = 0, dragStartY = 0;
         let ghostOffsetX = 0, ghostOffsetY = 0;
         let groupOriginalParent = null;
         let groupOriginalNextSibling = null;
@@ -2194,15 +2155,11 @@
         let agentDragStarted = false;
         let agentSourceCard = null;
         let agentGhost = null;
-        let agentPlaceholder = null;
         let agentGhostOffsetX = 0, agentGhostOffsetY = 0;
         let agentOriginalParent = null;
         let agentOriginalNextSibling = null;
         let isGroupDragging = false;
         let isAnimating = false;
-        let isSearching = false;
-        let lastPlaceholderIndex = -1;
-        let lastPlaceholderGroup = null;
 
 
         function flip(container, action) {
@@ -2477,21 +2434,6 @@
         }
 
         /* ---------- caret position helpers (plain character offsets) ---------- */
-
-        function getEditorCaretOffset() {
-            const sel = window.getSelection();
-            if (!sel || sel.rangeCount === 0) return null;
-            const range = sel.getRangeAt(0);
-            if (!box.contains(range.startContainer)) return null;
-            try {
-                const pre = range.cloneRange();
-                pre.selectNodeContents(box);
-                pre.setEnd(range.startContainer, range.startOffset);
-                return pre.toString().length;
-            } catch (e) {
-                return null;
-            }
-        }
 
         function locateEditorOffset(offset) {
             const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null, false);
@@ -2930,7 +2872,6 @@
             if (groupGhost) { groupGhost.remove(); groupGhost = null; }
             if (agentGhost) { agentGhost.remove(); agentGhost = null; }
             if (groupPlaceholder) { groupPlaceholder.remove(); groupPlaceholder = null; }
-            if (agentPlaceholder) { agentPlaceholder.remove(); agentPlaceholder = null; }
             if (agentSourceCard) agentSourceCard.classList.remove('dragging');
             document.querySelectorAll('.group-container.group-dragging').forEach(el => el.classList.remove('group-dragging'));
             document.querySelectorAll('.group-container.drag-over').forEach(el => el.classList.remove('drag-over'));
@@ -3229,8 +3170,6 @@
                             if (afterElement) {
                                 if (agentSourceCard.nextSibling !== afterElement) grid.insertBefore(agentSourceCard, afterElement);
                             } else {
-                                const addBtn = targetGroup.querySelector('.add-agent-card');
-
                                 if (grid.lastChild !== agentSourceCard) grid.appendChild(agentSourceCard);
                             }
                         });
@@ -3415,7 +3354,6 @@
         let isResizingGroup = false;
         const SNAP_TOLERANCE = 16;      // px of magnetism around a snap target
         const MIN_GROUP_WIDTH = 220;    // matches .group-container min-width
-        const TIDY_MAX_STRETCH = 1.6;   // a packed group never grows past this
 
         function getMenuMetrics() {
             const items = Array.from(menu.querySelectorAll('.group-container:not(.drag-ghost)'));
@@ -4517,38 +4455,6 @@
             return true;
         }
 
-        /* Packs the board like justified text: measure what each group naturally
-           wants, greedily fill rows, then share each row's leftover space so the
-           right edges line up. The stretch cap stops a lonely group on the last
-           row from ballooning across the screen. */
-        function computeTidyWidths(naturals, W, gap, maxStretch = TIDY_MAX_STRETCH) {
-            const rows = simulateRows(naturals, W, gap);
-            const out = naturals.slice();
-            for (const row of rows) {
-                // A row holding a single group is left alone. Stretching a lone
-                // group to fill the screen is the opposite of tidy, the same way
-                // justified text never stretches its last line.
-                if (row.length < 2) continue;
-                const natural = row.reduce((sum, i) => sum + naturals[i], 0);
-                const slack = W - natural - gap * (row.length - 1);
-                if (slack <= 0) continue;
-                const headroom = row.map(i => Math.floor(naturals[i] * maxStretch) - naturals[i]);
-                const totalHeadroom = headroom.reduce((a, b) => a + b, 0);
-                if (totalHeadroom <= 0) continue;
-                const share = Math.min(slack, totalHeadroom);
-                let handed = 0;
-                row.forEach((i, k) => {
-                    const add = k === row.length - 1
-                        ? share - handed
-                        : Math.floor(share * (headroom[k] / totalHeadroom));
-                    const capped = Math.max(0, Math.min(add, headroom[k]));
-                    out[i] = naturals[i] + capped;
-                    handed += capped;
-                });
-            }
-            return out;
-        }
-
         /* TIDY is reversible. The snapshot records every group's width exactly as
            it was the instant before packing - including "no custom width at all",
            stored as null, so a group that was auto-sizing goes back to auto-sizing
@@ -4766,7 +4672,7 @@
             if (!saved) showToast('WIDTHS APPLIED BUT NOT SAVED', 'error');
         }
 
-        /* ── IDEA_9: render-only-what-changed — skip the full board rebuild when nothing changed ──
+        /* ── Render-only-what-changed — skip the full board rebuild when nothing changed ──
            renderMenu() normally throws away and rebuilds every group and card on every sync.
            A cheap fingerprint of everything the render actually reads (folders, titles, widths,
            agent names, sampled prompt text, delete-mode + selections, density,
@@ -5024,7 +4930,7 @@
             // A render replaces every box, so positions are recomputed without
             // animation - otherwise brand new nodes would slide in from 0,0.
             applyBoardLayout(true);
-            // IDEA_9 calibration: once the first cards are painted, measure a real
+            // Calibration: once the first cards are painted, measure a real
             // card so off-screen cards use an accurate intrinsic-size estimate.
             requestAnimationFrame(() => {
                 const c = menu.querySelector('.agent-card');
@@ -5220,7 +5126,7 @@
             if (!fromRoute) setRoute(boardRoute());
         }
 
-        /* ── IDEA_7: real URL routing — browser Back/Forward, refresh and bookmarks ──
+        /* ── Real URL routing — browser Back/Forward, refresh and bookmarks ──
            Every screen gets an address: '#/' is the board, '#/p/<group>/<agent>' is a prompt.
            Entering a prompt pushes a history entry, so the browser Back button steps back
            through exactly the screens you visited; refreshing re-opens the same prompt. */
@@ -5271,7 +5177,7 @@
             handleRoute();
         }
 
-        /* ── IDEA_8: live prompt size meter — lines / words / characters / estimated tokens ──
+        /* ── Live prompt size meter — lines / words / characters / estimated tokens ──
            Own lightweight MutationObserver on the editor, so it updates live no matter how the
            text changed (typing, paste, insert-at-cursor, undo/redo, external reload). */
         const PROMPT_TOKENS_WARN = 6000;
@@ -5935,10 +5841,6 @@
             } catch (e) {
                 list.innerHTML = '<div class="recycle-empty">Failed to load recycle bin</div>';
             }
-        }
-
-        function escapeHtml(s) {
-            const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
         }
 
         async function verifyRecycleAction(actionType, binPath = null) {
