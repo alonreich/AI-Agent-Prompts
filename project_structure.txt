@@ -350,6 +350,12 @@ E. Atomic Move Operations:
 - Main behavior:
   - Clicking either the dashboard card's quick-copy icon or the main "COPY PROMPT" button triggers an atomic `/api/record-copy` request to the backend.
   - The backend writes a lightweight `copy_time.txt` timestamp file inside the target agent folder and broadcasts a sync event via the Watchdog observer.
+  - The sync a copy triggers does NOT rebuild the dashboard. `copy_times` are
+    excluded from the render fingerprint (buildRenderSignature) and
+    `syncCardTimestamps()` patches the `.card-timestamp` spans in place,
+    because a full rebuild re-measures and re-packs every group - one copy
+    used to scatter the whole board. copyToClipboard() also patches the single
+    copied card optimistically, so no rebuild ever runs on the copy path.
 - UI/UX behavior:
   - Dashboard cards and editor header display a subtle timestamp strictly formatted as `DD/MM HH:MM` directly beneath the agent title or in the navigation bar without any additional prefix text.
   - The prompt view header displays the timestamp cleanly aligned on the right side of the top navigation bar.
@@ -562,6 +568,13 @@ E. Board Packing and Per-Group Pinning
      synchronous block, so the browser never paints the intermediate state.
      Widths are then pinned in px (dataset.snugPin marks a pin as presentation
      only - it is never written back to custom_width).
+   - The measure pass runs under #main-menu.measuring, which forces
+     content-visibility:visible on .agent-card. content-visibility:auto makes
+     never-painted off-screen cards answer with their contain-intrinsic-size
+     estimate instead of their real height, so a rebuild packed guessed sizes
+     and the board drifted a little differently every time. The class is added
+     and removed inside the same synchronous block as the snug-mode toggle,
+     so nothing is ever painted with it.
    - The board is re-packed after a render, after shrink-wrap, after
      TIDY/RESET/UNDO/pin, at the end of a group drag, and whenever the board's
      own width changes (ResizeObserver, guarded against feedback).

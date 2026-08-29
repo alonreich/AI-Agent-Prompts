@@ -141,6 +141,15 @@ between it and reality.
   in flex layout. An absolutely positioned `width: fit-content` box shrinks to
   the space left of its containing-block edge, so measuring in place reports a
   group parked on the right as far narrower than it is.
+- `applyBoardLayout()` measures under `#main-menu.measuring`, which forces
+  `content-visibility: visible` on cards. Without it, never-painted off-screen
+  cards answer with their `contain-intrinsic-size` estimate and the board is
+  packed on guessed heights — each rebuild then lands slightly differently.
+  Never measure the board without that class.
+- **A copy must never rebuild the board.** `copy_times` are excluded from
+  `buildRenderSignature()` on purpose; timestamps are patched in place by
+  `syncCardTimestamps()`. Putting them back into the fingerprint re-packs
+  every group on each copy and the whole arrangement visibly jumps.
 - `packMasonry()` runs three strategies and keeps the shortest board. Do not
   "simplify" it back to plain bottom-left fill — on its own that sometimes
   produces a taller board than plain rows.

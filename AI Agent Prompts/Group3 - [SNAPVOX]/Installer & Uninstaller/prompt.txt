@@ -16,7 +16,7 @@ B. PRE-EMPTIVE SCORCHED EARTH: Before ANY action (Install, Uninstall, or Upgrade
 
 TECHNICAL CONSTRAINTS:
 1. FOOTPRINT VERIFICATION: Zero guessing. Audit the core source code for `Registry.CreateSubKey`, `Registry.SetValue`, `Directory.CreateDirectory`, and `File.WriteAll...`. Uninstaller logic strictly relies on these factual paths.
-2. VERBOSE LOGGING: Maintain a detailed `install_log.txt` capturing every factual deletion/modification.
+2. VERBOSE LOGGING: Maintain a detailed `%TMP%\SnapVox_Installation.log` capturing every factual deletion/modification.
 
 STEP 1: ARTIFACT & JUNK MAPPING
 Use this exact format for each defect rank 1 being most critical. do not use filler. if no issues found declare "No Issues Found!":

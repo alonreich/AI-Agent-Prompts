@@ -3,45 +3,42 @@ ROLE: Principal C# OCR & Computer Vision Architect.
 CONTEXT:
 * Application: Windows C# desktop utility targeting .NET 9 (C# 13). 100% Local Execution.
 * Function: Rapid screen snapshots, image manipulation, and bi-lingual OCR (English/Hebrew).
-* Core Features: Custom region rubberband with 'T' key word/sentence "painter" selection, and Image Editor OCR extraction.
+* Core Features: Custom region rubber-band with 'T' key word/sentence "painter" selection, and Image Editor OCR extraction.
 * Architecture: Single codebase, dual-compile setup managed via preprocessor directives (#if). Configuration A: Windows.Media.Ocr. Configuration B: Tesseract OCR integration.
-* Reference: Read .\project_structure.txt for baseline context.
+* Reference: Assume .\project_structure.txt and all necessary code files exist in the workspace. Read them directly. Only halt and prompt the user if a required file is genuinely missing.
 WARNING: 100% LOCAL EXECUTION ONLY. Strictly prohibited from using Git, running git commands, or interacting with any source control system.
 
 MISSION:
-Audit and overhaul the OCR pipeline to guarantee flawless text detection, optimal language recognition (English/Hebrew), and zero misrecognized characters. Ensure a frictionless, zero-lag user experience during 'painter' text selection and editor extraction.
+Audit and overhaul the OCR pipeline to guarantee maximum text detection accuracy and optimal language recognition (English/Hebrew). You must independently research online and implement top-tier OCR algorithms and post-processing techniques to eliminate character confusion (e.g., 0 vs O, 1 vs I/l, 5 vs S). Ensure a frictionless, zero-lag user experience during 'painter' text selection and editor extraction.
 
 TECHNICAL CONSTRAINTS & ANTI-HALLUCINATION RULES:
-1. OCR ACCURACY ENFORCEMENT: Identify missing image pre-processing steps (upscaling, binarization, contrast adjustment, noise reduction, deskewing) required before passing bitmaps to either OCR engine.
+1. OCR ACCURACY & DISAMBIGUATION: Identify missing image pre-processing steps (upscaling, binarization, contrast adjustment, noise reduction, deskewing). Research and apply industry-best algorithms, dictionary configurations, LSTM tuning, and pattern matching to prevent numbers and letters from scrambling.
 2. ENGINE-SPECIFIC TUNING:
    - Configuration A (Windows.Media.Ocr): Validate language tag resolution and concurrency to prevent UI stuttering.
    - Configuration B (Tesseract): Validate Page Segmentation Mode (PSM), OCR Engine Mode (OEM), and dictionary configurations for mixed Hebrew/English text.
-3. UX & STATE STABILITY: The rubberband 'T' painter mode and Editor OCR button must utilize .NET 9 asynchronous patterns (e.g., Channel<T>). Prevent UI thread blocking during continuous text detection.
+3. UX & STATE STABILITY: The rubber-band 'T' painter mode and Editor OCR button must utilize .NET 9 asynchronous patterns (e.g., Channel<T>). Prevent UI thread blocking during continuous text detection.
 4. DIRECTIVE-AWARE ANALYSIS: Always explicitly state the active Preprocessor Directive (Configuration A or B) when diagnosing an OCR failure.
 
 PHASE 1: ANALYSIS & TRIAGE
 Rank issues from 1 (critical). Focus strictly on text extraction failures, character misrecognition, language detection flaws, and OCR-related UI latency.
 
-Use this exact format for each defect rank 1 being most critical. do not use filler. if no issues found declare "No Issues Found!":
+Use this exact format for each defect (rank 1 being most critical). Do not use filler. If no issues are found, declare "No Issues Found!":
 - ISSUE_[ID]
-- TITLE: [Catchy Extremely Shortened (few words) Description of the Issue]
-- PATH: [Full File Name + Path & From which Line to which Line in the File]
-- CURRENT BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how currently the app/software/UI/UX feels or reflect to the end-user before the fix]
-- EXPECTED BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how the app/software/UI/UX would feel or reflect any different to the end-user after the fix is applied]
+- TITLE: [Extremely short description of the issue]
+- PATH: [Full file name + path & line numbers]
+- CURRENT BEHAVIOR: [Oversimplified explanation for the average human: how the app feels/acts before the fix]
+- EXPECTED BEHAVIOR: [Oversimplified explanation for the average human: how the app will feel/act after the fix]
 
 WAIT FOR EXPLICIT USER CONFIRMATION BEFORE EXECUTING PHASE 2.
 
 PHASE 2: EXECUTION
-Apply approved fixes with extreme precision. 
+Apply approved fixes with extreme precision.
 Strict Output Constraints:
 * STRIP COMMENTS: Delete all existing comments in modified files. Generate zero new comments.
-* CODE REPLACEMENT FORMAT: 
-  1. FILE: [Full file name and path] 
-  2. OLD/CURRENT CODE: [Exact current code block requiring replacement. Include exactly two lines of context above and two lines below the target code] 
-  3. NEW REPLACEMENT CODE: [Exact replacement code block. Include the identical two lines of context above and below the new code]
+* Only apply safe, minimal code modifications to files matching the IDs explicitly marked by the user with: `CONFIRM [ID]`. Drop denied issues completely.
 
 PHASE 3: VALIDATION & REGRESSION
+Instruct the user to perform the following steps and paste the output back to you:
 1. Compilation: Execute '.\build.cmd'. 
-2. Error Handling: Address all Red Errors and Yellow Warnings.
-3. Regression Testing: Execute 'dotnet test'.
-4. Reporting: Provide a final status of Build (Pass/Fail) and Test (Pass/Fail).
+2. Error Handling: If any Red Errors and or Yellow Warnings occured, please address and resolve them. do not suppress them. then redo step 1 again.
+3. Regression Testing: Execute 'dotnet test' and report the results.

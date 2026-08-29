@@ -597,7 +597,20 @@
             user-select: none;
             box-shadow: var(--shadow-sm);
             outline: none;
+            /* IDEA_9: skip painting off-screen cards; the browser remembers each
+               card's real size after its first paint (auto), so the board only
+               renders what you can actually see. */
+            content-visibility: auto;
+            contain-intrinsic-size: auto var(--card-cvi-h, 40px);
         }
+        /* While the packer measures groups, cards must report their REAL size.
+           content-visibility:auto answers with the contain-intrinsic-size
+           estimate for cards that have never been painted (off-screen), so a
+           rebuild used to pack the board on guessed heights and boxes drifted
+           apart once the true sizes materialized. The class exists only for
+           the synchronous measure block in applyBoardLayout() - nothing is
+           ever painted with it, the same contract as the snug-mode toggle. */
+        #main-menu.measuring .agent-card { content-visibility: visible; }
         .card-label {
             pointer-events: none;
             max-width: 100%;
@@ -725,6 +738,30 @@
         #prompt-box-wrap:hover:not(.editing-state) { border-color: var(--border-glow); }
         #prompt-box-wrap.editing-state { --editor-surface: var(--edit-bg); border-color: var(--blue); box-shadow: 0 0 15px rgba(88, 166, 255, 0.1); background: var(--editor-surface); }
         #prompt-box-wrap.editing-state #prompt-box { color: var(--edit-text); }
+
+        /* IDEA_8: live prompt size meter — bottom status bar, visible only inside the prompt view */
+        #prompt-status-bar {
+            flex: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 6px;
+            padding: 5px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: color-mix(in srgb, var(--bg-light) 55%, transparent);
+            color: var(--text-dim);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            user-select: none;
+        }
+        .psb-item { white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .psb-dot { flex: none; width: 3px; height: 3px; border-radius: 50%; background: var(--border); }
+        .psb-flex { flex: 1; }
+        #psb-tokens.psb-warn { color: #e0a93e; }
+        #psb-tokens.psb-hot { color: #ff6b6b; }
+        body.compact-density #prompt-status-bar { margin-top: 4px; padding: 3px 10px; }
         #prompt-box-wrap::before {
             content: "EDIT MODE";
             position: absolute;
@@ -1725,6 +1762,15 @@
         <div id="prompt-box-wrap">
             <div id="line-gutter"></div>
             <div id="prompt-box" ondblclick="startEdit()" role="textbox" aria-multiline="true" aria-label="Prompt content" aria-readonly="true"></div>
+        </div>
+        <div id="prompt-status-bar" aria-hidden="true">
+            <span class="psb-item" id="psb-lines">0 Ln</span>
+            <span class="psb-dot"></span>
+            <span class="psb-item" id="psb-words">0 Wr</span>
+            <span class="psb-dot"></span>
+            <span class="psb-item" id="psb-chars">0 Ch</span>
+            <span class="psb-flex"></span>
+            <span class="psb-item psb-tokens" id="psb-tokens" title="Estimated AI tokens (about 4 characters each) — amber when nearing small-model context limits, red when very large">&#8776; 0 tokens</span>
         </div>
     </div>
 
@@ -2794,11 +2840,11 @@
 
         window.addEventListener('DOMContentLoaded', async () => {
             await checkBridge();
-            if (isBridgeOnline) { await syncFromBridge(); startEventStream(); }
+            if (isBridgeOnline) { await syncFromBridge(); startEventStream(); initRouting(); }
             setInterval(async () => {
                 const wasOnline = isBridgeOnline;
                 await checkBridge();
-                if (!wasOnline && isBridgeOnline) { await syncFromBridge(); startEventStream(); }
+                if (!wasOnline && isBridgeOnline) { await syncFromBridge(); startEventStream(); initRouting(); }
             }, 3000);
 
             window.addEventListener('pointermove', handleManualDragMove);
@@ -3313,7 +3359,13 @@
                 saveScroll();
                 const promptVisible = (view.style.display === 'flex'), wasEditing = box.classList.contains('editing');
                 groups = data;
-                if (!isGroupDragging && !agentDragStarted && !isAnimating && !isResizingGroup) renderMenu(search.value);
+                if (!isGroupDragging && !agentDragStarted && !isAnimating && !isResizingGroup) {
+                    renderMenu(search.value);
+                    // Copy times are outside the render fingerprint, so reconcile
+                    // them onto the surviving cards (own copies, other-window
+                    // copies, resets, edit purges) without rebuilding the board.
+                    syncCardTimestamps();
+                }
                 if (isDeleteMode) updateDeleteCount();
                 updateBinBadge();
                 if (promptVisible && currentGroup && currentAgent) {
@@ -3322,6 +3374,7 @@
                         showToast("AGENT WAS DELETED EXTERNALLY", wasEditing ? "error" : "warning");
                         stopEdit(); cancelTitleEdit(); view.style.display = 'none';
                         document.getElementById('menu-container').style.display = 'flex';
+                        setRoute(boardRoute());
                         return true;
                     }
                     const remoteContent = groups[currentGroup].agents[currentAgent];
@@ -3977,6 +4030,11 @@
             } else {
                 // --- measure in rows layout ---
                 menu.classList.remove('snug-mode');
+                // Force every card to its real size for the measurement below:
+                // content-visibility:auto reports only the intrinsic estimate
+                // for never-painted off-screen cards, and packing on estimates
+                // is what made each rebuild land slightly differently.
+                menu.classList.add('measuring');
                 items.forEach(el => {
                     // NEVER touch the width of the group currently being dragged.
                     // custom_width still holds its OLD value until the drag ends, so
@@ -3995,6 +4053,7 @@
                 W = Math.max(0, menu.clientWidth - padLeft - (parseFloat(cs.paddingRight) || 0));
                 widths = items.map(el => Math.round(el.getBoundingClientRect().width));
                 heights = items.map(el => Math.round(el.getBoundingClientRect().height));
+                menu.classList.remove('measuring');
                 if (dragSizeCache === null && isGroupDragging) {
                     dragSizeCache = { count: items.length, widths: widths.slice(),
                                       heights: heights.slice(), gap, rowGap, padLeft, padTop, W };
@@ -4707,7 +4766,45 @@
             if (!saved) showToast('WIDTHS APPLIED BUT NOT SAVED', 'error');
         }
 
+        /* ── IDEA_9: render-only-what-changed — skip the full board rebuild when nothing changed ──
+           renderMenu() normally throws away and rebuilds every group and card on every sync.
+           A cheap fingerprint of everything the render actually reads (folders, titles, widths,
+           agent names, sampled prompt text, delete-mode + selections, density,
+           search filter) lets us keep the existing DOM when none of it changed.
+           copy_times are DELIBERATELY excluded: a copy must never rebuild the
+           board, because a rebuild re-measures and re-packs every group and the
+           whole arrangement jumps. Timestamps are patched in place by
+           syncCardTimestamps() instead. */
+        let lastRenderSignature = null;
+        function buildRenderSignature(filter) {
+            let h = 2166136261;
+            const mixStr = (s) => { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } };
+            const mixNum = (n) => { h ^= (n | 0); h = Math.imul(h, 16777619); };
+            mixNum(isDeleteMode ? 1 : 0); mixNum(compactDensity ? 1 : 0);
+            mixStr('\u0002' + filter + '\u0002');
+            for (const folderName of Object.keys(groups)) {
+                const g = groups[folderName];
+                mixStr(folderName + '\u0001' + g.title + '\u0001');
+                mixNum(g.custom_width || 0);
+                mixNum(selectedGroups.has(folderName) ? 1 : 0);
+                for (const agentName of Object.keys(g.agents)) {
+                    const text = g.agents[agentName];
+                    let th = text.length;
+                    const step = text.length > 1024 ? Math.ceil(text.length / 256) : 1;
+                    for (let i = 0; i < text.length; i += step) { th = (Math.imul(th, 31) + text.charCodeAt(i)) | 0; }
+                    mixStr(agentName + '\u0003');
+                    mixNum(th);
+                    mixNum(deleteSelections.has(selKey(folderName, agentName)) ? 1 : 0);
+                }
+                mixStr('\u0004');
+            }
+            return h;
+        }
+
         function renderMenu(filter = '') {
+            const renderSig = buildRenderSignature(filter);
+            if (renderSig === lastRenderSignature && menu.childElementCount > 0) return;
+            lastRenderSignature = renderSig;
             menu.innerHTML = '';
             const searchState = buildDashboardSearchState(filter);
             updateDashboardSearchFeedback(searchState);
@@ -4927,6 +5024,12 @@
             // A render replaces every box, so positions are recomputed without
             // animation - otherwise brand new nodes would slide in from 0,0.
             applyBoardLayout(true);
+            // IDEA_9 calibration: once the first cards are painted, measure a real
+            // card so off-screen cards use an accurate intrinsic-size estimate.
+            requestAnimationFrame(() => {
+                const c = menu.querySelector('.agent-card');
+                if (c && c.offsetHeight > 10) menu.style.setProperty('--card-cvi-h', c.offsetHeight + 'px');
+            });
         }
 
         let filterDebounceTimer = null;
@@ -5082,7 +5185,8 @@
             else { showApiError(res, "CREATE FAILED"); }
         }
 
-        function showPrompt(folder, agent) {
+        function showPrompt(folder, agent, fromRoute = false) {
+            if (!fromRoute) setRoute(promptRoute(folder, agent));
             currentGroup = folder; currentAgent = agent; stopEdit(); cancelTitleEdit();
             document.getElementById('menu-container').style.display = 'none';
             view.style.display = 'flex'; title.innerText = agent; box.textContent = groups[folder].agents[agent];
@@ -5093,15 +5197,19 @@
             setSearchReplaceDirty(false);
             setPromptBoxEditing(false);
             updateNavArrows(); updateBreadcrumb(); updateEditorTimestamp();
+            schedulePromptStats();
         }
 
-        function showMenu() {
+        function showMenu(fromRoute = false) {
             if (hasUnsavedWork()) {
                 showConfirm('Discard unsaved changes?', "Unsaved Changes").then(res => {
                     if (res) {
                         stopEdit(); cancelTitleEdit(); view.style.display = 'none';
                         document.getElementById('menu-container').style.display = 'flex';
                         syncFromBridge();
+                        if (!fromRoute) setRoute(boardRoute());
+                    } else if (fromRoute) {
+                        setRoute(promptRoute(currentGroup, currentAgent));
                     }
                 });
                 return;
@@ -5109,7 +5217,87 @@
             stopEdit(); cancelTitleEdit(); view.style.display = 'none';
             document.getElementById('menu-container').style.display = 'flex';
             syncFromBridge();
+            if (!fromRoute) setRoute(boardRoute());
         }
+
+        /* ── IDEA_7: real URL routing — browser Back/Forward, refresh and bookmarks ──
+           Every screen gets an address: '#/' is the board, '#/p/<group>/<agent>' is a prompt.
+           Entering a prompt pushes a history entry, so the browser Back button steps back
+           through exactly the screens you visited; refreshing re-opens the same prompt. */
+        let routingInitialized = false, suppressNextHashChange = false;
+        function promptRoute(f, a) { return '#/p/' + encodeURIComponent(f) + '/' + encodeURIComponent(a); }
+        function boardRoute() { return '#/'; }
+        function setRoute(hash) {
+            if (location.hash === hash) return;
+            suppressNextHashChange = true;
+            location.hash = hash;
+        }
+        function parseRoute() {
+            const raw = (location.hash || '').replace(/^#/, '');
+            if (raw.startsWith('/p/')) {
+                const rest = raw.slice(3);
+                const cut = rest.indexOf('/');
+                if (cut > 0) {
+                    try {
+                        return { type: 'prompt', folder: decodeURIComponent(rest.slice(0, cut)), agent: decodeURIComponent(rest.slice(cut + 1)) };
+                    } catch (e) { return { type: 'board' }; }
+                }
+            }
+            return { type: 'board' };
+        }
+        function handleRoute() {
+            if (!isBridgeOnline) return;
+            const r = parseRoute();
+            if (r.type === 'prompt') {
+                const g = groups[r.folder];
+                if (g && g.agents && Object.prototype.hasOwnProperty.call(g.agents, r.agent)) {
+                    if (view.style.display === 'flex' && currentGroup === r.folder && currentAgent === r.agent) return;
+                    showPrompt(r.folder, r.agent, true);
+                } else {
+                    setRoute(boardRoute());
+                    if (view.style.display === 'flex') showMenu(true);
+                }
+                return;
+            }
+            if (view.style.display === 'flex') showMenu(true);
+        }
+        window.addEventListener('hashchange', () => {
+            if (suppressNextHashChange) { suppressNextHashChange = false; return; }
+            handleRoute();
+        });
+        function initRouting() {
+            if (routingInitialized) return;
+            routingInitialized = true;
+            handleRoute();
+        }
+
+        /* ── IDEA_8: live prompt size meter — lines / words / characters / estimated tokens ──
+           Own lightweight MutationObserver on the editor, so it updates live no matter how the
+           text changed (typing, paste, insert-at-cursor, undo/redo, external reload). */
+        const PROMPT_TOKENS_WARN = 6000;
+        const PROMPT_TOKENS_HOT = 24000;
+        let psbScheduled = false;
+        function updatePromptStats() {
+            psbScheduled = false;
+            const text = box.textContent || '';
+            const lines = text.split('\n').length;
+            const words = (text.match(/\S+/g) || []).length;
+            const chars = text.length;
+            const tokens = Math.round(chars / 4);
+            document.getElementById('psb-lines').textContent = lines.toLocaleString() + ' Ln';
+            document.getElementById('psb-words').textContent = words.toLocaleString() + ' Wr';
+            document.getElementById('psb-chars').textContent = chars.toLocaleString() + ' Ch';
+            const tok = document.getElementById('psb-tokens');
+            tok.textContent = '\u2248 ' + tokens.toLocaleString() + ' tokens';
+            tok.classList.toggle('psb-warn', tokens >= PROMPT_TOKENS_WARN && tokens < PROMPT_TOKENS_HOT);
+            tok.classList.toggle('psb-hot', tokens >= PROMPT_TOKENS_HOT);
+        }
+        function schedulePromptStats() {
+            if (psbScheduled) return;
+            psbScheduled = true;
+            requestAnimationFrame(() => { if (view.style.display === 'flex') updatePromptStats(); else psbScheduled = false; });
+        }
+        new MutationObserver(schedulePromptStats).observe(box, { childList: true, characterData: true, subtree: true });
 
         function buildGroupAgentsList() {
             const list = [];
@@ -5150,6 +5338,36 @@
                 return `${day}/${month} ${hours}:${mins}`;
             }
             return ts;
+        }
+        /* Timestamps are presentation-only state that changes far more often
+           than anything else (every copy). They are patched onto the EXISTING
+           cards instead of going through renderMenu(), because a full rebuild
+           re-measures and re-packs the whole board - one copy used to scatter
+           every group. Called with no arguments it reconciles every card with
+           groups[f].copy_times (add, update or remove); called with a folder,
+           an agent and a value it patches exactly one card, for the optimistic
+           update right after /api/record-copy succeeds. */
+        function syncCardTimestamps(folder = null, agent = null, value = undefined) {
+            if (!menu) return;
+            const targeted = folder && agent && value !== undefined;
+            menu.querySelectorAll('.agent-card[data-folder][data-agent]').forEach(card => {
+                const f = card.dataset.folder, a = card.dataset.agent;
+                if (!f || !a) return;
+                if (targeted && (f !== folder || a !== agent)) return;
+                const ts = targeted ? value : (groups[f] && groups[f].copy_times && groups[f].copy_times[a]) || '';
+                let tsEl = card.querySelector('.card-timestamp');
+                if (ts) {
+                    if (!tsEl) {
+                        tsEl = document.createElement('span');
+                        tsEl.className = 'card-timestamp';
+                        card.appendChild(tsEl);
+                    }
+                    const formatted = formatCopyTime(ts);
+                    if (tsEl.innerText !== formatted) tsEl.innerText = formatted;
+                } else if (tsEl) {
+                    tsEl.remove();
+                }
+            });
         }
         function updateEditorTimestamp() {
             const el = document.getElementById('prompt-copy-timestamp');
@@ -5306,7 +5524,7 @@
                 if (!ok) return;
                 try { localStorage.setItem('aiReviewPrivacyAck', '1'); } catch (e) {}
             }
-            const aiInstructions = `Please review this AI agent prompt pasted below. Keep the answer very short and use very simple English.\n\nReturn:\n1. What is good.\n2. What is weak or risky.\n3. Missing hallucination guards, details, or constraints.\n4. Grammar or typo fixes.\n5. A full corrected version I can copy.\n\nPrompt:\n\n${rawPrompt}`;
+            const aiInstructions = `Please review this AI agent prompt pasted below. Keep the answer very short. as short as possible yet condenced with all the relevant necassery information. in an oversimplified English which would be extremely easy for the average human to understand explain in real short explain back:.\n\n1. What will this ai agent prompt will actually cause the ai agent to achieve in the session?\n2. What is good about this ai agent prompt and should be kept.\n3. What is weak or risky in this ai agent prompt or requires attention or improvements.\n4. Missing hallucination guards, details, or constraints.\n5. Grammar or typo fixes.\n6. A full corrected version I can copy along side with those suggested fix already included in the revised corrected improved ai agent prompt printed in a canvas block-code plain-text for me to easily copy and paste.\n\nPrompt:\n\n${rawPrompt}`;
             const copied = await writeClipboardPlain(aiInstructions);
             if (copied) showToast('AI REVIEW PROMPT COPIED', 'success');
             else showAlert('Could not copy the AI Review prompt. You can still open ChatGPT and copy the prompt manually from this app.', 'Copy Failed');
@@ -5505,16 +5723,10 @@
                     if (currentGroup === groupFolder && currentAgent === agentName && view.style.display !== 'none') {
                         updateEditorTimestamp();
                     }
-                    const card = document.querySelector(`.agent-card[data-folder="${groupFolder}"][data-agent="${agentName}"]`);
-                    if (card) {
-                        let tsEl = card.querySelector('.card-timestamp');
-                        if (!tsEl) {
-                            tsEl = document.createElement('span');
-                            tsEl.className = 'card-timestamp';
-                            card.appendChild(tsEl);
-                        }
-                        tsEl.innerText = formatCopyTime(res.timestamp);
-                    }
+                    // Optimistic in-place patch: only the copied card grows by
+                    // the timestamp height; the board is NOT re-measured or
+                    // re-packed, so every other group stays exactly where it is.
+                    syncCardTimestamps(groupFolder, agentName, res.timestamp);
                 } else {
                     showToast(apiErrorMessage(res, 'COPIED, BUT TIMESTAMP WAS NOT SAVED'), 'warning');
                 }

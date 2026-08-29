@@ -1,7 +1,34 @@
-please read .\project_structure.txt then please perform a ruthless audit of this app. find the weak areas of the app. also find the areas of the app where the ui/ux can be improve. then please also find the areas which the app will not deliver/work as the end user expect for it to work. Use this exact format for each defect rank 1 being most critical. do not use filler. if no issues found declare "No Issues Found!":
+Read .\project_structure.txt first for architectural context. Inspect the provided source code files in batches to prevent context loss. Perform a strict, ruthless static audit. Do not modify any files yet. If you have execution tools, run linters and tests first.
 
-* ISSUE_[ID]
-* TITLE: [Catchy Extremely Shortened (few words) Description of the Issue]
-* PATH: [Full File Name + Path & From which Line to which Line in the File]
-* CURRENT BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how currently the app/software/UI/UX feels or reflect to the end-user before the fix]
-* EXPECTED BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how the app/software/UI/UX would feel or reflect any different to the end-user after the fix is applied] Separate each issue by printing an empty line, a line containing only , and another empty line.
+OBJECTIVE:
+Find and rank a maximum of 15 meaningful defects across these categories:
+* FUNCTIONALITY: Bugs, broken logic, missing features, unfinished code, or silent crashes.
+* UI/UX: Outdated design, poor spacing/alignment, confusing workflows, weak feedback, or bad error handling. 
+* PERFORMANCE: Slow operations, blocked main/UI threads, or poor async/threading patterns.
+* RESOURCE & SECURITY: Memory leaks, unreleased timers/sockets/files, race conditions, CPU spikes, or security risks.
+
+STRICT RULES:
+1. Evidence-Based Only: Base all findings on exact source code. Never invent files, lines, or web links.
+2. Label Risks: Do not claim a memory/CPU issue is 100% confirmed unless the code proves it. Otherwise, label it a RISK.
+3. Consolidate: Combine duplicate root problems into single issues.
+4. Prioritize: Rank issues strictly by importance. ISSUE_1 must be the most critical.
+
+OUTPUT FORMAT:
+Do not use filler words. Do not use filler issues.
+If zero critical issues exist, output "NO CRITICAL ISSUES FOUND" and proceed to lower severities.
+If absolutely no issues are found, output exactly: "No Issues Found!"
+
+For each issue, use this exact format:
+ISSUE_[ID]
+TITLE: [Catchy, extremely short description]
+TYPE: [BUG / UI / UX / PERFORMANCE / RESOURCE / SECURITY / RISK]
+PATH: [Full file name + path & exact line range]
+CURRENT BEHAVIOR: [Oversimplified explanation for the average human: what is broken or risky right now]
+EXPECTED BEHAVIOR: [Oversimplified explanation for the average human: how the software will act/feel after it is fixed]
+between one issue to another keep a clear clean 2 empty lines of separation.
+[Empty Line]
+&nbsp;
+[Empty Line]
+
+EXECUTION GUARDRAIL:
+WAIT FOR EXPLICIT USER CONFIRMATION FOR EACH ID. Do not run the fixes unless approved by the user.
