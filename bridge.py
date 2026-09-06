@@ -1489,7 +1489,7 @@ def recycle_purge_all():
 
 
 
-git_push_lock = threading.Lock()
+git_op_lock = threading.Lock()
 
 def generate_git_summary(cwd, branch, remote):
     """Generate a concise, human-readable summary of changes compared to online version."""
@@ -1563,8 +1563,8 @@ def generate_git_summary(cwd, branch, remote):
 
 def run_git_push_stream():
     """Stream git push operations step-by-step with real-time output and diagnostics."""
-    if not git_push_lock.acquire(blocking=False):
-        yield f"data: {json.dumps({'type': 'complete', 'success': False, 'stage': 'lock', 'message': 'Git push is already running.', 'why': 'Another Git push process is currently active. Please wait for it to complete.'})}\n\n"
+    if not git_op_lock.acquire(blocking=False):
+        yield f"data: {json.dumps({'type': 'complete', 'success': False, 'stage': 'lock', 'message': 'Another Git operation is already running.', 'why': 'A Git sync process is currently active. Please wait for it to complete.'})}\n\n"
         return
 
     try:
@@ -1716,13 +1716,145 @@ def run_git_push_stream():
                         commit=commit_msg if has_staged_changes else None)
 
     finally:
-        git_push_lock.release()
+        git_op_lock.release()
 
 
 @app.route('/api/git-push', methods=['POST'])
 def api_git_push():
     """Trigger automated Git add, commit, and push workflow, streaming progress to client."""
     return Response(run_git_push_stream(), mimetype='text/event-stream')
+
+
+
+
+def run_git_pull_stream():
+    """Stream git fetch, reset --hard, and clean -fd to force overwrite local files with cloud version."""
+    if not git_op_lock.acquire(blocking=False):
+        yield f"data: {json.dumps({'type': 'complete', 'success': False, 'stage': 'lock', 'message': 'Another Git operation is already running.', 'why': 'A Git sync process is currently active. Please wait for it to complete.'})}\n\n"
+        return
+
+    try:
+        def sse_event(evt_type, **kwargs):
+            payload = {"type": evt_type, **kwargs}
+            return f"data: {json.dumps(payload)}\n\n"
+
+        def exec_stream(cmd):
+            yield sse_event('cmd', line=' '.join(cmd))
+            try:
+                proc = subprocess.Popen(
+                    cmd,
+                    cwd=ROOT_DIR,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=1,
+                    encoding='utf-8',
+                    errors='replace'
+                )
+            except Exception as e:
+                yield sse_event('error', line=f"Failed to execute command: {e}")
+                return -1, str(e)
+
+            collected = []
+            for line in iter(proc.stdout.readline, ''):
+                clean = line.rstrip('\r\n')
+                collected.append(clean)
+                yield sse_event('out', line=clean)
+            proc.stdout.close()
+            code = proc.wait()
+            return code, "\n".join(collected)
+
+        yield sse_event('info', line='Initializing Git force-pull pipeline...')
+
+        # 1. Verify Git executable
+        code, out = yield from exec_stream(['git', '--version'])
+        if code != 0:
+            yield sse_event('complete', success=False, stage='git-check',
+                            message='Git executable not found in PATH.',
+                            why='Git is not installed or not in the Windows PATH environment variable.',
+                            detail=out)
+            return
+
+        # 2. Check repository
+        git_dir = os.path.join(ROOT_DIR, '.git')
+        if not os.path.isdir(git_dir):
+            yield sse_event('complete', success=False, stage='repo-check',
+                            message='Not a Git repository.',
+                            why='No .git directory was found in the project root directory.',
+                            detail='Directory does not contain .git')
+            return
+
+        # 3. Determine branch
+        branch_proc = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], capture_output=True, text=True, cwd=ROOT_DIR)
+        branch = branch_proc.stdout.strip() or 'main'
+        yield sse_event('info', line=f'Active branch: {branch}')
+
+        # 4. Determine remote
+        remote_proc = subprocess.run(['git', 'remote'], capture_output=True, text=True, cwd=ROOT_DIR)
+        remotes = [r.strip() for r in remote_proc.stdout.splitlines() if r.strip()]
+        if not remotes:
+            yield sse_event('complete', success=False, stage='remote',
+                            message='No Git remote configured.',
+                            why='A remote destination (e.g. "origin") is required to pull changes from the cloud.',
+                            detail='git remote returned empty list')
+            return
+        remote = 'origin' if 'origin' in remotes else remotes[0]
+        yield sse_event('info', line=f'Target remote: {remote}')
+
+        # 5. git fetch <remote> <branch>
+        yield sse_event('info', line=f'Fetching latest cloud commits from {remote}/{branch}...')
+        code, out = yield from exec_stream(['git', 'fetch', remote, branch])
+        if code != 0:
+            lower_out = out.lower()
+            why = 'Git fetch failed.'
+            if 'could not resolve host' in lower_out or 'unable to access' in lower_out or 'timed out' in lower_out:
+                why = 'Network error: Unable to reach GitHub. Please check your internet connection.'
+            elif 'permission to' in lower_out and 'denied' in lower_out or 'authentication failed' in lower_out:
+                why = 'GitHub authentication failed or permission denied. Check your credentials or SSH key.'
+            elif "couldn't find remote ref" in lower_out:
+                why = f"Remote branch '{branch}' not found on remote '{remote}'."
+
+            yield sse_event('complete', success=False, stage='fetch',
+                            message=f'Git fetch failed with exit code {code}.',
+                            why=why,
+                            detail=out)
+            return
+
+        # 6. git reset --hard <remote>/<branch>
+        yield sse_event('warning', line=f'Overwriting local working tree with {remote}/{branch}...')
+        code, out = yield from exec_stream(['git', 'reset', '--hard', f'{remote}/{branch}'])
+        if code != 0:
+            yield sse_event('complete', success=False, stage='reset',
+                            message=f'Git reset --hard failed with exit code {code}.',
+                            why='Failed to reset local branch to the fetched remote commit.',
+                            detail=out)
+            return
+
+        # 7. git clean -fd
+        yield sse_event('info', line='Cleaning untracked local files and directories...')
+        code, out = yield from exec_stream(['git', 'clean', '-fd'])
+        if code != 0:
+            yield sse_event('warning', line='Warning: git clean -fd returned non-zero, continuing...')
+
+        # 8. Trigger library re-index
+        with migration_lock:
+            try:
+                migrate_folders_locked()
+            except Exception as me:
+                logger.error(f"Migration error after git pull: {me}")
+
+        yield sse_event('success', line=f'Successfully overwrote local files with cloud version ({remote}/{branch})!')
+        yield sse_event('complete', success=True, stage='done',
+                        message=f'Local workspace updated to match {remote}/{branch}')
+
+    finally:
+        git_op_lock.release()
+
+
+@app.route('/api/git-pull', methods=['POST'])
+def api_git_pull():
+    """Force overwrite local files with cloud git commits, streaming progress to client."""
+    return Response(run_git_pull_stream(), mimetype='text/event-stream')
 
 
 

@@ -170,7 +170,7 @@ E. Atomic Move Operations:
 
 10. Visual Copy Timestamp & Auto-Reset: Display a persistent visual date/time stamp around prompt cards and within the editor view indicating when a prompt was last copied to the clipboard. Automatically reset and remove this timestamp whenever the prompt text or title is modified or saved.
 
-11. Dev Automated Git Push & Live CMD Console Overlay: Provide a discreet developer-only 'PUSH' button positioned directly above the bridge status pill. When clicked, it initiates an automated Git workflow (init if needed, diff-aware auto-commit summary, git add, and git push) while streaming real-time CMD output into a dedicated terminal modal overlay. If the operation fails, detailed error explanations and diagnostics are presented; upon success, a green success overlay toast fades out smoothly.
+11. Dev Automated Git Sync (Push & Force Pull Overlay): Provide discreet developer-only 'PUSH' and 'PULL' action buttons positioned directly above the bridge status pill. 'PULL' displays a prominent reddish warning glow on hover and triggers a clear, easy-to-understand warning confirmation dialog before force-overwriting local files with cloud commits (git fetch, git reset --hard, git clean -fd). Both actions stream real-time CMD console diagnostics in a dedicated terminal overlay with clear error breakdowns on failure and green fading toasts upon success.
 
 ===============================================================================
 7. PRODUCT SPECIFICATIONS
@@ -368,31 +368,32 @@ E. Atomic Move Operations:
   2. Modifying and saving either the prompt text or title removes the timestamp.
   3. Clicking the Reset Counters button next to the recycle bin prompts confirmation and purges all copy timestamps across the library.
 
-### 15. Dev Automated Git Push & Live CMD Console Overlay
-- Purpose: Provide developers with a zero-friction, one-click Git sync pipeline that automatically detects changes from the online version, formats a concise commit message, stages, commits, and pushes to remote, complete with real-time terminal diagnostics.
+### 15. Dev Automated Git Sync (Push & Force Pull Overlay)
+- Purpose: Provide developers with a zero-friction, one-click Git sync and cloud recovery pipeline. Includes automated change detection, smart commit messages, and pushing to remote, as well as a safe force-pull pipeline to overwrite local files with cloud commits when necessary, backed by real-time terminal diagnostics and confirmation safeguards.
 - Main behavior:
-  - Clicking the subtle `PUSH` button located immediately above the bottom-right `#bridge-status` pill opens a dark terminal overlay modal (`#git-push-modal`).
-  - Calls `POST /api/git-push` on the local bridge backend (`bridge.py`).
-  - Subprocess executes `git --version`, verifies/initializes `.git`, checks user configuration, detects the active branch and target remote.
-  - Automatically compares the local workspace against `origin/<branch>` (or status porcelain) to synthesize a concise, descriptive commit summary (e.g., `Update prompts (BUG DETECTOR, General Logic); frontend UI`).
-  - Executes `git add .`, commits if changes exist, and executes `git push origin <branch>`.
-  - Streams each command and its real-time output (stdout/stderr) over Server-Sent Events (SSE) into the client terminal.
+  - Discreet developer action buttons (`PUSH` and `PULL`) sit directly above the `#bridge-status` pill in the bottom-right corner (`.dev-actions-bar`).
+  - **Git Push**: Calls `POST /api/git-push`. Verifies/inits Git, checks user config, derives branch and remote, automatically synthesizes a concise commit summary comparing local files to `origin/<branch>`, stages (`git add .`), commits, and pushes to remote.
+  - **Git Force Pull**: Clicking `PULL` first triggers a high-visibility warning confirmation dialog detailing that all local changes will be replaced. Upon confirmation, calls `POST /api/git-pull`. Runs `git fetch <remote> <branch>`, `git reset --hard <remote>/<branch>`, and `git clean -fd`, then triggers backend folder re-indexing and client-side UI sync (`syncFromBridge()`).
+  - Both operations stream command execution and stdout/stderr output in real time over Server-Sent Events (SSE) into `#git-push-terminal`.
 - UI/UX behavior:
-  - Button is rendered with low resting opacity (0.28) and subtle pill styling to stay unobtrusive during regular prompt usage.
-  - On hover, button brightens to full opacity with a clean highlight border.
-  - The modal card features standard dark IDE styling, live running status badge, monospace auto-scrolling terminal, and a close button.
-  - If any command fails, an error panel displays the failure stage, an intuitive English explanation of why it failed (e.g. non-fast-forward push rejection, auth failure, network timeout), the raw error details, and a Retry button.
-  - If successful, the modal marks the completion in green, triggers a green success toast that fades out cleanly, and auto-dismisses after 2.2 seconds.
+  - Both buttons render at low resting opacity (0.28) to avoid cluttering normal usage.
+  - `PUSH` glows white/blue on hover.
+  - `PULL` glows with a distinct, prominent reddish warning tone (`#ff7b72` text, red border, and reddish ambient shadow) on hover to provide an immediate visual risk cue.
+  - When clicking `PULL`, an easy-to-understand confirmation modal (`#git-pull-confirm-overlay`) warns the user about pending destructive overwrites with actionable bullet points and requires explicit confirmation (`FORCE PULL & OVERWRITE`).
+  - The live terminal console displays colored log streams (`cmd`, `out`, `info`, `warning`, `error`, `success`).
+  - On failure, a structured error card explains what happened and why it failed with a `RETRY` button.
+  - On success, the modal displays green status indicators and triggers a fading green toast notification (`showToast(..., 'success')`).
 - Failure handling:
-  - Non-zero return codes immediately halt the pipeline and deliver structured error diagnostics.
-  - Concurrency is guarded by `git_push_lock` on the backend and button disablement on the frontend to prevent concurrent Git operations.
+  - Subprocess errors halt execution and stream detailed diagnostic reasons.
+  - Concurrency is protected by a unified `git_op_lock` on the backend and client-side button disablement.
 - Acceptance Criteria:
-  1. Subtle 'PUSH' button is positioned directly above the bridge status pill.
-  2. Clicking opens the terminal modal and streams command execution in real time.
-  3. Automatically drafts a concise commit message reflecting recent modifications.
-  4. Pushes changes successfully to the configured remote repository.
-  5. Detailed, actionable error feedback is presented if Git or network operations fail.
-  6. Fading green toast notification displays upon successful push.
+  1. Discreet 'PUSH' and 'PULL' buttons are positioned side-by-side above the bridge status pill.
+  2. 'PULL' button turns reddish on hover as a visual warning cue.
+  3. Clicking 'PULL' opens a clear, easy-to-understand destructive action warning dialog.
+  4. Confirming force-pull overwrites all local files with cloud commits and cleans untracked files.
+  5. Real-time CMD terminal modal streams execution logs live for both push and pull.
+  6. Clear, detailed error breakdowns are presented if any operation fails.
+  7. Clear green fading toast appears on successful execution.
 
 ===============================================================================
 8. CACHING POLICY
@@ -730,3 +731,7 @@ G. Backend
      synthesizes a concise commit summary comparing against online remote,
      creates commit, and pushes to remote (git push origin <branch>) while
      streaming real-time stdout/stderr lines over Server-Sent Events (SSE).
+   - POST /api/git-pull           {}
+     Automated developer force-pull pipeline. Fetches cloud commits, resets
+     local working tree and index (--hard), and cleans untracked files (-fd)
+     to match the cloud repository while streaming real-time output over SSE.

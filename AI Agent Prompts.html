@@ -1006,27 +1006,33 @@
         .bridge-status { position: fixed; bottom: 15px; right: 15px; font-size: 11px; font-weight: 600; color: var(--text-dim); background: var(--bg-light); padding: 4px 10px; border-radius: var(--radius-pill); border: 1px solid var(--border); z-index: 100; }
         .bridge-status.online { color: var(--success); border-color: rgba(46, 160, 67, 0.4); }
 
-        /* Dev Push Button (barely noticeable, bottom right above bridge status) */
-        .dev-push-btn {
+        /* Dev Action Buttons (barely noticeable, bottom right above bridge status) */
+        .dev-actions-bar {
             position: fixed;
             bottom: 46px;
             right: 15px;
+            display: flex;
+            gap: 6px;
+            z-index: 100;
+        }
+        .dev-git-btn {
             font-size: 10px;
             font-weight: 700;
             letter-spacing: 0.8px;
             text-transform: uppercase;
-            color: var(--text-dim);
-            background: rgba(13, 17, 23, 0.4);
             padding: 2px 8px;
             border-radius: var(--radius-pill);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            z-index: 100;
-            cursor: pointer;
-            opacity: 0.28;
-            transition: opacity 0.25s ease, background 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
             user-select: none;
             line-height: 1.5;
             outline: none;
+            cursor: pointer;
+            opacity: 0.28;
+            transition: opacity 0.25s ease, background 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease, color 0.2s ease;
+        }
+        .dev-push-btn {
+            color: var(--text-dim);
+            background: rgba(13, 17, 23, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
         .dev-push-btn:hover {
             opacity: 1;
@@ -1036,6 +1042,23 @@
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
         }
         .dev-push-btn:active {
+            transform: translateY(1px);
+        }
+
+        .dev-pull-btn {
+            color: var(--text-dim);
+            background: rgba(13, 17, 23, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .dev-pull-btn:hover {
+            opacity: 1;
+            color: #ff7b72;
+            background: rgba(248, 81, 73, 0.16);
+            border-color: rgba(248, 81, 73, 0.6);
+            box-shadow: 0 2px 12px rgba(248, 81, 73, 0.35);
+            text-shadow: 0 0 6px rgba(248, 81, 73, 0.4);
+        }
+        .dev-pull-btn:active {
             transform: translateY(1px);
         }
 
@@ -1223,6 +1246,57 @@
         .git-btn-retry:hover { background: #2ea043; }
         .git-btn-done { background: #21262d; color: #c9d1d9; }
         .git-btn-done:hover { background: #30363d; color: #fff; }
+
+        /* Git Force Pull Confirmation Modal */
+        .git-pull-confirm-card {
+            max-width: 500px;
+            border-color: rgba(248, 81, 73, 0.4);
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(248, 81, 73, 0.2);
+        }
+        .git-pull-confirm-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .git-pull-warn-icon {
+            font-size: 22px;
+            line-height: 1;
+        }
+        .git-pull-warn-title {
+            color: #ff7b72;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0;
+        }
+        .git-pull-confirm-desc {
+            color: #e6edf3;
+            font-size: 13px;
+            line-height: 1.5;
+            margin-bottom: 14px;
+        }
+        .git-pull-confirm-box {
+            background: rgba(248, 81, 73, 0.08);
+            border: 1px solid rgba(248, 81, 73, 0.25);
+            border-radius: var(--radius-sm);
+            padding: 12px 14px;
+            margin-bottom: 18px;
+            font-size: 12px;
+            color: #c9d1d9;
+        }
+        .git-pull-confirm-box ul {
+            margin: 0 0 8px 18px;
+            padding: 0;
+            line-height: 1.5;
+        }
+        .git-pull-confirm-note {
+            margin: 0;
+            font-weight: 600;
+            color: #ff7b72;
+            font-size: 12px;
+        }
 
         #bridge-offline-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -2133,8 +2207,36 @@
         </div>
     </div>
 
+    <!-- Dev Git Pull Warning Confirmation Modal -->
+    <div id="git-pull-confirm-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="git-pull-confirm-title" style="display: none;">
+        <div class="modal-card git-pull-confirm-card">
+            <div class="git-pull-confirm-header">
+                <span class="git-pull-warn-icon">⚠️</span>
+                <h3 id="git-pull-confirm-title" class="git-pull-warn-title">WARNING: Destructive Action Pending</h3>
+            </div>
+            <p class="git-pull-confirm-desc">
+                You are about to <strong>force overwrite all local files</strong> with the latest commits from the online GitHub repository.
+            </p>
+            <div class="git-pull-confirm-box">
+                <ul>
+                    <li>All local modifications will be <strong>permanently replaced</strong>.</li>
+                    <li>Any unsaved prompt edits will be <strong>lost</strong>.</li>
+                    <li>Untracked local prompt files not online will be <strong>removed</strong>.</li>
+                </ul>
+                <p class="git-pull-confirm-note">Confirm it is safe to lose current local work to proceed.</p>
+            </div>
+            <div class="modal-actions">
+                <button id="git-pull-confirm-cancel" class="wiz-cancel" onclick="closeGitPullConfirm()">CANCEL</button>
+                <button id="git-pull-confirm-ok" class="wiz-danger" onclick="executeDevGitPull()">FORCE PULL &amp; OVERWRITE</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
-    <button id="dev-push-btn" class="dev-push-btn" onclick="startDevGitPush()" title="Dev Git Push">PUSH</button>
+    <div class="dev-actions-bar">
+        <button id="dev-pull-btn" class="dev-git-btn dev-pull-btn" onclick="confirmDevGitPull()" title="Dev Git Force Pull (Overwrite Local Files with Cloud Version)">PULL</button>
+        <button id="dev-push-btn" class="dev-git-btn dev-push-btn" onclick="startDevGitPush()" title="Dev Git Push">PUSH</button>
+    </div>
     <div id="bridge-status" class="bridge-status">BRIDGE: OFFLINE</div>
 
     <script>
@@ -6721,11 +6823,33 @@
             if (modal) modal.style.display = 'none';
         }
 
-        async function startDevGitPush() {
+        function confirmDevGitPull() {
+            if (isGitPushInProgress) return;
+            const overlay = document.getElementById('git-pull-confirm-overlay');
+            overlay.style.display = 'flex';
+            setTimeout(() => overlay.classList.add('visible'), 10);
+            trapFocusIn(overlay, () => closeGitPullConfirm());
+        }
+
+        function closeGitPullConfirm() {
+            const overlay = document.getElementById('git-pull-confirm-overlay');
+            if (!overlay) return;
+            overlay.classList.remove('visible');
+            releaseFocusTrap(overlay);
+            setTimeout(() => overlay.style.display = 'none', 200);
+        }
+
+        function executeDevGitPull() {
+            closeGitPullConfirm();
+            startDevGitPull();
+        }
+
+        async function startDevGitPull() {
             if (isGitPushInProgress) return;
             isGitPushInProgress = true;
 
             const modal = document.getElementById('git-push-modal');
+            const title = document.getElementById('git-push-title');
             const term = document.getElementById('git-push-terminal');
             const badge = document.getElementById('git-push-status-badge');
             const errorPanel = document.getElementById('git-push-error-panel');
@@ -6736,6 +6860,170 @@
             const retryBtn = document.getElementById('git-push-retry-btn');
             const closeBtn = document.getElementById('git-push-close-btn');
             const doneBtn = document.getElementById('git-push-done-btn');
+
+            title.innerText = 'GIT FORCE PULL & OVERWRITE CONSOLE';
+            modal.style.display = 'flex';
+            term.innerHTML = '';
+            errorPanel.style.display = 'none';
+            retryBtn.style.display = 'none';
+            retryBtn.onclick = () => executeDevGitPull();
+            closeBtn.disabled = true;
+            doneBtn.disabled = true;
+            summaryEl.innerText = 'Initializing automated Git pull & overwrite workflow...';
+
+            badge.className = 'git-badge git-badge-running';
+            badge.innerText = 'RUNNING...';
+
+            function addTermLine(text, type = 'out') {
+                const line = document.createElement('div');
+                line.className = 'git-term-line ' + type;
+                line.textContent = text;
+                term.appendChild(line);
+                term.scrollTop = term.scrollHeight;
+            }
+
+            addTermLine('=== DEV GIT FORCE PULL & OVERWRITE INITIATED ===', 'cmd');
+            addTermLine('Target: Overwrite local workspace with latest cloud commits', 'dim');
+
+            try {
+                const res = await fetch('http://127.0.0.1:5589/api/git-pull', {
+                    method: 'POST',
+                    cache: 'no-store'
+                });
+
+                if (!res.ok) {
+                    if (res.status === 403) throw new Error('Forbidden origin: Request blocked by security guard.');
+                    throw new Error(`Server returned HTTP status ${res.status}`);
+                }
+
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let buffer = '';
+                let lastResult = null;
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+
+                    const parts = buffer.split('\n\n');
+                    buffer = parts.pop();
+
+                    for (const part of parts) {
+                        const trimmed = part.trim();
+                        if (!trimmed || !trimmed.startsWith('data:')) continue;
+                        const jsonStr = trimmed.replace(/^data:\s*/, '');
+                        try {
+                            const evt = JSON.parse(jsonStr);
+                            if (evt.type === 'cmd') {
+                                addTermLine(`> ${evt.line}`, 'cmd');
+                            } else if (evt.type === 'out') {
+                                addTermLine(evt.line, 'out');
+                            } else if (evt.type === 'info') {
+                                addTermLine(`ℹ ${evt.line}`, 'cmd');
+                            } else if (evt.type === 'success') {
+                                addTermLine(`✓ ${evt.line}`, 'success');
+                            } else if (evt.type === 'warning') {
+                                addTermLine(`⚠ ${evt.line}`, 'warning');
+                            } else if (evt.type === 'error') {
+                                addTermLine(`✗ ${evt.line}`, 'error');
+                            } else if (evt.type === 'summary') {
+                                summaryEl.innerText = evt.message || '';
+                            } else if (evt.type === 'complete') {
+                                lastResult = evt;
+                            }
+                        } catch (pe) {
+                            console.error('SSE parse error:', pe, jsonStr);
+                        }
+                    }
+                }
+
+                if (lastResult && lastResult.success) {
+                    badge.className = 'git-badge git-badge-success';
+                    badge.innerText = 'SUCCESS';
+                    addTermLine(`\n✓ ${lastResult.message || 'Pull & overwrite completed successfully!'}`, 'success');
+                    summaryEl.innerText = 'Local workspace is synchronized with cloud version';
+
+                    try {
+                        await syncFromBridge();
+                        if (typeof renderMenu === 'function' && view.style.display !== 'flex') {
+                            renderMenu();
+                        }
+                    } catch (syncErr) {
+                        console.warn('Post-pull sync warning:', syncErr);
+                    }
+
+                    showToast(lastResult.message || 'LOCAL FILES OVERWRITTEN WITH CLOUD VERSION', 'success');
+
+                    setTimeout(() => {
+                        modal.style.display = 'none';
+                    }, 2200);
+                } else {
+                    const errMsg = (lastResult && lastResult.message) || 'Git force-pull encountered an error.';
+                    const errWhy = (lastResult && lastResult.why) || 'Subprocess command failed with non-zero exit code.';
+                    const errDetail = (lastResult && lastResult.detail) || '';
+
+                    badge.className = 'git-badge git-badge-failed';
+                    badge.innerText = 'FAILED';
+
+                    errorTitle.innerText = lastResult && lastResult.stage ? `FAILED AT STAGE: ${lastResult.stage.toUpperCase()}` : 'PULL FAILED';
+                    errorDesc.innerHTML = `<strong>What happened:</strong> ${escapeHtml(errMsg)}<br><strong>Why it failed:</strong> ${escapeHtml(errWhy)}`;
+                    if (errDetail) {
+                        errorRaw.textContent = errDetail;
+                        errorRaw.style.display = 'block';
+                    } else {
+                        errorRaw.style.display = 'none';
+                    }
+                    errorPanel.style.display = 'block';
+                    retryBtn.style.display = 'inline-block';
+                    retryBtn.onclick = () => executeDevGitPull();
+
+                    showToast(errMsg, 'error');
+                }
+            } catch (err) {
+                badge.className = 'git-badge git-badge-failed';
+                badge.innerText = 'FAILED';
+                addTermLine(`\n✗ Connection / Execution Error: ${err.message}`, 'error');
+
+                errorTitle.innerText = 'CONNECTION / SYSTEM FAILURE';
+                errorDesc.innerHTML = `<strong>What happened:</strong> Unable to communicate with local bridge backend.<br><strong>Why it failed:</strong> ${escapeHtml(err.message)}`;
+                errorRaw.textContent = `Ensure python bridge is running on 127.0.0.1:5589.\n${err.stack || err}`;
+                errorRaw.style.display = 'block';
+                errorPanel.style.display = 'block';
+                retryBtn.style.display = 'inline-block';
+                retryBtn.onclick = () => executeDevGitPull();
+
+                showToast('GIT PULL FAILED: Bridge unreachable', 'error');
+            } finally {
+                isGitPushInProgress = false;
+                closeBtn.disabled = false;
+                doneBtn.disabled = false;
+            }
+        }
+
+        async function startDevGitPush() {
+            if (isGitPushInProgress) return;
+            isGitPushInProgress = true;
+
+            const modal = document.getElementById('git-push-modal');
+            const title = document.getElementById('git-push-title');
+            const term = document.getElementById('git-push-terminal');
+            const badge = document.getElementById('git-push-status-badge');
+            const errorPanel = document.getElementById('git-push-error-panel');
+            const errorTitle = document.getElementById('git-error-title');
+            const errorDesc = document.getElementById('git-error-message');
+            const errorRaw = document.getElementById('git-error-details');
+            const summaryEl = document.getElementById('git-push-summary');
+            const retryBtn = document.getElementById('git-push-retry-btn');
+            const closeBtn = document.getElementById('git-push-close-btn');
+            const doneBtn = document.getElementById('git-push-done-btn');
+
+            title.innerText = 'GIT PUSH CONSOLE';
+            modal.style.display = 'flex';
+            term.innerHTML = '';
+            errorPanel.style.display = 'none';
+            retryBtn.style.display = 'none';
+            retryBtn.onclick = () => startDevGitPush();
 
             modal.style.display = 'flex';
             term.innerHTML = '';
@@ -6917,6 +7205,12 @@
                 }
             }
             if (e.key === 'Escape') {
+                const gitPullConfirm = document.getElementById('git-pull-confirm-overlay');
+                if (gitPullConfirm && gitPullConfirm.classList.contains('visible')) {
+                    closeGitPullConfirm();
+                    return;
+                }
+
                 const gitPushModal = document.getElementById('git-push-modal');
                 if (gitPushModal && gitPushModal.style.display === 'flex') {
                     if (!isGitPushInProgress) closeGitPushModal();
