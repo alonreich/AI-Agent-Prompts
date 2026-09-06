@@ -12,7 +12,7 @@ Perform a "Factual Engine Audit". You must base your findings strictly on code p
 
 INPUT PARAMETERS:
 1. project_structure.txt: Architectural map and intended feature list.
-2. SOURCE CODE: C# WinForms files, focusing on UI, memory management, and OCR branches.
+2. SOURCE CODE: C#13 .Net9 Avalonia UI fully Native AOT files, focusing on UI, memory management, and OCR branches.
 
 ANALYSIS PROTOCOL:
 

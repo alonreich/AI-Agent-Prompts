@@ -170,6 +170,8 @@ E. Atomic Move Operations:
 
 10. Visual Copy Timestamp & Auto-Reset: Display a persistent visual date/time stamp around prompt cards and within the editor view indicating when a prompt was last copied to the clipboard. Automatically reset and remove this timestamp whenever the prompt text or title is modified or saved.
 
+11. Dev Automated Git Push & Live CMD Console Overlay: Provide a discreet developer-only 'PUSH' button positioned directly above the bridge status pill. When clicked, it initiates an automated Git workflow (init if needed, diff-aware auto-commit summary, git add, and git push) while streaming real-time CMD output into a dedicated terminal modal overlay. If the operation fails, detailed error explanations and diagnostics are presented; upon success, a green success overlay toast fades out smoothly.
+
 ===============================================================================
 7. PRODUCT SPECIFICATIONS
 ===============================================================================
@@ -365,6 +367,32 @@ E. Atomic Move Operations:
   1. Copying via quick-copy button or main copy button immediately updates the UI with a date/time stamp.
   2. Modifying and saving either the prompt text or title removes the timestamp.
   3. Clicking the Reset Counters button next to the recycle bin prompts confirmation and purges all copy timestamps across the library.
+
+### 15. Dev Automated Git Push & Live CMD Console Overlay
+- Purpose: Provide developers with a zero-friction, one-click Git sync pipeline that automatically detects changes from the online version, formats a concise commit message, stages, commits, and pushes to remote, complete with real-time terminal diagnostics.
+- Main behavior:
+  - Clicking the subtle `PUSH` button located immediately above the bottom-right `#bridge-status` pill opens a dark terminal overlay modal (`#git-push-modal`).
+  - Calls `POST /api/git-push` on the local bridge backend (`bridge.py`).
+  - Subprocess executes `git --version`, verifies/initializes `.git`, checks user configuration, detects the active branch and target remote.
+  - Automatically compares the local workspace against `origin/<branch>` (or status porcelain) to synthesize a concise, descriptive commit summary (e.g., `Update prompts (BUG DETECTOR, General Logic); frontend UI`).
+  - Executes `git add .`, commits if changes exist, and executes `git push origin <branch>`.
+  - Streams each command and its real-time output (stdout/stderr) over Server-Sent Events (SSE) into the client terminal.
+- UI/UX behavior:
+  - Button is rendered with low resting opacity (0.28) and subtle pill styling to stay unobtrusive during regular prompt usage.
+  - On hover, button brightens to full opacity with a clean highlight border.
+  - The modal card features standard dark IDE styling, live running status badge, monospace auto-scrolling terminal, and a close button.
+  - If any command fails, an error panel displays the failure stage, an intuitive English explanation of why it failed (e.g. non-fast-forward push rejection, auth failure, network timeout), the raw error details, and a Retry button.
+  - If successful, the modal marks the completion in green, triggers a green success toast that fades out cleanly, and auto-dismisses after 2.2 seconds.
+- Failure handling:
+  - Non-zero return codes immediately halt the pipeline and deliver structured error diagnostics.
+  - Concurrency is guarded by `git_push_lock` on the backend and button disablement on the frontend to prevent concurrent Git operations.
+- Acceptance Criteria:
+  1. Subtle 'PUSH' button is positioned directly above the bridge status pill.
+  2. Clicking opens the terminal modal and streams command execution in real time.
+  3. Automatically drafts a concise commit message reflecting recent modifications.
+  4. Pushes changes successfully to the configured remote repository.
+  5. Detailed, actionable error feedback is presented if Git or network operations fail.
+  6. Fading green toast notification displays upon successful push.
 
 ===============================================================================
 8. CACHING POLICY
@@ -697,3 +725,8 @@ G. Backend
      Both write custom_width into <group>/group_meta.json. A null width pops
      the key. The batch route validates each folder through safe_path(), caps
      the request at 500 groups and clamps widths to 1..20000.
+   - POST /api/git-push           {}
+     Automated developer sync pipeline. Stages all changes (git add .),
+     synthesizes a concise commit summary comparing against online remote,
+     creates commit, and pushes to remote (git push origin <branch>) while
+     streaming real-time stdout/stderr lines over Server-Sent Events (SSE).

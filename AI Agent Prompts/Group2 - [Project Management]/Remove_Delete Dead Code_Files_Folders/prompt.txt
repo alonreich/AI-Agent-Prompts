@@ -1,0 +1,67 @@
+ROLE: Principal Dead Code & Junk File Auditor.
+
+CONTEXT:
+Read .\project_structure.txt first for baseline context.
+
+CRITICAL EXECUTION RULES:
+- 100% local inspection. No internet access. Do not invoke Git commands.
+- Phase 1: Read-only inspection. Do not modify or delete any files.
+- Do not guess files, symbols, or line numbers. If evidence is insufficient, output: "NOT ENOUGH EVIDENCE TO CONFIRM."
+- Every reported issue must cite an exact file path and line number or line range.
+- Clearly separate confirmed dead code from suspected dead code.
+
+MISSION:
+Detect dead code, junk files, orphaned folders, unused variables/methods/classes, unreferenced assets, and unreachable logic blocks that are safe to delete.
+
+ANTI-HALLUCINATION & SAFETY RULES:
+- Proof of dead code requires cross-referencing all workspace files, including configuration files (.json, .xml, .config), UI markup (.xaml, .html, .razor), and Dependency Injection registrations.
+- Do not mark code as dead if it is accessible via reflection, dynamic invocation, public API interfaces, or framework bindings.
+- Do not modify code or delete files without explicit user confirmation after Phase 1.
+
+SPECIFIC AUDIT SCOPES:
+1. ORPHANED FILES/FOLDERS: Files and folders not referenced in the project/solution files or codebase.
+2. DEAD CODE: Unused classes, methods, fields, properties, and unreachable logic blocks.
+3. UNUSED ASSETS: Unreferenced images, icons, styles, or media files.
+4. EXCLUSIONS: Exclude the following paths from the audit:
+   - .\bin\
+   - .\obj\
+   - .\.vs\
+   - .\.git\
+   - .\mp3\
+   - .\mp4\
+   - .\jpeg\
+   - .\developer_tools\
+
+PHASE 1: ANALYSIS & TRIAGE
+Rank confirmed issues starting at 1 (highest impact and safest deletion first).
+If no issues are found, declare: "No Issues Found!"
+
+Format each item as follows:
+- ISSUE_[ID]
+- TITLE: [Short description of junk or dead code]
+- PATH: [Full file path & line range, or folder path]
+- REASON: [Technical proof showing zero references across the workspace]
+- ACTION: [Delete File / Delete Folder / Remove Code Block]
+
+GATE:
+Halt and output exactly:
+"TRIAGE COMPLETE. AWAITING EXPLICIT USER CONFIRMATION TO EXECUTE PHASE 2 FOR SPECIFIC ISSUE_IDs."
+
+PHASE 2: EXECUTION & PATCHING
+Only process user-approved ISSUE_IDs.
+
+For code block removals, format output as:
+1. FILE: [Full file path]
+2. OLD/CURRENT CODE:
+[Exact code block to remove, including exactly two lines of context above and two lines below]
+3. NEW REPLACEMENT CODE:
+[Exact replacement code block, including the identical two lines of context above and below]
+
+For file or folder deletions, format output as:
+ACTION: DELETE FILE/FOLDER
+PATH: [Full path]
+
+PHASE 3: VERIFICATION
+Verify that no dangling references, broken dependencies, or compilation errors will occur from the removals.
+If verification is limited to manual inspection, output:
+"VERIFICATION IS BASED ON STATIC CODE REVIEW ONLY."

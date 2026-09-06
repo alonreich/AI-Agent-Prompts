@@ -1489,6 +1489,244 @@ def recycle_purge_all():
 
 
 
+git_push_lock = threading.Lock()
+
+def generate_git_summary(cwd, branch, remote):
+    """Generate a concise, human-readable summary of changes compared to online version."""
+    changed_files = []
+    try:
+        diff_res = subprocess.run(
+            ['git', 'diff', '--name-status', f'{remote}/{branch}'],
+            capture_output=True, text=True, cwd=cwd, encoding='utf-8', errors='replace'
+        )
+        if diff_res.returncode == 0 and diff_res.stdout.strip():
+            for line in diff_res.stdout.strip().splitlines():
+                parts = line.split('\t')
+                if len(parts) >= 2:
+                    changed_files.append(parts[-1].strip().strip('"'))
+    except Exception:
+        pass
+
+    try:
+        status_res = subprocess.run(
+            ['git', 'status', '--porcelain'],
+            capture_output=True, text=True, cwd=cwd, encoding='utf-8', errors='replace'
+        )
+        if status_res.returncode == 0 and status_res.stdout.strip():
+            for line in status_res.stdout.strip().splitlines():
+                path = line[3:].strip().strip('"')
+                if path and path not in changed_files:
+                    changed_files.append(path)
+    except Exception:
+        pass
+
+    if not changed_files:
+        return "Sync with remote"
+
+    agents = []
+    groups = []
+    others = []
+
+    for path in changed_files:
+        m = re.match(r'AI Agent Prompts/Group\d+ - \[(.*?)\]/(.*?)/', path)
+        if m:
+            grp, ag = m.group(1), m.group(2)
+            if ag not in agents:
+                agents.append(ag)
+            if grp not in groups:
+                groups.append(grp)
+        elif 'AI Agent Prompts.html' in path:
+            others.append('frontend UI')
+        elif 'bridge.py' in path:
+            others.append('bridge backend')
+        elif any(doc in path for doc in ['project_structure.txt', 'README.md', 'CLAUDE.md']):
+            others.append('documentation')
+        elif path.endswith('.bat'):
+            others.append('scripts')
+        else:
+            others.append('project files')
+
+    parts = []
+    if agents:
+        if len(agents) <= 3:
+            parts.append(f"Update prompts ({', '.join(agents)})")
+        else:
+            parts.append(f"Update {len(agents)} prompts across {len(groups)} groups")
+    if others:
+        unique_others = list(dict.fromkeys(others))
+        parts.append(' + '.join(unique_others))
+
+    summary = '; '.join(parts) if parts else "Update project files"
+    summary = summary.replace('"', "'").replace('\n', ' ').strip()
+    return summary[:100]
+
+
+def run_git_push_stream():
+    """Stream git push operations step-by-step with real-time output and diagnostics."""
+    if not git_push_lock.acquire(blocking=False):
+        yield f"data: {json.dumps({'type': 'complete', 'success': False, 'stage': 'lock', 'message': 'Git push is already running.', 'why': 'Another Git push process is currently active. Please wait for it to complete.'})}\n\n"
+        return
+
+    try:
+        def sse_event(evt_type, **kwargs):
+            payload = {"type": evt_type, **kwargs}
+            return f"data: {json.dumps(payload)}\n\n"
+
+        def exec_stream(cmd):
+            yield sse_event('cmd', line=' '.join(cmd))
+            try:
+                proc = subprocess.Popen(
+                    cmd,
+                    cwd=ROOT_DIR,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=1,
+                    encoding='utf-8',
+                    errors='replace'
+                )
+            except Exception as e:
+                yield sse_event('error', line=f"Failed to execute command: {e}")
+                return -1, str(e)
+
+            collected = []
+            for line in iter(proc.stdout.readline, ''):
+                clean = line.rstrip('\r\n')
+                collected.append(clean)
+                yield sse_event('out', line=clean)
+            proc.stdout.close()
+            code = proc.wait()
+            return code, "\n".join(collected)
+
+        yield sse_event('info', line='Checking Git environment and repository configuration...')
+
+        # 1. Verify Git executable
+        code, out = yield from exec_stream(['git', '--version'])
+        if code != 0:
+            yield sse_event('complete', success=False, stage='git-check',
+                            message='Git executable not found in PATH.',
+                            why='Git is not installed or not in the Windows PATH environment variable.',
+                            detail=out)
+            return
+
+        # 2. Check / Init repository
+        git_dir = os.path.join(ROOT_DIR, '.git')
+        if not os.path.isdir(git_dir):
+            yield sse_event('info', line='Initializing new Git repository...')
+            code, out = yield from exec_stream(['git', 'init'])
+            if code != 0:
+                yield sse_event('complete', success=False, stage='init',
+                                message='Failed to initialize Git repository.',
+                                why='Git init returned an error code.',
+                                detail=out)
+                return
+        else:
+            yield sse_event('info', line='Git repository verified.')
+
+        # 3. Verify user name / email
+        name_chk = subprocess.run(['git', 'config', 'user.name'], capture_output=True, text=True, cwd=ROOT_DIR)
+        if not name_chk.stdout.strip():
+            yield from exec_stream(['git', 'config', 'user.name', 'AI Agent Prompt Dev'])
+        email_chk = subprocess.run(['git', 'config', 'user.email'], capture_output=True, text=True, cwd=ROOT_DIR)
+        if not email_chk.stdout.strip():
+            yield from exec_stream(['git', 'config', 'user.email', 'dev@ai-agent-prompt.local'])
+
+        # 4. Determine current branch
+        branch_proc = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], capture_output=True, text=True, cwd=ROOT_DIR)
+        branch = branch_proc.stdout.strip()
+        if not branch or branch == 'HEAD':
+            branch = 'main'
+            yield from exec_stream(['git', 'checkout', '-B', 'main'])
+        yield sse_event('info', line=f'Active branch: {branch}')
+
+        # 5. Determine remote
+        remote_proc = subprocess.run(['git', 'remote'], capture_output=True, text=True, cwd=ROOT_DIR)
+        remotes = [r.strip() for r in remote_proc.stdout.splitlines() if r.strip()]
+        if not remotes:
+            yield sse_event('complete', success=False, stage='remote',
+                            message='No Git remote configured.',
+                            why='Cannot push online without a remote repository URL. Add a remote using: git remote add origin <URL>.',
+                            detail='git remote returned empty list')
+            return
+        remote = 'origin' if 'origin' in remotes else remotes[0]
+        yield sse_event('info', line=f'Target remote: {remote}')
+
+        # 6. Generate summary commit message
+        commit_msg = generate_git_summary(ROOT_DIR, branch, remote)
+        yield sse_event('summary', message=f'Summary: {commit_msg}')
+        yield sse_event('info', line=f'Commit message: "{commit_msg}"')
+
+        # 7. git add .
+        yield sse_event('info', line='Staging all modifications and untracked files...')
+        code, out = yield from exec_stream(['git', 'add', '.'])
+        if code != 0:
+            yield sse_event('complete', success=False, stage='stage',
+                            message='Failed to stage changes (git add .).',
+                            why='Git could not stage files. Check file permissions or locked files.',
+                            detail=out)
+            return
+
+        # 8. git commit
+        diff_cached = subprocess.run(['git', 'diff', '--cached', '--quiet'], cwd=ROOT_DIR)
+        has_staged_changes = (diff_cached.returncode != 0)
+        if has_staged_changes:
+            yield sse_event('info', line='Committing staged changes...')
+            code, out = yield from exec_stream(['git', 'commit', '-m', commit_msg])
+            if code != 0:
+                yield sse_event('complete', success=False, stage='commit',
+                                message='Failed to commit changes.',
+                                why='Git commit returned a non-zero exit status.',
+                                detail=out)
+                return
+            yield sse_event('success', line='Commit created successfully.')
+        else:
+            yield sse_event('info', line='Working tree clean. No new file modifications to commit.')
+
+        # 9. git push
+        yield sse_event('info', line=f'Pushing to {remote}/{branch}...')
+        upstream_chk = subprocess.run(['git', 'rev-parse', '--abbrev-ref', f'{branch}@{{u}}'], capture_output=True, text=True, cwd=ROOT_DIR)
+        push_cmd = ['git', 'push', remote, branch]
+        if upstream_chk.returncode != 0:
+            push_cmd = ['git', 'push', '-u', remote, branch]
+
+        code, out = yield from exec_stream(push_cmd)
+        if code != 0:
+            lower_out = out.lower()
+            why = 'Git push command exited with non-zero status.'
+            if 'fetch first' in lower_out or 'non-fast-forward' in lower_out or '[rejected]' in lower_out:
+                why = 'Remote rejected the push because remote has commits that do not exist locally (non-fast-forward). Pull or rebase the remote changes first.'
+            elif 'permission to' in lower_out and 'denied' in lower_out or 'authentication failed' in lower_out:
+                why = 'GitHub authentication failed or permission denied. Check your credentials, SSH key, or Personal Access Token.'
+            elif 'could not resolve host' in lower_out or 'unable to access' in lower_out or 'timed out' in lower_out:
+                why = 'Network error: Unable to reach GitHub. Please check your network connection.'
+            elif 'repository not found' in lower_out:
+                why = f"Remote repository '{remote}' not found on GitHub. Check the remote URL."
+            elif 'protected branch' in lower_out:
+                why = f"Branch '{branch}' is protected by GitHub branch protection rules."
+
+            yield sse_event('complete', success=False, stage='push',
+                            message=f'Git push failed with exit code {code}.',
+                            why=why,
+                            detail=out)
+            return
+
+        yield sse_event('success', line=f'Push to {remote}/{branch} completed successfully!')
+        yield sse_event('complete', success=True, stage='done',
+                        message=f'Pushed successfully to {remote}/{branch}',
+                        commit=commit_msg if has_staged_changes else None)
+
+    finally:
+        git_push_lock.release()
+
+
+@app.route('/api/git-push', methods=['POST'])
+def api_git_push():
+    """Trigger automated Git add, commit, and push workflow, streaming progress to client."""
+    return Response(run_git_push_stream(), mimetype='text/event-stream')
+
+
+
+
 @app.route('/')
 def index():
     try:

@@ -7,12 +7,16 @@ MISSION:
 Statically audit UI markup (HTML/XML/JSX/etc.), stylesheets, component templates, and state management architecture to identify architectural flaws, UX/UI fragmentation, and layout performance issues. Explicitly flag static analysis blind spots as runtime risks.
 
 AUDIT CATEGORIES:
-1. DESIGN SYSTEM & STYLE BREAKAGE: Hardcoded assets, design token/variable duplication, broken theme inheritance, and disconnected style bindings.
-2. STATE MANAGEMENT & ARCHITECTURAL FLAWS: Broken data contexts, improper event handlers, missing state bindings on input controls, and missing loading/disabled/error visual states.
-3. PERFORMANCE & RENDER TREE REFACTORING: Excessive DOM/layout nesting, abusive usage of expensive reactive computations, hardcoded dimensions breaking responsiveness/scaling, and risky absolute positioning or margin abuse.
-4. MICRO-INTERACTION & ACCESSIBILITY ACCURACY: Missing pointer cursors on interactive controls, unconfigured focus/hover/active states within component templates, and obvious WCAG 2.2 focus navigation gaps visible in markup.
-5. ERROR FEEDBACK & COGNITIVE FRICTION: Missing DataValidationErrors templates, absent inline text warnings for destructive operations, or lack of explicit watermarks/placeholders in data-entry fields.
-6. VISUAL HIERARCHY & CONTRAST DEVIATION: Identical styling applied to primary and secondary actions in the same layout pane, missing distinct Header text properties on control groups, and layout configurations that mix multi-step wizards without explicit visual step indicators.
+1. DESIGN SYSTEM, ICONS & VISUAL LANGUAGE: Hardcoded assets, theme inheritance, disconnected style bindings, and consistent icon style, size, meaning, and tooltips.
+2. STATE MANAGEMENT, LOADING & ACTION FEEDBACK: Broken data contexts, missing loading/empty/error visual states, and clear feedback for save success, progress, undo, destructive-action warnings, or failed data.
+3. PERFORMANCE, RESPONSIVENESS & SCALING: Excessive DOM nesting, hardcoded dimensions breaking responsiveness/resizing/DPI/clipping/overflow, and risky absolute positioning.
+4. ACCESSIBILITY & MICRO-INTERACTIONS: Missing pointer cursors, WCAG 2.2 focus navigation gaps, keyboard use, focus order, screen-reader labels, and tap target sizes.
+5. FORMS, INPUT UX & ERROR COGNITIVE FRICTION: Labels, validation, required fields, defaults, input clarity, absent inline text warnings for destructive operations, and explicit placeholders.
+6. VISUAL HIERARCHY & CONTRAST DEVIATION: Identical styling applied to primary and secondary actions, missing distinct Header text properties, and multi-step wizards without explicit visual step indicators.
+7. NAVIGATION & SCREEN FLOW: Static evaluation of menus, back behavior, tabs, and logical routing movement between screens.
+8. DIALOGS & WINDOW BEHAVIOR: Modal size constraints, close/cancel behavior, focus trapping, and z-index stacking.
+9. TERMINOLOGY & CONTENT CONSISTENCY: Same action, name, and wording used consistently across app components.
+10. LOCALIZATION & RTL (STATIC FLAGS): Hardcoded LTR constraints (e.g., margin-left vs margin-inline) affecting Hebrew support, long text alignment, and mixed Hebrew/English handling.
 
 KNOWN STATIC AUDIT BLIND SPOTS (FLAG AS RUNTIME RISKS):
 - Runtime Rendering & Clipping: Unforeseen element collisions, text overflow, and clipping during window resizing/viewport shifts.
@@ -39,7 +43,6 @@ Use this exact format for each defect rank 1 being most critical. do not use fil
 - CURRENT BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how currently the app/software/UI/UX feels or reflect to the end-user before the fix]
 - EXPECTED BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how the app/software/UI/UX would feel or reflect any different to the end-user after the fix is applied]
 Separate each issue by printing an empty line, a line containing only &nbsp;, and another empty line.
-If zero Critical issues exist, output "NO CRITICAL ISSUES FOUND" and proceed to High/Medium/Low.
 
 If zero Critical issues exist, output "NO CRITICAL ISSUES FOUND" and proceed to High/Medium/Low.
 
