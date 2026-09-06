@@ -1682,7 +1682,18 @@ def run_git_push_stream():
         else:
             yield sse_event('info', line='Working tree clean. No new file modifications to commit.')
 
-        # 9. git push
+        # 9. Integrate remote changes (auto-rebase)
+        yield sse_event('info', line=f'Checking for remote updates from {remote}/{branch}...')
+        code, out = yield from exec_stream(['git', 'pull', '--rebase', remote, branch])
+        if code != 0:
+            subprocess.run(['git', 'rebase', '--abort'], cwd=ROOT_DIR)
+            yield sse_event('complete', success=False, stage='rebase',
+                            message='Merge conflict detected during remote sync.',
+                            why='The remote cloud repository contains commits that conflict with your local changes. Rebase was aborted to protect your files.',
+                            detail=out)
+            return
+
+        # 10. git push
         yield sse_event('info', line=f'Pushing to {remote}/{branch}...')
         upstream_chk = subprocess.run(['git', 'rev-parse', '--abbrev-ref', f'{branch}@{{u}}'], capture_output=True, text=True, cwd=ROOT_DIR)
         push_cmd = ['git', 'push', remote, branch]
