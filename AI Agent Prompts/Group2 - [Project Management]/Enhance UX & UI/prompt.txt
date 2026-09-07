@@ -40,8 +40,8 @@ Use this exact format for each defect rank 1 being most critical. do not use fil
 - ISSUE_[ID]
 - TITLE: [Catchy Extremely Shortened (few words) Description of the Issue]
 - PATH: [Full File Name + Path & From which Line to which Line in the File]
-- CURRENT BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how currently the app/software/UI/UX feels or reflect to the end-user before the fix]
-- EXPECTED BEHAVIOR: [oversimplified explanation which is easy for the avarage human to understand: explanation of how the app/software/UI/UX would feel or reflect any different to the end-user after the fix is applied]
+- CURRENT BEHAVIOR: [in an oversimplified English which would be extremely easy for the average human to understand and or illustrate as a human: explanation of how currently the app/software/UI/UX feels or reflect to the end-user before the fix]
+- EXPECTED BEHAVIOR: [in an oversimplified English which would be extremely easy for the average human to understand and or illustrate as a human: explanation of how the app/software/UI/UX would feel or reflect any different to the end-user after the fix is applied]
 Separate each issue by printing an empty line, a line containing only &nbsp;, and another empty line.
 
 If zero Critical issues exist, output "NO CRITICAL ISSUES FOUND" and proceed to High/Medium/Low.

@@ -369,11 +369,11 @@ E. Atomic Move Operations:
   3. Clicking the Reset Counters button next to the recycle bin prompts confirmation and purges all copy timestamps across the library.
 
 ### 15. Dev Automated Git Sync (Push & Force Pull Overlay)
-- Purpose: Provide developers with a zero-friction, one-click Git sync and cloud recovery pipeline. Includes automated change detection, smart commit messages, and pushing to remote, as well as a safe force-pull pipeline to overwrite local files with cloud commits when necessary, backed by real-time terminal diagnostics and confirmation safeguards.
+- Purpose: Provide developers with a zero-friction, one-click Git sync and cloud recovery pipeline. Includes automated change detection, smart commit messages, pre-push rebase synchronization, and pushing to remote, as well as a safe force-pull pipeline to overwrite local files with cloud commits when necessary, backed by real-time terminal diagnostics and confirmation safeguards.
 - Main behavior:
   - Discreet developer action buttons (`PUSH` and `PULL`) sit directly above the `#bridge-status` pill in the bottom-right corner (`.dev-actions-bar`).
-  - **Git Push**: Calls `POST /api/git-push`. Verifies/inits Git, checks user config, derives branch and remote, automatically synthesizes a concise commit summary comparing local files to `origin/<branch>`, stages (`git add .`), commits, and pushes to remote.
-  - **Git Force Pull**: Clicking `PULL` first triggers a high-visibility warning confirmation dialog detailing that all local changes will be replaced. Upon confirmation, calls `POST /api/git-pull`. Runs `git fetch <remote> <branch>`, `git reset --hard <remote>/<branch>`, and `git clean -fd`, then triggers backend folder re-indexing and client-side UI sync (`syncFromBridge()`).
+  - **Git Push**: Calls `POST /api/git-push`. Verifies/inits Git, checks user config, derives branch and remote, automatically synthesizes a concise commit summary comparing local files to `origin/<branch>`, stages (`git add .`), commits, runs `git pull --rebase` to incorporate remote changes, and pushes to remote (`git push origin <branch>`).
+  - **Git Force Pull**: Clicking `PULL` first triggers a high-visibility warning confirmation dialog detailing that all local changes will be replaced. Upon confirmation, calls `POST /api/git-pull`. Runs `git fetch <remote> <branch>`, `git reset --hard <remote>/<branch>`, and `git clean -fd`, then triggers backend folder re-indexing (`migrate_folders_locked()`) and client-side UI sync (`syncFromBridge()`).
   - Both operations stream command execution and stdout/stderr output in real time over Server-Sent Events (SSE) into `#git-push-terminal`.
 - UI/UX behavior:
   - Both buttons render at low resting opacity (0.28) to avoid cluttering normal usage.
@@ -383,17 +383,24 @@ E. Atomic Move Operations:
   - The live terminal console displays colored log streams (`cmd`, `out`, `info`, `warning`, `error`, `success`).
   - On failure, a structured error card explains what happened and why it failed with a `RETRY` button.
   - On success, the modal displays green status indicators and triggers a fading green toast notification (`showToast(..., 'success')`).
+- Logic Details:
+  - Dynamic Commit Synthesis: Evaluates `git diff --cached --name-status` against `origin/<branch>` (or HEAD) and synthesizes human-readable category summaries: core infrastructure (`bridge.py`, installers), frontend layout/styling (`AI Agent Prompts.html`), architectural documentation (`project_structure.txt`, `README.md`, `CLAUDE.md`), and prompt data additions/modifications.
+  - Pre-Push Auto-Rebase: To prevent `[rejected] (fetch first)` non-fast-forward push failures when remote commits exist upstream, the backend runs `git pull --rebase <remote> <branch>`. If conflicts arise, it automatically executes `git rebase --abort` to protect local files and surfaces actionable conflict diagnostics.
+  - Safe Force-Pull Protocol: Runs `git fetch <remote> <branch>`, `git reset --hard <remote>/<branch>`, and `git clean -fd`, then invokes `migrate_folders_locked()` to update backend folder state and triggers frontend `syncFromBridge()` to refresh the dashboard DOM.
+  - SSE Protocol: Subprocess output lines are streamed in real time using `text/event-stream` with payload format `{"type": "cmd"|"out"|"err"|"info"|"success"|"error"|"done", "text": "..."}`.
 - Failure handling:
-  - Subprocess errors halt execution and stream detailed diagnostic reasons.
+  - Subprocess errors halt execution and stream detailed diagnostic reasons (stage, what happened, why it failed).
   - Concurrency is protected by a unified `git_op_lock` on the backend and client-side button disablement.
+  - Rebase conflicts auto-abort (`git rebase --abort`) immediately to avoid corrupting the working tree.
 - Acceptance Criteria:
   1. Discreet 'PUSH' and 'PULL' buttons are positioned side-by-side above the bridge status pill.
   2. 'PULL' button turns reddish on hover as a visual warning cue.
   3. Clicking 'PULL' opens a clear, easy-to-understand destructive action warning dialog.
   4. Confirming force-pull overwrites all local files with cloud commits and cleans untracked files.
   5. Real-time CMD terminal modal streams execution logs live for both push and pull.
-  6. Clear, detailed error breakdowns are presented if any operation fails.
-  7. Clear green fading toast appears on successful execution.
+  6. Auto-rebase integrates remote changes cleanly before pushing, or cleanly aborts on merge conflicts.
+  7. Clear, detailed error breakdowns are presented if any operation fails.
+  8. Clear green fading toast appears on successful execution.
 
 ===============================================================================
 8. CACHING POLICY
@@ -729,9 +736,13 @@ G. Backend
    - POST /api/git-push           {}
      Automated developer sync pipeline. Stages all changes (git add .),
      synthesizes a concise commit summary comparing against online remote,
-     creates commit, and pushes to remote (git push origin <branch>) while
-     streaming real-time stdout/stderr lines over Server-Sent Events (SSE).
+     creates commit, integrates upstream commits via 'git pull --rebase'
+     (auto-aborts via 'git rebase --abort' on conflict), and pushes to remote
+     (git push origin <branch>) while streaming real-time stdout/stderr lines
+     over Server-Sent Events (SSE). Protected by git_op_lock.
    - POST /api/git-pull           {}
      Automated developer force-pull pipeline. Fetches cloud commits, resets
-     local working tree and index (--hard), and cleans untracked files (-fd)
-     to match the cloud repository while streaming real-time output over SSE.
+     local working tree and index (--hard), cleans untracked files (-fd)
+     to match the cloud repository, triggers backend folder re-indexing
+     (migrate_folders_locked()), and signals client sync (syncFromBridge())
+     while streaming real-time stdout/stderr output over SSE.

@@ -23,8 +23,8 @@ ISSUE_[ID]
 TITLE: [Catchy, extremely short description]
 TYPE: [BUG / UI / UX / PERFORMANCE / RESOURCE / SECURITY / RISK]
 PATH: [Full file name + path & exact line range]
-CURRENT BEHAVIOR: [Oversimplified explanation for the average human: what is broken or risky right now]
-EXPECTED BEHAVIOR: [Oversimplified explanation for the average human: how the software will act/feel after it is fixed]
+CURRENT BEHAVIOR: [in an oversimplified English which would be extremely easy for the average human to understand and or illustrate as a human: what is wrong/broken/incorrect/risky as of now before the fix, and how that might effect the app / the pc / the overall experience of the app]
+EXPECTED BEHAVIOR: [in an oversimplified English which would be extremely easy for the average human to understand and or illustrate as a human: how it would be any different after the suggested fix.]
 between one issue to another keep a clear clean 2 empty lines of separation.
 [Empty Line]
 &nbsp;
