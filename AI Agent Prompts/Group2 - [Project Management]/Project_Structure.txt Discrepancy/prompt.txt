@@ -1,22 +1,29 @@
-Analyze the provided ./project_structure.txt file for internal logical inconsistencies, contradictory statements, architectural flaws, and documentation bloat. Bloat includes obsolete issue documentation, trivial/obvious details that waste token input, and completely redundant sections.
-Then compare ./project_structure.txt against all provided code files.
-Identify only real discrepancies or confirmed bloat that are directly supported by the provided files.
-Do not guess. Do not assume missing information. Do not invent issues. If evidence is unclear, state that the issue cannot be confirmed.
+Analyze ./project_structure.txt and only the explicitly provided project code files. Ignore vendor folders, lockfiles, and minified assets.
 
-For each confirmed issue or bloated section, use exactly this format:
-Rank issues from 1 (critical). Cut the filler. Stop when major pipeline issues are exposed.
-Rank: [The issue id numeric value]
-Title: [An extremely short yet catchy title for the issue or bloat detected]
-Vector: [State exactly: "Project_Structure.txt File vs. Project_Structure.txt", "Project_Structure.txt File vs. The Actual Project's Code Files Written", OR "Documentation Bloat"]
-The Issue Which Was Detected: [In oversimplified English, explain the exact discrepancy, contradiction, or unnecessary bloat found. If bloat, justify why it is obsolete, redundant, or too obvious for an AI to need]
-Suggested Solution: [In oversimplified English, the suggested correction, fix, or removal to apply upon end user's approval]
-Solution Target: [State explicitly if patching project_structure.txt OR name the exact code file/files to be corrected]
+Audit for five specific vectors to create a high-density, context-complete technical reference:
+1. Code Contradiction: Statements in ./project_structure.txt conflicting with actual code implementation.
+2. Critical Omission: Core entry points, main classes, primary data flows, required .env variables, or runtime prerequisites present in code but missing from documentation. (Ignore trivial helpers and private functions).
+3. Dead Artifact: References to deleted files, obsolete functions, or deprecated workflows.
+4. Token Optimization: Chatty, conversational paragraphs that can be compressed into high-density technical bullets without losing architectural facts.
+5. Tree Mismatch: Directory tree mismatches against the physical repository layout provided.
 
-Halt. Allow the end user to either "Confirm" or "Deny" each numeric issue suggested.
+Guardrails:
+- Report only confirmed findings directly evidenced by the provided files.
+- Do not assume or guess the contents of files not provided.
+- Discard ambiguous items and formatting preferences.
+- Do not modify any files or execute code during this step.
 
-Rules:
-1. Do not use filler.
-2. Do not repeat the same issue.
-3. Do not report style preferences as issues.
-4. Only report problems that could cause wrong documentation, wrong architecture, wrong code behavior, or severe token bloat.
-5. If no confirmed inconsistencies or bloat are found, output exactly: "No Discrepancies Found!"
+Format each finding using this exact schema, ordered by severity (1 = execution-breaking, 2 = mismatch/dead artifact, 3 = bloat/compression):
+
+Issue ID: [Sequential Number, e.g., 1]
+Rank: [Severity Number: 1, 2, or 3]
+Title: [Concise, descriptive title]
+Vector: [Choose one: "Code Contradiction", "Critical Omission", "Dead Artifact", "Token Optimization", or "Tree Mismatch"]
+Evidence: [Exact file paths, line numbers, or verbatim quotes proving the issue]
+Issue Detected: [Factual explanation of the gap, conflict, or inefficiency]
+Suggested Solution: [Exact replacement text, deletion, or concise compressed technical snippet]
+Solution Target: [Exact file path to modify]
+
+If no verifiable issues or optimization opportunities exist, output exactly: "No Discrepancies Found!"
+
+Halt immediately after outputting all findings. Await explicit user "Confirm" or "Deny" per Issue ID before applying changes.

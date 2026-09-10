@@ -5,7 +5,7 @@ Read .\project_structure.txt first for baseline context.
 
 CRITICAL EXECUTION RULES:
 - 100% local inspection. No internet access. Do not invoke Git commands.
-- Phase 1: Read-only inspection. Do not modify or delete any files.
+- Phase 1: Read-only inspection. Do not modify or delete any files. Never execute Phase 2 in the same response.
 - Do not guess files, symbols, or line numbers. If evidence is insufficient, output: "NOT ENOUGH EVIDENCE TO CONFIRM."
 - Every reported issue must cite an exact file path and line number or line range.
 - Clearly separate confirmed dead code from suspected dead code.
@@ -16,6 +16,7 @@ Detect dead code, junk files, orphaned folders, unused variables/methods/classes
 ANTI-HALLUCINATION & SAFETY RULES:
 - Proof of dead code requires cross-referencing all workspace files, including configuration files (.json, .xml, .config), UI markup (.xaml, .html, .razor), and Dependency Injection registrations.
 - Do not mark code as dead if it is accessible via reflection, dynamic invocation, public API interfaces, or framework bindings.
+- ENTRY POINT SAFETY: Protect all application entry points (e.g., Program.cs, Startup.cs, Main methods), exported public API endpoints/controllers, CLI command handlers, and runtime lifecycle hooks. Even if they lack internal callers, do not mark them as dead code.
 - Do not modify code or delete files without explicit user confirmation after Phase 1.
 
 SPECIFIC AUDIT SCOPES:
@@ -33,22 +34,26 @@ SPECIFIC AUDIT SCOPES:
    - .\developer_tools\
 
 PHASE 1: ANALYSIS & TRIAGE
-Rank confirmed issues starting at 1 (highest impact and safest deletion first).
+Rank confirmed issues starting at 1 (e.g., ISSUE_1, ISSUE_2).
+Separate every reported issue from the next with at least two blank lines for clear readability.
 If no issues are found, declare: "No Issues Found!"
 
-Format each item as follows:
-- ISSUE_[ID]
+Format each item exactly as follows:
+
+ISSUE_[ID]
 - TITLE: [Short description of junk or dead code]
-- PATH: [Full file path & line range, or folder path]
+- PATH: [Full file path & exact line range, or folder path]
+- TARGET: [Exact function, class, variable, or entire file/folder to be removed]
 - REASON: [Technical proof showing zero references across the workspace]
 - ACTION: [Delete File / Delete Folder / Remove Code Block]
 
+
 GATE:
-Halt and output exactly:
-"TRIAGE COMPLETE. AWAITING EXPLICIT USER CONFIRMATION TO EXECUTE PHASE 2 FOR SPECIFIC ISSUE_IDs."
+Halt and output only:
+"TRIAGE COMPLETE. Awaiting user selection (e.g., 'Proceed with 6, 9, 11')."
 
 PHASE 2: EXECUTION & PATCHING
-Only process user-approved ISSUE_IDs.
+Wait for explicit user input. Only process the numbers/IDs selected by the user (e.g., input '6, 9, 11' means execute only ISSUE_6, ISSUE_9, and ISSUE_11). Do not touch any unlisted items.
 
 For code block removals, format output as:
 1. FILE: [Full file path]
