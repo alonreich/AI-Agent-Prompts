@@ -1721,8 +1721,8 @@ def run_git_push_stream():
                 '.gitignore',
                 '.gitattributes'
             ])
-            # Extra safety barrier: ensure [RECYCLE BIN] and local copy_time.txt are never staged in index
-            subprocess.run(['git', 'reset', 'HEAD', '--', '[RECYCLE BIN]', '**/copy_time.txt', 'copy_time.txt'], cwd=ROOT_DIR, capture_output=True)
+            # Extra safety barrier: ensure [RECYCLE BIN] and local copy_time.txt are never tracked in index
+            subprocess.run(['git', 'rm', '--cached', '-r', '--ignore-unmatch', '[RECYCLE BIN]', '**/copy_time.txt', 'copy_time.txt'], cwd=ROOT_DIR, capture_output=True)
             if code != 0:
                 yield sse_event('complete', success=False, stage='stage',
                                 message='Failed to stage changes.',
@@ -1746,9 +1746,9 @@ def run_git_push_stream():
             else:
                 yield sse_event('info', line='Working tree clean. No new file modifications to commit.')
 
-        # 9. Integrate remote changes (auto-rebase)
+        # 9. Integrate remote changes (auto-rebase with autostash)
         yield sse_event('info', line=f'Checking for remote updates from {remote}/{branch}...')
-        code, out = yield from exec_stream(['git', 'pull', '--rebase', remote, branch])
+        code, out = yield from exec_stream(['git', 'pull', '--rebase', '--autostash', remote, branch])
         if code != 0:
             subprocess.run(['git', 'rebase', '--abort'], cwd=ROOT_DIR)
             yield sse_event('complete', success=False, stage='rebase',
