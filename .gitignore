@@ -22,10 +22,14 @@ dist/
 .DS_Store
 
 # === Project Specific ===
+# Purely local per-machine copy timestamps - never synced via Git
+copy_time.txt
+**/copy_time.txt
 logs/
 *.log
 .recycle-bin/
-[RECYCLE BIN]/
+\[RECYCLE BIN\]/
+\[RECYCLE BIN\]/**
 RECYCLE_BIN/
 .openclaw/
 .bridge.pid

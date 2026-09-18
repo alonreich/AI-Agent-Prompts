@@ -97,6 +97,15 @@ E. Atomic Move Operations:
    - Relocations are performed as a single disk move (`shutil.move`), 
      eliminating duplicates and ensuring data integrity.
 
+F. Atomic Persistence & Safe Archival:
+   - All prompt and metadata updates use atomic temp-file creation, buffer
+     flush, hardware fsync, and `os.replace` (`robust_replace`) to prevent 0-byte
+     truncation on power/process interruption.
+   - Collision resolution during read never deletes files; colliding legacy
+     prompts are archived into `[RECYCLE BIN]`.
+   - Git operations synchronize with the filesystem `migration_lock` and `.gitignore`
+     strictly ignores `[RECYCLE BIN]` with escaped bracket globs.
+
 ===============================================================================
 4. SYSTEM OPERATION & STARTUP
 ===============================================================================
@@ -107,7 +116,12 @@ E. Atomic Move Operations:
   another bridge instance is already serving port 5589. Duplicate processes
   are therefore impossible regardless of how the bridge is launched.
 - Persistence (primary): A Windows Scheduled Task named 'AIAgentPromptBridge'
-  runs at user logon with STANDARD (non-admin) privileges.
+  runs at user logon with STANDARD (non-admin) privileges. Fully hardened for
+  laptops and battery environments: DisallowStartIfOnBatteries=false,
+  StopIfGoingOnBatteries=false, Priority=4 (Interactive/Normal priority preventing
+  Windows Battery Saver/Modern Standby suppression), StopOnIdleEnd=false,
+  ExecutionTimeLimit=PT0S (no 72h auto-kill), and GroupId BUILTIN\Users with
+  unrestricted LogonTrigger for resilient MSA, Entra ID, PIN, and offline start.
 - Persistence (fallback): If task creation fails, a VBS launcher is created at:
   %LOCALAPPDATA%\AIAgentPromptController\silent_start.vbs
   plus a shortcut in the user's Startup folder.
@@ -281,19 +295,25 @@ E. Atomic Move Operations:
   3. The recycle bin badge updates immediately after a deletion.
 
 ### 8. Drag and Drop Architecture (Groups & Agents)
-- Purpose: Allow fluid reorganization of agents across groups, and reordering of the groups themselves.
-- Main behavior: Client-side HTML5 drag-and-drop combined with atomic backend folder manipulation.
-- System behavior: 
-  - Agent Drag: Relocates the agent's folder using `shutil.move` via `/api/move`.
-  - Group Drag: Reorders the sequential numbering scheme of the root folders (e.g., swapping `Group2` and `Group3`) via `/api/save-order`.
-- UI/UX behavior: 
-  - Drag handles (`cursor: grab`) are explicitly required to initiate dragging (prevents accidental drags while selecting text).
-  - Valid drop targets highlight dynamically.
-  - Global Trash Zone animates into view only when a drag operation begins.
-- Edge Cases: Dragging an agent into its own current group is a no-op.
+- Purpose: Fluid, top-tier reorganization of agents across groups and reordering of groups without layout thrashing.
+- Main behavior: Pointer-event powered drag-and-drop combined with atomic backend folder manipulation (`/api/move`) and top-tier physics.
+- Group Dragging Architecture (Midpoint & Hysteresis Slot Swapping):
+  - 50% Midpoint Intersection: Groups maintain their stable grid positions until the midpoint of the dragged ghost crosses 50% into a neighboring group's bounding box.
+  - Hysteresis Deadband: A 20px spatial buffer prevents oscillation or flickering when hovering near borders.
+  - Spring Slot Evacuation: Surrounding groups glide smoothly with Apple-style spring easing (`cubic-bezier(0.16, 1, 0.3, 1)`) to open a dedicated slot for the dragged group.
+  - Raw-pixel continuous masonry repacking is eliminated during flight.
+- Card Dragging Architecture (Elastic Slot Void Mechanics):
+  - Elastic Placeholder Void: An exact-dimension `.agent-card.card-placeholder` reserves space in the grid while the dragged card floats in an elevated plane.
+  - Vertical Midpoint Displacement: Sibling cards slide smoothly via FLIP animations (`cubic-bezier(0.16, 1, 0.3, 1)`) only when the pointer crosses their vertical midpoint.
+  - Zero In-Flight DOM Mutilation: Cards are not reshuffled or sorted by string length while in mid-air.
+- Ghost Rendering & Inertial Physics:
+  - Glassmorphic Ghost: `.drag-ghost` renders at 68% opacity with `backdrop-filter: blur(8px)` so users can see drop targets beneath the cursor.
+  - Clutter Stripping: Checkboxes, copy buttons, timestamps, badges, and action menus are hidden inside the ghost.
+  - Momentum Tilt: Horizontal velocity ($v_x$) dynamically tilts the ghost ($\pm 3.5^\circ$) to deliver tactile physics matching native OS drag behavior.
+- Edge Cases: Dragging an agent into its own current group slot or cancelling drag returns elements smoothly to their original locations without layout drift.
 - Acceptance Criteria:
   1. The backend performs the move atomically without duplicating the file.
-  2. The UI instantly reflects the new hierarchy.
+  2. The UI reflects the new hierarchy with fluid spring transitions and zero jitter.
 
 ### 9. Real-Time Disk Mirroring (Watchdog Observer)
 - Purpose: Ensure the UI perfectly mirrors the physical file system in real-time without requiring manual browser refreshes.
@@ -363,6 +383,7 @@ E. Atomic Move Operations:
   - The prompt view header displays the timestamp cleanly aligned on the right side of the top navigation bar.
   - A small Reset Counters button positioned immediately to the left of the recycle bin down-arrow button allows users to globally reset and purge all copy timestamps across all prompts at once via `/api/reset-copy-times`.
   - Editing and saving a prompt's text or renaming its title automatically purges the `copy_time.txt` file and resets the timestamp display.
+  - Machine-Local Isolation: `copy_time.txt` is purely local to each physical machine. It is strictly ignored by Git (`.gitignore`), excluded from automated Git staging, and preserved untouched during `git pull` / `git clean -fd`. Copy dates never synchronize between different computers.
 - Acceptance Criteria:
   1. Copying via quick-copy button or main copy button immediately updates the UI with a date/time stamp.
   2. Modifying and saving either the prompt text or title removes the timestamp.

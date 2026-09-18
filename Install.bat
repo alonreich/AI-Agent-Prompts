@@ -15,7 +15,8 @@ title AI Agent Prompt Controller - Professional Setup
 :: Path and Log Setup
 :: ============================================================================
 set "PROJECT_DIR=%~dp0"
-set "PROJECT_DIR=%PROJECT_DIR:~0,-1%"
+if "%PROJECT_DIR:~-1%"=="\" set "PROJECT_DIR=%PROJECT_DIR:~0,-1%"
+cd /d "%PROJECT_DIR%"
 set "BRIDGE_PY=%PROJECT_DIR%\bridge.py"
 set "LOG_DIR=%TMP%\AI-Agent-Prompt"
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
@@ -41,7 +42,7 @@ goto :EOF
 :: ============================================================================
 :PROBE_BRIDGE
 set "HEALTH_OK=0"
-powershell -NoProfile -Command "try { $r = Invoke-RestMethod -Uri '%BRIDGE_URL%/api/ping' -TimeoutSec 3; if ($r.status -eq 'ok') { exit 0 }; exit 1 } catch { exit 1 }" >nul 2>&1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $r = Invoke-RestMethod -Uri '%BRIDGE_URL%/api/ping' -TimeoutSec 3; if ($r.status -eq 'ok') { exit 0 }; exit 1 } catch { exit 1 }" >nul 2>&1
 if %errorLevel% equ 0 set "HEALTH_OK=1"
 goto :EOF
 
@@ -57,11 +58,18 @@ call :LOG "INFO" "Detailed logs will be saved to: %LOG_FILE%"
 echo.
 
 :: ============================================================================
-:: STEP 1: Check for Administrative Privileges
+:: STEP 1: Check for Administrative Privileges (Auto-Elevate if needed)
 :: ============================================================================
 call :LOG "STEP 1/8" "Checking for Administrative Privileges..."
 net session >nul 2>&1
-if %errorLevel% neq 0 goto :NOT_ADMIN
+if %errorLevel% neq 0 (
+    call :LOG "INFO" "Administrator privileges required - prompting for elevation..."
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%~f0' -Verb RunAs" >nul 2>&1
+    if !errorLevel! neq 0 (
+        goto :NOT_ADMIN
+    )
+    exit /b 0
+)
 call :LOG "OK" "Administrative access confirmed."
 echo.
 
@@ -94,6 +102,7 @@ if /i not "%TARGET_DIR%"=="%PROJECT_DIR%" (
     )
     set "PROJECT_DIR=%TARGET_DIR%"
     set "BRIDGE_PY=%TARGET_DIR%\bridge.py"
+    cd /d "%TARGET_DIR%"
     if not exist "!BRIDGE_PY!" (
         call :LOG "ERROR" "bridge.py is missing at the destination after copy. Aborting."
         goto :INSTALL_FAIL
@@ -104,7 +113,6 @@ if /i not "%TARGET_DIR%"=="%PROJECT_DIR%" (
     call :LOG "OK" "Running from current location: %PROJECT_DIR%"
 )
 echo.
-
 :: ============================================================================
 :: STEP 3: Validate Python Environment (probes python, then the py launcher)
 :: ============================================================================
@@ -128,7 +136,7 @@ for /f "tokens=2" %%v in ('%PY_CMD% --version 2^>^&1') do set "DETECTED_PY_VER=%
 call :LOG "INFO" "Found Python version: %DETECTED_PY_VER%"
 
 :: Strip pre-release suffixes (e.g. 3.13.0rc1) before comparing versions
-powershell -NoProfile -Command "$v = $env:DETECTED_PY_VER -replace '[^0-9.].*$',''; if ([version]$v -lt [version]$env:MIN_PYTHON_VERSION) { exit 1 } else { exit 0 }"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $v = $env:DETECTED_PY_VER -replace '[^0-9.].*$',''; if (-not $v -or [version]$v -lt [version]$env:MIN_PYTHON_VERSION) { exit 1 }; exit 0 } catch { exit 1 }"
 if %errorLevel% neq 0 goto :PYTHON_OLD
 
 :: Resolve full interpreter paths so persistence never depends on logon PATH
@@ -255,7 +263,7 @@ call :LOG "OK" "Port 5589 is clear."
 echo.
 
 :: ============================================================================
-:: STEP 7: Configure Persistence (verified, least-privilege)
+:: STEP 7: Configure Persistence (verified, battery-safe, least-privilege)
 :: ============================================================================
 call :LOG "STEP 7/8" "Configuring Persistence for auto-start..."
 
@@ -264,38 +272,50 @@ schtasks /delete /tn "%TASK_NAME%" /f >nul 2>&1
 schtasks /delete /tn "AIAgentBridge" /f >nul 2>&1
 if exist "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\AIAgentBridge.lnk" del /f /q "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\AIAgentBridge.lnk" >nul 2>&1
 if exist "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\AIAgentPromptBridge.lnk" del /f /q "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\AIAgentPromptBridge.lnk" >nul 2>&1
+if exist "%ProgramData%\Microsoft\Windows\Start Menu\Programs\Startup\AIAgentBridge.lnk" del /f /q "%ProgramData%\Microsoft\Windows\Start Menu\Programs\Startup\AIAgentBridge.lnk" >nul 2>&1
+if exist "%ProgramData%\Microsoft\Windows\Start Menu\Programs\Startup\AIAgentPromptBridge.lnk" del /f /q "%ProgramData%\Microsoft\Windows\Start Menu\Programs\Startup\AIAgentPromptBridge.lnk" >nul 2>&1
 
 :: Note: full interpreter path (no PATH dependency at logon), standard user
 :: privileges (the bridge only reads/writes the user's own prompt folder).
-:: ATTEMPT 1 - Hardened registration via the PowerShell ScheduledTasks module.
-:: Classic 'schtasks /create' defaults silently break boot persistence:
-::   - the task will NOT start while the machine is on battery power (laptops)
-::   - the task is force-killed after 72 hours (default ExecutionTimeLimit)
-:: The settings below disable both, fire missed logon triggers when the system
-:: becomes available, and auto-restart the bridge up to 3 times on crash.
-call :LOG "INFO" "Creating hardened Task Scheduler job (runs at logon, standard privileges)..."
+:: ATTEMPT 1 - Hardened registration via PowerShell ScheduledTasks module.
+:: Key hardening attributes for laptops and battery power:
+::   - DisallowStartIfOnBatteries=false (starts on DC battery power)
+::   - StopIfGoingOnBatteries=false (keeps running when unplugged from charger)
+::   - Priority=4 (Normal/Interactive priority - prevents Windows Battery Saver
+::     and Modern Standby from suppressing or deferring execution at boot/logon)
+::   - StopOnIdleEnd=false (keeps running when system leaves idle)
+::   - StartWhenAvailable=true (launches if a scheduled trigger was missed)
+::   - ExecutionTimeLimit=PT0S (runs indefinitely, avoids Windows 72h auto-kill)
+::   - LogonTrigger without hardcoded UserId (triggers reliably for MSA,
+::     Azure AD / Entra ID, Windows Hello PIN, and local accounts)
+::   - GroupId BUILTIN\Users (runs under interactive user token without password)
+::   - RestartCount 3 / RestartInterval 1m (auto-recovers from transient faults)
+call :LOG "INFO" "Creating hardened Task Scheduler job (runs at logon, battery-safe)..."
 set "AIB_PYW=%PYTHONW_EXE%"
 set "AIB_BRIDGE=%BRIDGE_PY%"
 set "AIB_DIR=%PROJECT_DIR%"
 set "AIB_TASK=%TASK_NAME%"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$q=[char]34; $u=$env:USERDOMAIN+'\'+$env:USERNAME; $a=New-ScheduledTaskAction -Execute $env:AIB_PYW -Argument ('-B '+$q+$env:AIB_BRIDGE+$q) -WorkingDirectory $env:AIB_DIR; $t=New-ScheduledTaskTrigger -AtLogOn -User $u; $s=New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1); $p=New-ScheduledTaskPrincipal -UserId $u -LogonType Interactive -RunLevel Limited; Register-ScheduledTask -TaskName $env:AIB_TASK -Action $a -Trigger $t -Settings $s -Principal $p -Force | Out-Null" >>"%LOG_FILE%" 2>&1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$q=[char]34; $a=New-ScheduledTaskAction -Execute $env:AIB_PYW -Argument ('-B '+$q+$env:AIB_BRIDGE+$q) -WorkingDirectory $env:AIB_DIR; $t=New-ScheduledTaskTrigger -AtLogOn; $s=New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -DontStopOnIdleEnd -Priority 4 -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1); $p=New-ScheduledTaskPrincipal -GroupId 'BUILTIN\Users' -RunLevel Limited; Register-ScheduledTask -TaskName $env:AIB_TASK -Action $a -Trigger $t -Settings $s -Principal $p -Force | Out-Null" >>"%LOG_FILE%" 2>&1
 
 :: Probe: confirm the task really exists before trusting it for next boot
 schtasks /query /tn "%TASK_NAME%" >nul 2>&1
 if %errorLevel% equ 0 (
     call :LOG "OK" "Hardened Task Scheduler job '%TASK_NAME%' created and verified."
-    call :LOG "INFO" "Battery-safe, no 72h kill limit, auto-restarts on crash, standard privileges."
+    call :LOG "INFO" "Battery-safe (Priority 4, DC start enabled), no 72h kill limit, auto-restarts on crash."
     set "PERSISTENCE_MODE=task"
     goto :PERSIST_DONE
 )
 
-:: ATTEMPT 2 - Classic schtasks (older systems without the ScheduledTasks module)
-call :LOG "WARNING" "PowerShell task registration failed. Trying classic schtasks..."
-schtasks /create /tn "%TASK_NAME%" /tr "\"%PYTHONW_EXE%\" -B \"%BRIDGE_PY%\"" /sc onlogon /f >>"%LOG_FILE%" 2>&1
+:: ATTEMPT 2 - Hardened XML import via schtasks (bulletproof schema, battery-safe)
+call :LOG "WARNING" "PowerShell task registration failed. Trying XML schtasks import..."
+set "XML_PATH=%TEMP%\aib_task_%RANDOM%.xml"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$lines = @('<?xml version="1.0" encoding="UTF-16"?>','<Task version="1.3" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">','  <RegistrationInfo><Description>AI Agent Prompt Controller Bridge</Description></RegistrationInfo>','  <Principals><Principal id="Author"><GroupId>S-1-5-32-545</GroupId></Principal></Principals>','  <Settings><DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries><StopIfGoingOnBatteries>false</StopIfGoingOnBatteries><ExecutionTimeLimit>PT0S</ExecutionTimeLimit><MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy><Priority>4</Priority><RestartOnFailure><Count>3</Count><Interval>PT1M</Interval></RestartOnFailure><StartWhenAvailable>true</StartWhenAvailable><IdleSettings><Duration>PT10M</Duration><WaitTimeout>PT1H</WaitTimeout><StopOnIdleEnd>false</StopOnIdleEnd><RestartOnIdle>false</RestartOnIdle></IdleSettings><UseUnifiedSchedulingEngine>true</UseUnifiedSchedulingEngine></Settings>','  <Triggers><LogonTrigger /></Triggers>','  <Actions Context="Author"><Exec>',('    <Command>'+$env:AIB_PYW+'</Command>'),('    <Arguments>-B "'+$env:AIB_BRIDGE+'"</Arguments>'),('    <WorkingDirectory>'+$env:AIB_DIR+'</WorkingDirectory>'),'  </Exec></Actions>','</Task>'); [System.IO.File]::WriteAllLines($env:XML_PATH, $lines, [System.Text.Encoding]::Unicode)" >>"%LOG_FILE%" 2>&1
+schtasks /create /tn "%TASK_NAME%" /xml "%XML_PATH%" /f >>"%LOG_FILE%" 2>&1
+del /f /q "%XML_PATH%" >nul 2>&1
 schtasks /query /tn "%TASK_NAME%" >nul 2>&1
-if %errorLevel% equ 0 (
-    call :LOG "OK" "Task Scheduler job '%TASK_NAME%' created via classic schtasks."
-    call :LOG "INFO" "Note: classic mode may pause the bridge on battery power."
+if !errorLevel! equ 0 (
+    call :LOG "OK" "Task Scheduler job '%TASK_NAME%' created via XML import."
+    call :LOG "INFO" "Battery-safe (Priority 4, DC start enabled), no 72h kill limit, auto-restarts on crash."
     set "PERSISTENCE_MODE=task"
     goto :PERSIST_DONE
 )
@@ -308,11 +328,17 @@ call :LOG "INFO" "Falling back to creating a shortcut in the Startup folder..."
     if not exist "!LOCAL_AUTO_START!" mkdir "!LOCAL_AUTO_START!"
     set "VBS_PATH=!LOCAL_AUTO_START!\silent_start.vbs"
 
-    powershell -NoProfile -Command "$vbs = 'Set WinScriptHost = CreateObject(\"WScript.Shell\")' + [char]10 + 'WinScriptHost.Run Chr(34) & \"%PYTHONW_EXE%\" & Chr(34) & \" -B \" & Chr(34) & \"%BRIDGE_PY%\" & Chr(34), 0' + [char]10 + 'Set WinScriptHost = Nothing'; $vbs | Out-File -LiteralPath '!VBS_PATH!' -Encoding ascii" >>"%LOG_FILE%" 2>&1
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "$vbs = 'Set WinScriptHost = CreateObject("WScript.Shell")' + [char]10 + 'WinScriptHost.Run Chr(34) & "%PYTHONW_EXE%" & Chr(34) & " -B " & Chr(34) & "%BRIDGE_PY%" & Chr(34), 0' + [char]10 + 'Set WinScriptHost = Nothing'; $vbs | Out-File -LiteralPath '!VBS_PATH!' -Encoding ascii" >>"%LOG_FILE%" 2>&1
 
     set "STARTUP_FOLDER=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
     set "SHORTCUT_PATH=!STARTUP_FOLDER!\AIAgentPromptBridge.lnk"
-    powershell -NoProfile -Command "$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('!SHORTCUT_PATH!'); $Shortcut.TargetPath = '!VBS_PATH!'; $Shortcut.WorkingDirectory = '%PROJECT_DIR%'; $Shortcut.Save()" >>"%LOG_FILE%" 2>&1
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('!SHORTCUT_PATH!'); $Shortcut.TargetPath = '!VBS_PATH!'; $Shortcut.WorkingDirectory = '%PROJECT_DIR%'; $Shortcut.Save()" >>"%LOG_FILE%" 2>&1
+
+    :: Also write to Common Startup folder for elevated / multi-user resiliency
+    if exist "%ProgramData%\Microsoft\Windows\Start Menu\Programs\Startup" (
+        set "COMMON_SHORTCUT=%ProgramData%\Microsoft\Windows\Start Menu\Programs\Startup\AIAgentPromptBridge.lnk"
+        powershell -NoProfile -ExecutionPolicy Bypass -Command "$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('!COMMON_SHORTCUT!'); $Shortcut.TargetPath = '!VBS_PATH!'; $Shortcut.WorkingDirectory = '%PROJECT_DIR%'; $Shortcut.Save()" >>"%LOG_FILE%" 2>&1
+    )
 
     :: Probe: confirm the fallback artifacts actually exist
     if exist "!SHORTCUT_PATH!" (
@@ -366,13 +392,14 @@ for /f "tokens=5" %%a in ('netstat -aon ^| findstr /r /c:":5589 .*LISTENING"') d
 if defined BRIDGE_PID (
     call :LOG "OK" "Backend is alive and answering on port 5589 (PID: %BRIDGE_PID%)."
     >"%LOG_DIR%\bridge.pid" echo %BRIDGE_PID%
-    call :LOG "INFO" "PID recorded to: %LOG_DIR%\bridge.pid"
+    >"%LOG_DIR%\.bridge.pid" echo %BRIDGE_PID%
+    call :LOG "INFO" "PID recorded to: %LOG_DIR%\bridge.pid and .bridge.pid"
 ) else (
     call :LOG "OK" "Backend is alive and answering on port 5589."
     call :LOG "WARNING" "Listening PID could not be resolved from netstat."
 )
 call :LOG "INFO" "Verifying the backend serves prompt data (/api/data)..."
-powershell -NoProfile -Command "try { $r = Invoke-WebRequest -Uri '%BRIDGE_URL%/api/data' -TimeoutSec 5 -UseBasicParsing; if ($r.StatusCode -eq 200) { exit 0 }; exit 1 } catch { exit 1 }" >nul 2>&1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $r = Invoke-WebRequest -Uri '%BRIDGE_URL%/api/data' -TimeoutSec 5 -UseBasicParsing; if ($r.StatusCode -eq 200) { exit 0 }; exit 1 } catch { exit 1 }" >nul 2>&1
 if %errorLevel% neq 0 (
     call :LOG "WARNING" "Backend is running but /api/data did not return successfully."
     call :LOG "INFO" "Check the bridge log: %BRIDGE_LOG%"

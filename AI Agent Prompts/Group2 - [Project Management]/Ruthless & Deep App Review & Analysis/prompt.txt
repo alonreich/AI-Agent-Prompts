@@ -72,22 +72,16 @@
 ---
 
 ## OUTPUT FORMAT SPECIFICATION
-
 # PART 1: AUDIT FINDINGS & ARCHITECTURAL BRIEFINGS
-
 For each verified issue (Rank 1 to Rank N), output the following block:
-
 ### Finding [Rank #]: [Condensed, Precise Architectural Title]
-
 **High-Impact Architecture / Migration Warning (Conditional):**  
 (Mandatory if recommending an architectural framework shift, language migration, or runtime change. State:  
 1. Current architectural gaps and what the project leaves on the table today.  
 2. Migration complexity, estimated operational friction, and implementation duration.  
 3. Critical risks, potential breaking changes, and failure modes to evaluate before committing).
-
 **Documented Fragility Warning (Conditional):**  
 (Include only if the finding directly touches documented fragile code, known trade-offs, or declared project rules).
-
 **Evidence:**  
 - **File:** `[Exact relative file path]`  
 - **Lines:** `[Line numbers or function name]`  
@@ -95,37 +89,28 @@ For each verified issue (Rank 1 to Rank N), output the following block:
 ```[language]
 [Paste exact relevant code snippet from repository]
 ```
-
 **The Problem (Plain English & Analogy):**  
-(Explain what is broken or inefficient in simple terms. Provide a concrete, real-world analogy so non-technical stakeholders immediately understand the issue).
-
+(Explain what is broken or what is the issue detected or what is inefficient in an oversimplified way.)
 **Industry Standard Benchmark:**  
 (Explain how high-scale production systems solve this properly, and the direct end-user benefit).
-
 **Senior Technical Breakdown:**  
 (Dense, rigorous technical analysis for engineers. Reference exact components, synchronization primitives, memory layout, system calls, or runtime mechanics).
-
 **Adversarial Trade-offs & Retention Case:**  
 (State in 2–3 sentences why the original author likely wrote it this way, what operational or simplicity benefits it provides, and the explicit risk of refactoring it).
 
 ---
 
 # PART 2: AI AGENT IMPLEMENTATION BLUEPRINTS (BATCHED VAULT)
-
 Stack all corresponding AI Agent prompts consecutively at the bottom of the report. Every blueprint must match the rank number and title from Part 1.
-
 ### Blueprint [Rank 1]: [Matching Title from Part 1]
 ```plaintext
 TASK & MISSION GOAL:
 [Exact, unambiguous description of the target refactoring/migration task and operational objective]
-
 CURRENT PROBLEM & ROOT CAUSE:
 [Specific code paths, anti-patterns, synchronization flaws, race conditions, file I/O gaps, or architectural bottlenecks]
-
 ARCHITECTURAL MIGRATION:
 Migrate away from: [Current brittle/outdated pattern or runtime]
 Migrate towards:   [Target decoupled, high-performance design pattern or modern runtime]
-
 TECHNICAL IMPLEMENTATION REQUIREMENTS:
 1. TARGET FILES:
    - [List specific relative file paths to modify]

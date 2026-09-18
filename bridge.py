@@ -210,16 +210,23 @@ def sse_cleanup_thread_func():
             snapshot = list(clients)
         for q in snapshot:
             try:
-
-
                 if q.qsize() > 50:
                     with clients_lock:
                         try: clients.remove(q)
                         except ValueError: pass
+                    try:
+                        q.put_nowait('shutdown')
+                    except Exception:
+                        pass
             except Exception:
                 with clients_lock:
                     try: clients.remove(q)
                     except ValueError: pass
+                try:
+                    q.put_nowait('shutdown')
+                except Exception:
+                    pass
+
 
 
 
@@ -270,8 +277,39 @@ def robust_rename(src, dst, max_retries=8):
             last = e
             logger.warning(f"robust_rename retry {i+1}/{max_retries} "
                            f"'{os.path.basename(src)}' -> '{os.path.basename(dst)}': {e}")
+    raise last
+
+def robust_replace(src, dst, max_retries=8):
+    """os.replace with backoff, for Windows."""
+    last = None
+    for i in range(max_retries):
+        try:
+            os.replace(src, dst)
+            return True
+        except (OSError, PermissionError) as e:
+            last = e
+            logger.warning(f"robust_replace retry {i+1}/{max_retries} "
+                           f"'{os.path.basename(src)}' -> '{os.path.basename(dst)}': {e}")
             time.sleep(0.15 * (i + 1))
     raise last
+
+def atomic_write_text(file_path, content, encoding='utf-8'):
+    """Atomically write text to file_path using temp file + flush + fsync + os.replace."""
+    dir_name = os.path.dirname(os.path.abspath(file_path))
+    os.makedirs(dir_name, exist_ok=True)
+    temp_path = os.path.join(dir_name, f".atomic_{int(time.time()*1000)}_{clean_filename(os.path.basename(file_path))}.tmp")
+    try:
+        with open(temp_path, 'w', encoding=encoding, newline='\r\n' if file_path.endswith('.txt') else None) as f:
+            f.write(content)
+            f.flush()
+            os.fsync(f.fileno())
+        robust_replace(temp_path, file_path)
+    except Exception:
+        if os.path.exists(temp_path):
+            try: os.remove(temp_path)
+            except OSError: pass
+        raise
+
 
 
 ORPHAN_PREFIX = ".tmp_re_"      # written by save_order
@@ -431,11 +469,12 @@ def migrate_folders_locked():
             tmp_name = f".tmp_{ts}_{clean_filename(old_name)}"
             old_p = os.path.join(DATA_DIR, old_name)
             tmp_p = os.path.join(DATA_DIR, tmp_name)
+            final_p = os.path.join(DATA_DIR, final_name)
             if os.path.exists(old_p):
                 robust_rename(old_p, tmp_p)
-                temp_renames.append((tmp_p, os.path.join(DATA_DIR, final_name)))
+                temp_renames.append((tmp_p, old_p, final_p))
         
-        for tmp_p, final_p in temp_renames:
+        for tmp_p, _old_p, final_p in temp_renames:
             if os.path.exists(final_p):
                 # Never delete a destination to make room. Every folder is in a
                 # temp name at this point, so anything sitting here is
@@ -443,11 +482,19 @@ def migrate_folders_locked():
                 raise OSError(f"Destination already exists: {os.path.basename(final_p)}")
             robust_rename(tmp_p, final_p)
     except (OSError, PermissionError) as e:
-        logger.error(f"Migration rename failed: {e}")
-        for tmp_p, final_p in temp_renames:
-            if os.path.exists(tmp_p) and not os.path.exists(final_p):
-                try: robust_rename(tmp_p, final_p)
-                except (OSError, PermissionError): pass
+        logger.error(f"Migration rename failed, rolling back to original names: {e}")
+        # Roll back in two passes: revert any that reached final_p back to tmp_p first
+        for tmp_p, _old_p, final_p in temp_renames:
+            if os.path.exists(final_p) and not os.path.exists(tmp_p):
+                try: robust_rename(final_p, tmp_p)
+                except (OSError, PermissionError) as err:
+                    logger.error(f"Migration rollback pass 1 failed for '{final_p}': {err}")
+        # Pass 2: revert all tmp_p back to old_p (original name)
+        for tmp_p, old_p, _final_p in temp_renames:
+            if os.path.exists(tmp_p) and not os.path.exists(old_p):
+                try: robust_rename(tmp_p, old_p)
+                except (OSError, PermissionError) as err:
+                    logger.error(f"Migration rollback pass 2 failed for '{tmp_p}': {err}")
         # Anything still hidden keeps its original name inside the temp name and
         # is picked up by adopt_orphan_group_folders() on the next read.
 
@@ -514,8 +561,7 @@ def move_to_recycle_bin(src_path, item_name, item_type, original_group=""):
         'original_group': original_group,
         'deleted_at': ts
     }
-    with open(os.path.join(bin_path, '.bin_meta.json'), 'w', encoding='utf-8') as f:
-        json.dump(meta, f)
+    atomic_write_text(os.path.join(bin_path, '.bin_meta.json'), json.dumps(meta, indent=2))
     return bin_folder_name
 
 def list_recycle_bin():
@@ -564,13 +610,13 @@ class ChangeHandler(FileSystemEventHandler):
             if current_time - self.last_sync > self.debounce_seconds:
                 with clients_lock:
                     for client in clients:
-                        try: client.put('sync')
+                        try: client.put_nowait('sync')
                         except Exception: pass
                 self.last_sync = current_time
 
 def event_stream():
     import queue
-    q = queue.Queue()
+    q = queue.Queue(maxsize=100)
     with clients_lock:
         clients.append(q)
     try:
@@ -649,7 +695,8 @@ def get_data():
                         if not os.path.exists(os.path.join(agent_subfolder, "prompt.txt")):
                             shutil.move(group_prompt, os.path.join(agent_subfolder, "prompt.txt"))
                         else:
-                            os.remove(group_prompt)
+                            logger.warning(f"Collision resolution during read for '{folder_name}': moving duplicate root prompt to recycle bin")
+                            move_to_recycle_bin(group_prompt, f"{clean_filename(title)}_duplicate_prompt", "prompt", folder_name)
                     except (OSError, PermissionError) as e:
                         logger.warning(f"Collision resolution failed for '{folder_name}': {e}")
 
@@ -903,14 +950,13 @@ def save_group_width():
                 meta.pop('custom_width', None)
             meta.pop('pin_row', None)      # retired concept, cleaned up on write
                 
-            with open(meta_path, "w", encoding="utf-8") as f:
-                json.dump(meta, f)
+            atomic_write_text(meta_path, json.dumps(meta, indent=2))
                 
             import time
             time.sleep(0.05)
             with clients_lock:
                 for client in clients:
-                    try: client.put('sync')
+                    try: client.put_nowait('sync')
                     except Exception: pass
             return jsonify({'status': 'success'})
         except Exception as e:
@@ -976,8 +1022,7 @@ def save_group_widths():
                 meta.pop('pin_row', None)      # retired concept, cleaned up on write
 
                 try:
-                    with open(meta_path, "w", encoding="utf-8") as f:
-                        json.dump(meta, f)
+                    atomic_write_text(meta_path, json.dumps(meta, indent=2))
                     updated += 1
                 except OSError as e:
                     logger.warning(f"save_group_widths could not write {meta_path}: {e}")
@@ -986,7 +1031,7 @@ def save_group_widths():
             time.sleep(0.05)
             with clients_lock:
                 for client in clients:
-                    try: client.put('sync')
+                    try: client.put_nowait('sync')
                     except Exception: pass
 
             return jsonify({'status': 'success', 'updated': updated, 'skipped': skipped})
@@ -1022,7 +1067,7 @@ def save_agent():
                     try:
                         with open(group_prompt_file, "r", encoding="utf-8") as f: old_c = f.read()
                     except Exception: pass
-                    with open(group_prompt_file, "w", encoding="utf-8") as f: f.write(content)
+                    atomic_write_text(group_prompt_file, content)
                     if old_c != content:
                         ct = os.path.join(base, "copy_time.txt")
                         if os.path.exists(ct):
@@ -1061,18 +1106,19 @@ def save_agent():
                 if do_backup:
                     import tempfile
                     temp_dir = tempfile.mkdtemp()
-                    backup_src = os.path.join(temp_dir, os.path.basename(target_to_backup))
-                    shutil.copytree(target_to_backup, backup_src)
-                    move_to_recycle_bin(backup_src, original_item_name, 'agent', group_folder)
-                    try: os.rmdir(temp_dir)
-                    except: pass
+                    try:
+                        backup_src = os.path.join(temp_dir, os.path.basename(target_to_backup))
+                        shutil.copytree(target_to_backup, backup_src)
+                        move_to_recycle_bin(backup_src, original_item_name, 'agent', group_folder)
+                    finally:
+                        shutil.rmtree(temp_dir, ignore_errors=True)
 
             if old_name and old_name != name:
                 old_p = os.path.join(base, clean_filename(old_name))
                 if os.path.exists(old_p): shutil.move(old_p, os.path.join(base, name))
             agent_dir = os.path.join(base, name)
             os.makedirs(agent_dir, exist_ok=True)
-            with open(os.path.join(agent_dir, 'prompt.txt'), 'w', encoding='utf-8') as f: f.write(content)
+            atomic_write_text(os.path.join(agent_dir, 'prompt.txt'), content)
             if not target_to_backup or do_backup or (old_name and old_name != name):
                 ct = os.path.join(agent_dir, "copy_time.txt")
                 if os.path.exists(ct):
@@ -1528,6 +1574,8 @@ def generate_git_summary(cwd, branch, remote):
     others = []
 
     for path in changed_files:
+        if 'copy_time.txt' in path:
+            continue
         m = re.match(r'AI Agent Prompts/Group\d+ - \[(.*?)\]/(.*?)/', path)
         if m:
             grp, ag = m.group(1), m.group(2)
@@ -1656,31 +1704,47 @@ def run_git_push_stream():
         yield sse_event('summary', message=f'Summary: {commit_msg}')
         yield sse_event('info', line=f'Commit message: "{commit_msg}"')
 
-        # 7. git add .
-        yield sse_event('info', line='Staging all modifications and untracked files...')
-        code, out = yield from exec_stream(['git', 'add', '.'])
-        if code != 0:
-            yield sse_event('complete', success=False, stage='stage',
-                            message='Failed to stage changes (git add .).',
-                            why='Git could not stage files. Check file permissions or locked files.',
-                            detail=out)
-            return
-
-        # 8. git commit
-        diff_cached = subprocess.run(['git', 'diff', '--cached', '--quiet'], cwd=ROOT_DIR)
-        has_staged_changes = (diff_cached.returncode != 0)
-        if has_staged_changes:
-            yield sse_event('info', line='Committing staged changes...')
-            code, out = yield from exec_stream(['git', 'commit', '-m', commit_msg])
+        # 7. git add (scoped and sanitized)
+        with migration_lock:
+            yield sse_event('info', line='Staging managed project files and prompts...')
+            code, out = yield from exec_stream([
+                'git', 'add', '--',
+                'AI Agent Prompts',
+                'AI Agent Prompts.html',
+                'bridge.py',
+                'README.md',
+                'CLAUDE.md',
+                'project_structure.txt',
+                'Install.bat',
+                'Restart-Bridge.bat',
+                'UnInstall.bat',
+                '.gitignore',
+                '.gitattributes'
+            ])
+            # Extra safety barrier: ensure [RECYCLE BIN] and local copy_time.txt are never staged in index
+            subprocess.run(['git', 'reset', 'HEAD', '--', '[RECYCLE BIN]', '**/copy_time.txt', 'copy_time.txt'], cwd=ROOT_DIR, capture_output=True)
             if code != 0:
-                yield sse_event('complete', success=False, stage='commit',
-                                message='Failed to commit changes.',
-                                why='Git commit returned a non-zero exit status.',
+                yield sse_event('complete', success=False, stage='stage',
+                                message='Failed to stage changes.',
+                                why='Git could not stage files. Check file permissions or locked files.',
                                 detail=out)
                 return
-            yield sse_event('success', line='Commit created successfully.')
-        else:
-            yield sse_event('info', line='Working tree clean. No new file modifications to commit.')
+
+            # 8. git commit
+            diff_cached = subprocess.run(['git', 'diff', '--cached', '--quiet'], cwd=ROOT_DIR)
+            has_staged_changes = (diff_cached.returncode != 0)
+            if has_staged_changes:
+                yield sse_event('info', line='Committing staged changes...')
+                code, out = yield from exec_stream(['git', 'commit', '-m', commit_msg])
+                if code != 0:
+                    yield sse_event('complete', success=False, stage='commit',
+                                    message='Failed to commit changes.',
+                                    why='Git commit returned a non-zero exit status.',
+                                    detail=out)
+                    return
+                yield sse_event('success', line='Commit created successfully.')
+            else:
+                yield sse_event('info', line='Working tree clean. No new file modifications to commit.')
 
         # 9. Integrate remote changes (auto-rebase)
         yield sse_event('info', line=f'Checking for remote updates from {remote}/{branch}...')
@@ -1831,24 +1895,24 @@ def run_git_pull_stream():
                             detail=out)
             return
 
-        # 6. git reset --hard <remote>/<branch>
-        yield sse_event('warning', line=f'Overwriting local working tree with {remote}/{branch}...')
-        code, out = yield from exec_stream(['git', 'reset', '--hard', f'{remote}/{branch}'])
-        if code != 0:
-            yield sse_event('complete', success=False, stage='reset',
-                            message=f'Git reset --hard failed with exit code {code}.',
-                            why='Failed to reset local branch to the fetched remote commit.',
-                            detail=out)
-            return
-
-        # 7. git clean -fd
-        yield sse_event('info', line='Cleaning untracked local files and directories...')
-        code, out = yield from exec_stream(['git', 'clean', '-fd'])
-        if code != 0:
-            yield sse_event('warning', line='Warning: git clean -fd returned non-zero, continuing...')
-
-        # 8. Trigger library re-index
         with migration_lock:
+            # 6. git reset --hard <remote>/<branch>
+            yield sse_event('warning', line=f'Overwriting local working tree with {remote}/{branch}...')
+            code, out = yield from exec_stream(['git', 'reset', '--hard', f'{remote}/{branch}'])
+            if code != 0:
+                yield sse_event('complete', success=False, stage='reset',
+                                message=f'Git reset --hard failed with exit code {code}.',
+                                why='Failed to reset local branch to the fetched remote commit.',
+                                detail=out)
+                return
+
+            # 7. git clean -fd
+            yield sse_event('info', line='Cleaning untracked local files and directories...')
+            code, out = yield from exec_stream(['git', 'clean', '-fd'])
+            if code != 0:
+                yield sse_event('warning', line='Warning: git clean -fd returned non-zero, continuing...')
+
+            # 8. Trigger library re-index
             try:
                 migrate_folders_locked()
             except Exception as me:
@@ -1866,6 +1930,61 @@ def run_git_pull_stream():
 def api_git_pull():
     """Force overwrite local files with cloud git commits, streaming progress to client."""
     return Response(run_git_pull_stream(), mimetype='text/event-stream')
+
+
+@app.route('/api/git-preview-pull', methods=['GET', 'POST'])
+def api_git_preview_pull():
+    """Fetches origin and inspects incoming commits ahead of HEAD without modifying workspace."""
+    git_dir = os.path.join(ROOT_DIR, '.git')
+    if not os.path.isdir(git_dir):
+        return jsonify({"status": "error", "message": "Not a Git repository"}), 400
+
+    # Determine active branch
+    branch_proc = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], capture_output=True, text=True, cwd=ROOT_DIR)
+    branch = branch_proc.stdout.strip() or 'main'
+
+    # Determine remote
+    remote_proc = subprocess.run(['git', 'remote'], capture_output=True, text=True, cwd=ROOT_DIR)
+    remotes = [r.strip() for r in remote_proc.stdout.splitlines() if r.strip()]
+    if not remotes:
+        return jsonify({"status": "error", "message": "No Git remote configured"}), 400
+    remote = 'origin' if 'origin' in remotes else remotes[0]
+
+    # Fetch latest remote commits (read-only against local working tree)
+    try:
+        fetch_res = subprocess.run(
+            ['git', 'fetch', remote, branch],
+            capture_output=True, text=True, cwd=ROOT_DIR, timeout=15
+        )
+        if fetch_res.returncode != 0:
+            err_msg = fetch_res.stderr.strip() or fetch_res.stdout.strip()
+            return jsonify({
+                "status": "error",
+                "message": f"Git fetch failed: {err_msg}",
+                "remote": remote,
+                "branch": branch
+            }), 502
+    except subprocess.TimeoutExpired:
+        return jsonify({"status": "error", "message": "Git fetch timed out connecting to remote"}), 504
+    except Exception as ex:
+        return jsonify({"status": "error", "message": str(ex)}), 500
+
+    # Inspect incoming commits: HEAD..remote/branch
+    target_ref = f"{remote}/{branch}"
+    log_res = subprocess.run(
+        ['git', 'log', f'HEAD..{target_ref}', '--oneline', '--max-count=20'],
+        capture_output=True, text=True, cwd=ROOT_DIR
+    )
+    incoming_commits = [line.strip() for line in log_res.stdout.splitlines() if line.strip()]
+
+    return jsonify({
+        "status": "success",
+        "remote": remote,
+        "branch": branch,
+        "incoming_count": len(incoming_commits),
+        "commits": incoming_commits
+    })
+
 
 
 

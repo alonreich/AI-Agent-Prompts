@@ -333,12 +333,38 @@
             position: fixed !important;
             pointer-events: none !important;
             z-index: 10000 !important;
-            opacity: 0.9 !important;
-            box-shadow: 0 35px 70px rgba(0,0,0,0.7), 0 0 30px rgba(88, 166, 255, 0.3);
-            transform: scale(1.06);
-            backdrop-filter: blur(8px);
-            border: 2px solid var(--blue);
-            transition: none !important;
+            opacity: 0.68 !important;
+            box-shadow: 0 28px 56px rgba(0,0,0,0.6), 0 0 24px rgba(88, 166, 255, 0.3) !important;
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
+            border: 1.5px solid var(--blue) !important;
+            border-radius: var(--radius-md) !important;
+            transform-origin: center center;
+            will-change: transform, left, top;
+            transition: transform 0.08s ease-out !important;
+        }
+        .drag-ghost .quick-copy-btn,
+        .drag-ghost .agent-checkbox,
+        .drag-ghost .card-timestamp,
+        .drag-ghost .group-actions-wrap,
+        .drag-ghost .group-actions,
+        .drag-ghost .group-resize-handle,
+        .drag-ghost .group-order-badge {
+            display: none !important;
+        }
+
+        .agent-card.card-placeholder {
+            background: rgba(88, 166, 255, 0.08) !important;
+            border: 2px dashed var(--blue) !important;
+            box-shadow: inset 0 0 10px rgba(88, 166, 255, 0.15) !important;
+            pointer-events: none !important;
+            box-sizing: border-box;
+            border-radius: var(--radius-sm);
+            min-height: 38px;
+            transition: height 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease !important;
+        }
+        body.compact-density .agent-card.card-placeholder {
+            min-height: 28px;
         }
 
         .group-placeholder {
@@ -636,6 +662,21 @@
         .quick-copy-btn { position: absolute; top: 50%; transform: translateY(-50%); right: 8px; width: 24px; height: 24px; opacity: 0.35; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; z-index: 5; background: none; border: none; color: inherit; padding: 0; }
         .quick-copy-btn:hover { opacity: 1; color: var(--blue); }
         .quick-copy-btn svg { width: 16px; height: 16px; fill: currentColor; }
+        .quick-copy-btn.copied {
+            opacity: 1 !important;
+            color: var(--success) !important;
+            transform: translateY(-50%) scale(1.22);
+            transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.15s ease;
+        }
+        .quick-copy-btn.copied svg {
+            filter: drop-shadow(0 0 5px rgba(63, 185, 80, 0.6));
+        }
+        .copy-btn.copied {
+            background: var(--success) !important;
+            border-color: var(--success) !important;
+            color: #ffffff !important;
+            transform: scale(1.03);
+        }
 
         #prompt-view { display: none; height: 100vh; flex-direction: column; padding: 10px 20px; box-sizing: border-box; position: relative; animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -1277,6 +1318,78 @@
             line-height: 1.5;
             margin-bottom: 14px;
         }
+        .git-pull-incoming-section {
+            background: rgba(22, 27, 34, 0.85);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            margin-bottom: 12px;
+            font-size: 12px;
+            text-align: left;
+        }
+        .git-pull-incoming-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: var(--text-dim);
+            margin-bottom: 6px;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+        .git-incoming-badge {
+            font-size: 10px;
+            padding: 2px 7px;
+            border-radius: 10px;
+            background: rgba(88, 166, 255, 0.15);
+            color: var(--blue);
+            font-weight: 700;
+        }
+        .git-incoming-badge.up-to-date {
+            background: rgba(63, 185, 80, 0.15);
+            color: var(--success);
+        }
+        .git-incoming-badge.has-incoming {
+            background: rgba(210, 153, 34, 0.2);
+            color: var(--gold);
+        }
+        .git-incoming-badge.fetch-error {
+            background: rgba(248, 81, 73, 0.15);
+            color: var(--error);
+        }
+        .git-pull-incoming-list {
+            max-height: 100px;
+            overflow-y: auto;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            line-height: 1.4;
+            color: var(--text);
+        }
+        .git-incoming-item {
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            gap: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .git-incoming-item:last-child { border-bottom: none; }
+        .git-incoming-hash {
+            color: var(--blue);
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        .git-incoming-msg {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .git-incoming-loading {
+            color: var(--text-dim);
+            font-style: italic;
+            padding: 4px 0;
+        }
         .git-pull-confirm-box {
             background: rgba(248, 81, 73, 0.08);
             border: 1px solid rgba(248, 81, 73, 0.25);
@@ -1413,8 +1526,8 @@
         #main-menu.snug-mode > .group-container {
             position: absolute;
             margin: 0;
-            transition: left 0.28s cubic-bezier(0.2, 0, 0, 1),
-                        top 0.28s cubic-bezier(0.2, 0, 0, 1),
+            transition: left 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+                        top 0.28s cubic-bezier(0.16, 1, 0.3, 1),
                         width 0.2s, transform 0.3s, box-shadow 0.3s, border-color 0.3s;
         }
         #main-menu.snug-mode > .group-container.is-resizing,
@@ -1662,6 +1775,25 @@
         body.compact-density .control-center.search-active-feedback { min-height: 60px; }
         body.compact-density #main-menu { gap: 10px; padding-top: 2px; }
         body.compact-density .group-grid { gap: 4px; }
+        body.compact-density .agent-card {
+            min-height: 28px;
+            padding: 4px 26px;
+            font-size: 11px;
+            --card-cvi-h: 28px;
+        }
+        body.compact-density .quick-copy-btn {
+            width: 20px;
+            height: 20px;
+            right: 5px;
+        }
+        body.compact-density .quick-copy-btn svg {
+            width: 13px;
+            height: 13px;
+        }
+        body.compact-density .card-timestamp {
+            font-size: 8px;
+            bottom: 1px;
+        }
         body.compact-density .add-agent-card { height: 27px; margin-top: 4px; padding: 0 8px; font-size: 11px; }
         body.compact-density #prompt-view { padding: 8px 16px; }
         body.compact-density .nav-bar { gap: 6px; margin-bottom: 6px; }
@@ -1836,6 +1968,7 @@
         <symbol id="icon-bin-full" viewBox="0 0 24 24"><path d="M16 9h-2.1l-1.9-3.4c-.2-.4-.6-.6-1-.6s-.8.2-1 .6L8.1 9H6c-1.1 0-2 .9-2 2v9c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-9c0-1.1-.9-2-2-2zm-6-2l1.7 3H8.3L10 7zm8 13H6v-9h12v9z"/></symbol>
         <symbol id="icon-edit" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></symbol>
         <symbol id="icon-copy" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></symbol>
+        <symbol id="icon-check" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></symbol>
         <symbol id="icon-reset" viewBox="0 0 24 24"><path d="M12 5V2L8 6l4 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></symbol>
         <symbol id="icon-pin-down" viewBox="0 0 24 24"><path d="M11 3h2v9.2l3.6-3.6L18 10l-6 6-6-6 1.4-1.4L11 12.2V3zM5 19h14v2H5v-2z"/></symbol>
         <symbol id="icon-pin-up" viewBox="0 0 24 24"><path d="M13 21h-2v-9.2l-3.6 3.6L6 14l6-6 6 6-1.4 1.4L13 11.8V21zM5 3h14v2H5V3z"/></symbol>
@@ -2217,6 +2350,15 @@
             <p class="git-pull-confirm-desc">
                 You are about to <strong>force overwrite all local files</strong> with the latest commits from the online GitHub repository.
             </p>
+            <div class="git-pull-incoming-section">
+                <div class="git-pull-incoming-header">
+                    <span>UPSTREAM STATUS (<span id="git-pull-upstream-ref">origin/main</span>):</span>
+                    <span id="git-pull-incoming-badge" class="git-incoming-badge">CHECKING...</span>
+                </div>
+                <div id="git-pull-incoming-list" class="git-pull-incoming-list">
+                    <div class="git-incoming-loading">Checking GitHub for incoming commits...</div>
+                </div>
+            </div>
             <div class="git-pull-confirm-box">
                 <ul>
                     <li>All local modifications will be <strong>permanently replaced</strong>.</li>
@@ -2514,6 +2656,8 @@
         let agentDragStarted = false;
         let agentSourceCard = null;
         let agentGhost = null;
+        let cardPlaceholder = null;
+        let lastAgentClientX = 0;
         let agentGhostOffsetX = 0, agentGhostOffsetY = 0;
         let agentOriginalParent = null;
         let agentOriginalNextSibling = null;
@@ -2548,7 +2692,7 @@
 
                 children.forEach((c, i) => {
                     if (deltas[i]) {
-                        c.style.transition = 'transform 0.3s ease';
+                        c.style.transition = 'transform 0.24s cubic-bezier(0.16, 1, 0.3, 1)';
                         c.style.transform = '';
                     }
                 });
@@ -2753,6 +2897,9 @@
             compactDensity = !compactDensity;
             try { localStorage.setItem('compactDensity', compactDensity ? '1' : '0'); } catch (e) {}
             updateDensityMode();
+            if (typeof applyBoardLayout === 'function') {
+                applyBoardLayout(false);
+            }
         }
         updateDensityMode();
 
@@ -3148,10 +3295,6 @@
                 if (!wasOnline && isBridgeOnline) { await syncFromBridge(); startEventStream(); initRouting(); }
             }, 3000);
 
-            window.addEventListener('pointermove', handleManualDragMove);
-            window.addEventListener('pointerup', handleManualDragUp);
-            window.addEventListener('pointermove', handleAgentPointerMove);
-            window.addEventListener('pointerup', handleAgentPointerUp);
             window.addEventListener('resize', scheduleUpdateLineNumbers);
             updateLineNumbers();
             updateTidyButton();
@@ -3200,10 +3343,15 @@
             } else if (agentDragStarted) {
                 const sourceCard = agentSourceCard;
                 agentDragStarted = false;
+                if (cardPlaceholder && cardPlaceholder.parentNode) {
+                    cardPlaceholder.remove();
+                    cardPlaceholder = null;
+                }
                 if (sourceCard && agentOriginalParent) {
+                    sourceCard.style.display = '';
+                    sourceCard.classList.remove('dragging');
                     flip(agentOriginalParent, () => {
                         agentOriginalParent.insertBefore(sourceCard, agentOriginalNextSibling);
-                        sourceCard.classList.remove('dragging');
                     });
                     animateGhostTo(sourceCard);
                 } else { cleanupDragState(); }
@@ -3215,7 +3363,7 @@
             if (!ghost || !targetEl) { cleanupDragState(); return; }
             isAnimating = true;
             const rect = targetEl.getBoundingClientRect();
-            ghost.style.transition = 'left 0.3s ease, top 0.3s ease, transform 0.3s ease, opacity 0.3s ease';
+            ghost.style.transition = 'left 0.26s cubic-bezier(0.16, 1, 0.3, 1), top 0.26s cubic-bezier(0.16, 1, 0.3, 1), transform 0.26s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease';
             ghost.style.left = rect.left + 'px';
             ghost.style.top = rect.top + 'px';
             ghost.style.transform = 'scale(1)';
@@ -3224,14 +3372,22 @@
                 cleanupDragState();
                 isAnimating = false;
                 syncFromBridge();
-            }, 600);
+            }, 300);
         }
 
         function cleanupDragState() {
+            window.removeEventListener('pointermove', handleManualDragMove);
+            window.removeEventListener('pointerup', handleManualDragUp);
+            window.removeEventListener('pointermove', handleAgentPointerMove);
+            window.removeEventListener('pointerup', handleAgentPointerUp);
             if (groupGhost) { groupGhost.remove(); groupGhost = null; }
             if (agentGhost) { agentGhost.remove(); agentGhost = null; }
             if (groupPlaceholder) { groupPlaceholder.remove(); groupPlaceholder = null; }
-            if (agentSourceCard) agentSourceCard.classList.remove('dragging');
+            if (cardPlaceholder) { cardPlaceholder.remove(); cardPlaceholder = null; }
+            if (agentSourceCard) {
+                agentSourceCard.style.display = '';
+                agentSourceCard.classList.remove('dragging');
+            }
             document.querySelectorAll('.group-container.group-dragging').forEach(el => el.classList.remove('group-dragging'));
             document.querySelectorAll('.group-container.drag-over').forEach(el => el.classList.remove('drag-over'));
             globalTrash.classList.remove('active', 'drag-over');
@@ -3247,6 +3403,8 @@
 
         function handleManualDragStart(e, folderName, container) {
             e.preventDefault();
+            window.addEventListener('pointermove', handleManualDragMove);
+            window.addEventListener('pointerup', handleManualDragUp);
             // Dragging used to send a list of every group to be renamed on disk,
             // and a filtered board could only send a partial one - which is what
             // destroyed groups. A drag now just records a position in this
@@ -3263,6 +3421,9 @@
             const rect = container.getBoundingClientRect();
             ghostOffsetX = e.clientX - rect.left;
             ghostOffsetY = e.clientY - rect.top;
+            prevGroupClientX = e.clientX;
+            lastGroupSwapX = e.clientX;
+            lastGroupSwapY = e.clientY;
 
             groupGhost = container.cloneNode(true);
             groupGhost.classList.add('drag-ghost');
@@ -3395,6 +3556,10 @@
 
         let dragMoveRAF = null;
         let lastClientX = 0, lastClientY = 0;
+        let prevGroupClientX = 0;
+        let lastGroupSwapX = 0, lastGroupSwapY = 0;
+        const GROUP_SWAP_HYSTERESIS = 20;
+
         function handleManualDragMove(e) {
             if (!activeGroupDrag) return;
             lastClientX = e.clientX;
@@ -3403,16 +3568,61 @@
             if (dragMoveRAF) return;
             dragMoveRAF = requestAnimationFrame(() => {
                 dragMoveRAF = null;
+                const vx = lastClientX - prevGroupClientX;
+                prevGroupClientX = lastClientX;
+                const tilt = Math.max(-3.5, Math.min(3.5, vx * 0.14));
                 groupGhost.style.left = (lastClientX - ghostOffsetX) + 'px';
                 groupGhost.style.top = (lastClientY - ghostOffsetY) + 'px';
+                groupGhost.style.transform = `scale(1.02) rotate(${tilt}deg)`;
 
-                // The group lands wherever it is dropped, so the preview simply
-                // follows the cursor. No slot to work out, no list to reorder.
-                const drop = computeDropRect();
-                if (drop) {
-                    pendingDropRect = drop;
-                    applyBoardLayout(true, { el: groupPlaceholder, left: drop.left, top: drop.top });
-                    updatePlacementGuides(drop);
+                // 50% Midpoint & Hysteresis Slot Detection
+                if (groupPlaceholder && menu) {
+                    const ghostRect = groupGhost.getBoundingClientRect();
+                    const ghostCenterX = ghostRect.left + ghostRect.width / 2;
+                    const ghostCenterY = ghostRect.top + ghostRect.height / 2;
+
+                    const dxSwap = Math.abs(lastClientX - lastGroupSwapX);
+                    const dySwap = Math.abs(lastClientY - lastGroupSwapY);
+
+                    if (dxSwap > GROUP_SWAP_HYSTERESIS || dySwap > GROUP_SWAP_HYSTERESIS) {
+                        const others = Array.from(menu.querySelectorAll('.group-container:not(.group-dragging):not(.drag-ghost)'));
+                        let targetGroup = null;
+                        for (const g of others) {
+                            const gr = g.getBoundingClientRect();
+                            if (ghostCenterX >= gr.left && ghostCenterX <= gr.right &&
+                                ghostCenterY >= gr.top && ghostCenterY <= gr.bottom) {
+                                targetGroup = g;
+                                break;
+                            }
+                        }
+
+                        if (targetGroup) {
+                            const tr = targetGroup.getBoundingClientRect();
+                            const targetCenterX = tr.left + tr.width / 2;
+                            const targetCenterY = tr.top + tr.height / 2;
+                            const isBefore = (groupPlaceholder.compareDocumentPosition(targetGroup) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+
+                            let shouldSwap = false;
+                            if (isBefore) {
+                                if (ghostCenterX > targetCenterX || ghostCenterY > targetCenterY) {
+                                    targetGroup.parentNode.insertBefore(groupPlaceholder, targetGroup.nextSibling);
+                                    shouldSwap = true;
+                                }
+                            } else {
+                                if (ghostCenterX < targetCenterX || ghostCenterY < targetCenterY) {
+                                    targetGroup.parentNode.insertBefore(groupPlaceholder, targetGroup);
+                                    shouldSwap = true;
+                                }
+                            }
+
+                            if (shouldSwap) {
+                                lastGroupSwapX = lastClientX;
+                                lastGroupSwapY = lastClientY;
+                                applyBoardLayout();
+                                refreshOrderBadges();
+                            }
+                        }
+                    }
                 }
 
                 const trashRect = globalTrash.getBoundingClientRect();
@@ -3424,6 +3634,8 @@
         }
 
         async function handleManualDragUp(e) {
+            window.removeEventListener('pointermove', handleManualDragMove);
+            window.removeEventListener('pointerup', handleManualDragUp);
             if (!activeGroupDrag) return;
             const folder = activeGroupDrag;
             const trashActive = globalTrash.classList.contains('drag-over');
@@ -3439,28 +3651,27 @@
 
                 if (await showConfirm(msg, 'Delete Group')) {
                     await moveToRecycleBin(folder);
-
                     a11yAnnounce(`Group ${group ? group.title : folder} moved to recycle bin.`);
                 }
             } else {
                 const original = document.querySelector(`.group-container[data-folder="${folder}"]`);
                 if (original) {
                     activeGroupDrag = null;
-                    const drop = pendingDropRect;
-                    if (groupPlaceholder) { groupPlaceholder.remove(); groupPlaceholder = null; }
+                    if (groupPlaceholder && groupPlaceholder.parentNode) {
+                        const targetLeft = parseFloat(groupPlaceholder.style.left) || 0;
+                        const targetTop = parseFloat(groupPlaceholder.style.top) || 0;
+                        pendingDropRect = { left: targetLeft, top: targetTop, width: original.offsetWidth, height: original.offsetHeight };
+                        groupPlaceholder.parentNode.insertBefore(original, groupPlaceholder);
+                        groupPlaceholder.remove();
+                        groupPlaceholder = null;
+                    }
                     original.classList.remove('group-dragging');
 
-                    /* Dropping a group is now a PURELY VISUAL act. It records a
-                       position for this browser at this board width and nothing
-                       else. Folders on disk are never renamed, so the operation
-                       that once lost three groups - and that Windows regularly
-                       denies - is no longer on the drag path at all.
-                       Ctrl+Left / Ctrl+Right still change the real list order. */
+                    const drop = pendingDropRect;
                     if (drop) {
                         const W = currentBoardWidth();
                         const gap = getMenuMetrics().gap;
                         const previous = readPlacements(W)[folder] || null;
-                        // Anything this lands on slides aside and stays placed.
                         const pushed = pushOverlappingPlacements(folder, drop, gap);
                         setGroupPlacement(folder, drop);
 
@@ -3468,7 +3679,6 @@
                             ? `PLACED - ${pushed.length} MOVED ASIDE`
                             : 'GROUP PLACED';
                         showUndoToast(message, () => {
-                            // Put everything back exactly as it was.
                             const map = readPlacements(currentBoardWidth());
                             for (const m of pushed) map[m.folder] = m.from;
                             if (previous) map[folder] = previous;
@@ -3477,15 +3687,12 @@
                             applyBoardLayout();
                             showToast('MOVE UNDONE', 'success');
                         });
-                        a11yAnnounce(`${groups[folder] ? groups[folder].title : folder} placed. `
-                            + 'This position is remembered for this window size.');
+                        a11yAnnounce(`${groups[folder] ? groups[folder].title : folder} placed.`);
                     }
                     pendingDropRect = null;
                     hidePlacementGuides();
                     dragSnapRefs = [];
 
-                    // Pack BEFORE animating the ghost, so it flies onto the group
-                    // in its final position rather than a stale one.
                     applyBoardLayout(true);
                     refreshOrderBadges();
                     animateGhostTo(original);
@@ -3497,8 +3704,12 @@
             if (!agentSourceCard) return;
             if (agentDragStarted) {
                 if (agentGhost) {
+                    const vx = e.clientX - lastAgentClientX;
+                    lastAgentClientX = e.clientX;
+                    const tilt = Math.max(-3.5, Math.min(3.5, vx * 0.15));
                     agentGhost.style.left = (e.clientX - agentGhostOffsetX) + 'px';
                     agentGhost.style.top = (e.clientY - agentGhostOffsetY) + 'px';
+                    agentGhost.style.transform = `scale(1.03) rotate(${tilt}deg)`;
                 }
 
                 const elem = document.elementFromPoint(e.clientX, e.clientY);
@@ -3508,30 +3719,38 @@
                     if (el !== targetGroup) el.classList.remove('drag-over');
                 });
 
-                if (targetGroup) {
+                if (targetGroup && cardPlaceholder) {
                     targetGroup.classList.add('drag-over');
                     const grid = targetGroup.querySelector('.group-grid');
                     if (grid) {
-                        const children = Array.from(grid.children).filter(c => c !== agentSourceCard && c.classList.contains('agent-card'));
-                        let afterElement = null;
+                        const siblings = Array.from(grid.querySelectorAll('.agent-card:not(.card-placeholder)'))
+                            .filter(c => c !== agentSourceCard);
 
-
-                        const dragName = agentSourceCard.dataset.agent;
-                        for (const child of children) {
-                            const childName = child.dataset.agent;
-                            if (dragName.length < childName.length || (dragName.length === childName.length && dragName.localeCompare(childName) < 0)) {
-                                afterElement = child; break;
+                        let targetSibling = null;
+                        for (const child of siblings) {
+                            const r = child.getBoundingClientRect();
+                            const midY = r.top + r.height / 2;
+                            if (e.clientY < midY) {
+                                targetSibling = child;
+                                break;
                             }
                         }
 
+                        const isCurrentSlot = targetSibling
+                            ? (cardPlaceholder.parentNode === grid && cardPlaceholder.nextSibling === targetSibling)
+                            : (cardPlaceholder.parentNode === grid && (!cardPlaceholder.nextSibling || cardPlaceholder.nextSibling.classList.contains('empty-group-msg') || cardPlaceholder.nextSibling.classList.contains('add-agent-card')));
 
-                        flip(grid, () => {
-                            if (afterElement) {
-                                if (agentSourceCard.nextSibling !== afterElement) grid.insertBefore(agentSourceCard, afterElement);
-                            } else {
-                                if (grid.lastChild !== agentSourceCard) grid.appendChild(agentSourceCard);
-                            }
-                        });
+                        if (!isCurrentSlot) {
+                            flip(grid, () => {
+                                if (targetSibling) {
+                                    grid.insertBefore(cardPlaceholder, targetSibling);
+                                } else {
+                                    const addBtn = grid.querySelector('.add-agent-card');
+                                    if (addBtn) grid.insertBefore(cardPlaceholder, addBtn);
+                                    else grid.appendChild(cardPlaceholder);
+                                }
+                            });
+                        }
                     }
                 }
 
@@ -3543,7 +3762,12 @@
                 return;
             }
 
-            if (e.buttons === 0) { agentSourceCard = null; return; }
+            if (e.buttons === 0) {
+                window.removeEventListener('pointermove', handleAgentPointerMove);
+                window.removeEventListener('pointerup', handleAgentPointerUp);
+                agentSourceCard = null;
+                return;
+            }
             const dx = e.clientX - agentPointerStartX, dy = e.clientY - agentPointerStartY;
             if (Math.sqrt(dx * dx + dy * dy) > 5) {
                 agentDragStarted = true;
@@ -3551,9 +3775,11 @@
                 draggedFromGroup = agentSourceCard.dataset.folder;
                 agentOriginalParent = agentSourceCard.parentNode;
                 agentOriginalNextSibling = agentSourceCard.nextSibling;
+                lastAgentClientX = e.clientX;
 
                 const rect = agentSourceCard.getBoundingClientRect();
-                agentGhostOffsetX = e.clientX - rect.left; agentGhostOffsetY = e.clientY - rect.top;
+                agentGhostOffsetX = e.clientX - rect.left;
+                agentGhostOffsetY = e.clientY - rect.top;
 
                 agentGhost = agentSourceCard.cloneNode(true);
                 agentGhost.classList.add('drag-ghost');
@@ -3563,13 +3789,26 @@
                 agentGhost.style.top = rect.top + 'px';
                 agentGhost.style.margin = '0';
 
+                // Top-Tier Elastic Slot Void
+                cardPlaceholder = document.createElement('div');
+                cardPlaceholder.className = 'agent-card card-placeholder';
+                cardPlaceholder.style.width = rect.width + 'px';
+                cardPlaceholder.style.height = rect.height + 'px';
+                cardPlaceholder.dataset.folder = draggedFromGroup;
+                cardPlaceholder.dataset.agent = draggedAgent;
+
+                agentSourceCard.parentNode.insertBefore(cardPlaceholder, agentSourceCard);
+                agentSourceCard.style.display = 'none';
                 agentSourceCard.classList.add('dragging');
+
                 document.body.appendChild(agentGhost);
                 globalTrash.classList.add('active');
             }
         }
 
         async function handleAgentPointerUp(e) {
+            window.removeEventListener('pointermove', handleAgentPointerMove);
+            window.removeEventListener('pointerup', handleAgentPointerUp);
             if (!agentDragStarted) {
                 if (agentSourceCard && agentSourceCard.dataset.agent) {
                     if (!e.target.closest('.quick-copy-btn') && !e.target.closest('.agent-checkbox')) {
@@ -3590,7 +3829,6 @@
                     const res = await api('recycle-delete-agents', 'POST', { agents: [{ g: fromGroup, a: agent }] });
                     if (res && res.status === 'success') {
                         showToast(`MOVED TO BIN: ${agent}`, "success");
-
                         a11yAnnounce(`Agent ${agent} moved to recycle bin.`);
                         await syncFromBridge(); updateBinBadge();
                     } else { showApiError(res, "DELETE FAILED"); syncFromBridge(); }
@@ -3598,8 +3836,18 @@
             } else {
                 const elem = document.elementFromPoint(e.clientX, e.clientY);
                 const targetGroup = elem ? elem.closest('.group-container') : null;
+
+                if (cardPlaceholder && cardPlaceholder.parentNode) {
+                    cardPlaceholder.parentNode.insertBefore(sourceCard, cardPlaceholder);
+                    cardPlaceholder.remove();
+                    cardPlaceholder = null;
+                }
+                sourceCard.style.display = '';
+                sourceCard.classList.remove('dragging');
+
                 if (targetGroup && targetGroup.dataset.folder !== fromGroup) {
                     agentDragStarted = false;
+                    sourceCard.dataset.folder = targetGroup.dataset.folder;
                     api('move', 'POST', { from: fromGroup, to: targetGroup.dataset.folder, name: agent }).then(res => {
                         if (res && res.status === 'success') {
                             showToast(`MOVED ${agent}`, "success");
@@ -5232,6 +5480,8 @@
                         if (e.target.closest('.quick-copy-btn') || e.target.closest('.agent-checkbox')) return;
                         agentPointerStartX = e.clientX; agentPointerStartY = e.clientY;
                         agentDragStarted = false; agentSourceCard = card;
+                        window.addEventListener('pointermove', handleAgentPointerMove);
+                        window.addEventListener('pointerup', handleAgentPointerUp);
                     };
                     const cardLabel = document.createElement('span');
                     cardLabel.className = 'card-label';
@@ -5255,7 +5505,7 @@
                     cp.setAttribute('aria-label', 'Copy ' + agentName + ' prompt');
                     cp.innerHTML = '<svg aria-hidden="true"><use href="#icon-copy"/></svg>';
                     cp.onpointerdown = (e) => e.stopPropagation();
-                    cp.onclick = (e) => { e.stopPropagation(); copyToClipboard(groupAgents[agentName], folderName, agentName); };
+                    cp.onclick = (e) => { e.stopPropagation(); copyToClipboard(groupAgents[agentName], folderName, agentName, cp); };
                     card.appendChild(cp);
                     const copyTimeStr = groupData.copy_times?.[agentName];
                     if (copyTimeStr) {
@@ -5971,13 +6221,22 @@
             return ok;
         }
 
-        async function copyToClipboard(t, groupFolder, agentName) {
+        async function copyToClipboard(t, groupFolder, agentName, triggerBtn) {
             const copied = await writeClipboardPlain(t);
             if (!copied) {
                 showAlert('Copy failed. Please select the prompt text and press Ctrl+C.', 'Copy Failed');
                 return;
             }
             showToast("COPIED", "success");
+            if (triggerBtn) {
+                triggerBtn.classList.add('copied');
+                const svg = triggerBtn.querySelector('svg');
+                if (svg) svg.innerHTML = '<use href="#icon-check"/>';
+                setTimeout(() => {
+                    triggerBtn.classList.remove('copied');
+                    if (svg) svg.innerHTML = '<use href="#icon-copy"/>';
+                }, 800);
+            }
             if (groupFolder && agentName) {
                 const res = await api('record-copy', 'POST', { group: groupFolder, name: agentName });
                 if (res && res.status === 'success' && res.timestamp) {
@@ -5997,7 +6256,19 @@
                 }
             }
         }
-        function copyPrompt() { copyToClipboard(getEditorText(), currentGroup, currentAgent); }
+        function copyPrompt() {
+            const mainBtn = document.getElementById('main-copy-btn');
+            if (mainBtn) {
+                const originalText = mainBtn.textContent;
+                mainBtn.classList.add('copied');
+                mainBtn.textContent = 'COPIED ✓';
+                setTimeout(() => {
+                    mainBtn.classList.remove('copied');
+                    mainBtn.textContent = originalText;
+                }, 800);
+            }
+            copyToClipboard(getEditorText(), currentGroup, currentAgent);
+        }
 
         function showToast(m, t = 'info') {
             const el = document.getElementById('toast'); el.innerText = m; el.className = 'toast visible ' + t;
@@ -6823,15 +7094,70 @@
             if (modal) modal.style.display = 'none';
         }
 
-        function confirmDevGitPull() {
+        let pullPreviewAbort = null;
+        async function confirmDevGitPull() {
             if (isGitPushInProgress) return;
             const overlay = document.getElementById('git-pull-confirm-overlay');
             overlay.style.display = 'flex';
             setTimeout(() => overlay.classList.add('visible'), 10);
             trapFocusIn(overlay, () => closeGitPullConfirm());
+
+            const badge = document.getElementById('git-pull-incoming-badge');
+            const list = document.getElementById('git-pull-incoming-list');
+            const upstreamRef = document.getElementById('git-pull-upstream-ref');
+
+            if (badge && list) {
+                badge.className = 'git-incoming-badge';
+                badge.textContent = 'CHECKING...';
+                list.innerHTML = '<div class="git-incoming-loading">Connecting to remote GitHub...</div>';
+
+                if (pullPreviewAbort) pullPreviewAbort.abort();
+                pullPreviewAbort = new AbortController();
+
+                try {
+                    const res = await fetch('http://127.0.0.1:5589/api/git-preview-pull', {
+                        signal: pullPreviewAbort.signal,
+                        cache: 'no-store'
+                    });
+                    const data = await res.json();
+                    if (upstreamRef && data.remote && data.branch) {
+                        upstreamRef.textContent = `${data.remote}/${data.branch}`;
+                    }
+                    if (data.status === 'success') {
+                        if (data.incoming_count > 0) {
+                            badge.className = 'git-incoming-badge has-incoming';
+                            badge.textContent = `${data.incoming_count} INCOMING`;
+                            list.innerHTML = data.commits.map(c => {
+                                const parts = c.split(' ');
+                                const hash = parts[0] || '';
+                                const msg = escapeHtml(parts.slice(1).join(' '));
+                                return `<div class="git-incoming-item"><span class="git-incoming-hash">${escapeHtml(hash)}</span><span class="git-incoming-msg">${msg}</span></div>`;
+                            }).join('');
+                        } else {
+                            badge.className = 'git-incoming-badge up-to-date';
+                            badge.textContent = 'UP TO DATE';
+                            list.innerHTML = '<div class="git-incoming-loading" style="color:var(--success)">Workspace is already synchronized with remote. Force pull will cleanly reinstall remote HEAD.</div>';
+                        }
+                    } else {
+                        badge.className = 'git-incoming-badge fetch-error';
+                        badge.textContent = 'FETCH FAILED';
+                        list.innerHTML = `<div class="git-incoming-loading" style="color:var(--error)">${escapeHtml(data.message || 'Failed to fetch upstream')}</div>`;
+                    }
+                } catch (err) {
+                    if (err.name !== 'AbortError') {
+                        badge.className = 'git-incoming-badge fetch-error';
+                        badge.textContent = 'UNREACHABLE';
+                        list.innerHTML = '<div class="git-incoming-loading" style="color:var(--text-dim)">Bridge backend offline or unreachable.</div>';
+                    }
+                }
+            }
         }
 
         function closeGitPullConfirm() {
+            if (pullPreviewAbort) {
+                pullPreviewAbort.abort();
+                pullPreviewAbort = null;
+            }
             const overlay = document.getElementById('git-pull-confirm-overlay');
             if (!overlay) return;
             overlay.classList.remove('visible');

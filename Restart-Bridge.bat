@@ -81,13 +81,23 @@ if defined TASK_NAME (
     )
 )
 
-:: PID file written by bridge.py on startup
+:: PID file written by bridge.py on startup -- verify identity before killing
+if not exist "%PID_FILE%" (
+    if exist "%TMP%\AI-Agent-Prompt\bridge.pid" set "PID_FILE=%TMP%\AI-Agent-Prompt\bridge.pid"
+)
 if exist "%PID_FILE%" (
     set "OLD_PID="
     set /p OLD_PID=<"%PID_FILE%"
     if defined OLD_PID (
-        taskkill /F /PID !OLD_PID! >nul 2>&1
-        if not errorlevel 1 echo       Killed PID !OLD_PID! from the PID file.
+        set "IS_OURS=0"
+        for /f "usebackq" %%K in (`%PS% "try { $p = Get-CimInstance Win32_Process -Filter 'ProcessId = !OLD_PID!' -ErrorAction Stop; if ($p.Name -match 'python' -and $p.CommandLine -match 'bridge\.py') { 1 } else { 0 } } catch { 0 }"`) do set "IS_OURS=%%K"
+        if "!IS_OURS!"=="1" (
+            taskkill /F /PID !OLD_PID! >nul 2>&1
+            if not errorlevel 1 echo       Killed verified bridge PID !OLD_PID!.
+        ) else (
+            echo       PID !OLD_PID! is not the bridge process [stale or recycled PID]. Skipped.
+        )
+        del /f /q "%PID_FILE%" >nul 2>&1
     )
 )
 
@@ -157,7 +167,7 @@ if "!STARTED!"=="0" (
 
 if "!STARTED!"=="0" (
     echo       [ERROR] Could not start the bridge - no task and no VBS launcher.
-    echo               Run Install.bat once to (re)create persistence.
+    echo               Run Install.bat once to re-create persistence.
     goto :Finish
 )
 echo.
