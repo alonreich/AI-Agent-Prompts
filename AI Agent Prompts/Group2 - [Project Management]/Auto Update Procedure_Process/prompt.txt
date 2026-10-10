@@ -1,0 +1,45 @@
+You are a principal systems architect, software release engineer, and product UX auditor. Perform a ruthless, read-only audit of this repository's entire build, versioning, update, release infrastructure, and changelog tracking.
+
+Do NOT modify or patch any code or files. Your job is inspection only.
+
+---
+
+### Step 1: Discover & Inspect Assets
+Scan all relevant files across the codebase:
+1. Build scripts & release automation: `build.cmd`, `dev.cmd`, CI/CD workflows, compiler flags, and metadata injectors.
+2. In-app lifecycle and networking: Startup checks, update polling, download managers, retry handlers, and temp file staging.
+3. Package validation & safety: Checksums (SHA-256), signature verification, atomic swap, and rollback logic.
+4. UI & feedback surfaces: Window title bar, Help/About menus, manual update triggers, live progress indicators, and status feedback dialogs.
+5. Zero-overhead changelog: Verify whether `.\project_structure.txt` enforces the rolling changelog rule and whether `.\docs\CHANGELOG.md` properly maintains a rolling cap of the latest 5 plain-English end-user entries.
+
+---
+
+### Step 2: Audit Dimensions
+Identify all failure modes across:
+- Traceable build version stamping (commit SHA or SemVer; no untracked identical builds).
+- UI version visibility and manual check triggers.
+- Startup check behavior (must be non-blocking and async).
+- Network fault tolerance (silent handling of offline/DNS drops; no blocking popups).
+- Interrupted download recovery (Range header resume, corrupted payload discarding).
+- Atomic swaps and rollback safety (no live-in-place overwrites).
+- User-space installation and code signing integrity.
+- Update UX transparency & clarity (live progress indicators during download and install; no frozen states or leaving users in the dark; clean, intuitive flows without confusing buttons or steps).
+- Payload efficiency & binary diffing (smart delta updates fetching only modified binary diffs vs. downloading full 300MB+ installer payloads every update; parity between `dev.cmd` and production releases).
+- Changelog discipline (rolling 5-entry buffer limit in `.\docs\`).
+
+---
+
+### Step 3: Required Output Format
+
+Rules:
+- If no issues are found, output strictly:
+No issues found!
+
+- If issues are found, rank them strictly from most critical to least critical (Issue #1 is the most critical).
+- Do not provide scorecards, introductions, summaries, or conversational filler.
+- Leave exactly TWO blank lines between each issue.
+- Follow this exact format for every item:
+
+Issue #[Number]: [Short condensed yet catchy title]
+The current issue: [Short, extremely oversimplified explanation of what is wrong or off right now]
+The solution: [Short, extremely oversimplified explanation of how it will be after the fix]

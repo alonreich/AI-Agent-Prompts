@@ -1,0 +1,35 @@
+According to all the top issues we had reviewed, discussed above, and agreed to work on: For every issue found, generate a low-level, technical, execution-ready AI agent sub-prompt formatted for autonomous completion.
+
+### Session Execution Plan
+Before listing the prompts, output an execution matrix classifying each generated sub-prompt:
+1. Sequential Prompts (Same Session): Group prompts that have shared dependencies, state mutations, or sequential file edits where context carryover is required.
+2. Isolated Prompts (Fresh Session): Identify prompts that are modular, decoupled, or high-token tasks that must run in a clean context window to prevent memory saturation and hallucination.
+
+### Per-Issue Prompt Generation Rules
+For each issue, output an agent task using this exact structure:
+
+### Prompt [N]: [Brief Technical Description]
+
+1. Context & Verification:
+   - CONTEXT: Check if either `./docs/` folder exist or `./project_structure.txt` file, or both exists in the repository root to establish architectural context.
+   - Locate and inspect the target implementation files.
+
+2. Evidence of Current Failure:
+   - Target File: `[Relative Path]`
+   - Code Evidence: `[Specific function, component, or snippet where the defect exists]`
+   - Current Flaw: `[Exact technical failure, anti-pattern, or broken logic]`
+
+3. Industry Benchmark / Best-Practice Target:
+   - Target Pattern: `[Reference standard architectural or low-level design pattern used in production-grade systems]`
+   - Expected Behavior: `[Precise technical requirement, type safety, error boundaries, or state management needed]`
+
+4. Implementation Instructions:
+   - Apply the surgical fix directly to the target code.
+   - Strictly follow the required replacement format:
+     - FILE: `[Full file path]`
+     - ISSUE FOUND: `[Parts of the target snippet which points at the issue]`
+     - POST FIX: `[an example or few other examples from top tier insdustry standard apps which do it better/correctly instead of the current issue found.]`
+   - Do not use placeholders or truncate output.
+
+5. Post-Fix Documentation Sync:
+   - Update the relevant `./docs/` files (or `./project_structure.txt` if structural/schema changes occurred) to reflect the new state accurately, preventing outdated context from corrupting downstream agent workflows.
