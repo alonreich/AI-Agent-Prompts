@@ -42,4 +42,4 @@ No issues found!
 
 Issue #[Number]: [Short condensed yet catchy title]
 The current issue: [Short, extremely oversimplified explanation of what is wrong or off right now]
-The solution: [Short, extremely oversimplified explanation of how it will be after the fix]
+The solution: [Short, extremely oversimplified explanation of how it will be any different after this suggested fix]
