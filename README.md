@@ -36,7 +36,6 @@
 Project Root/
 ├── AI Agent Prompts.html    ← Single-file frontend (HTML + CSS + JS)
 ├── Restart-Bridge.bat       ← Restarts the bridge process (keeps persistence)
-├── CLAUDE.md                ← Rules auto-loaded by AI agents before any work
 ├── bridge_master.py         ← Backend source of truth (Flask API)
 ├── bridge.py                ← Generated at install time (copy of master)
 ├── Install.bat              ← One-click installer for Windows

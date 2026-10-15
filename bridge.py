@@ -1587,7 +1587,7 @@ def generate_git_summary(cwd, branch, remote):
             others.append('frontend UI')
         elif 'bridge.py' in path:
             others.append('bridge backend')
-        elif any(doc in path for doc in ['project_structure.txt', 'README.md', 'CLAUDE.md']):
+        elif any(doc in path for doc in ['project_structure.txt', 'README.md']):
             others.append('documentation')
         elif path.endswith('.bat'):
             others.append('scripts')
@@ -1713,7 +1713,6 @@ def run_git_push_stream():
                 'AI Agent Prompts.html',
                 'bridge.py',
                 'README.md',
-                'CLAUDE.md',
                 'project_structure.txt',
                 'Install.bat',
                 'Restart-Bridge.bat',
@@ -1726,7 +1725,7 @@ def run_git_push_stream():
             if code != 0:
                 yield sse_event('complete', success=False, stage='stage',
                                 message='Failed to stage changes.',
-                                why='Git could not stage files. Check file permissions or locked files.',
+                                why='Git could not stage the managed paths. See the Git error below for the cause.',
                                 detail=out)
                 return
 
