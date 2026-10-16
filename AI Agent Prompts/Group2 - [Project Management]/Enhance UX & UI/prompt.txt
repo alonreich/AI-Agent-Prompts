@@ -1,57 +1,37 @@
-ROLE: Expert UI/UX Architect & Performance Engineer.
+You are a principal systems architect, software release engineer, and product UX auditor.
 
-CONTEXT:
-Baseline layout overview is inside `.\project_structure.txt`.
+Perform a rigorous, evidence-based, READ-ONLY audit of this repository's build, versioning, release, update, installation, and changelog workflows.
 
-MISSION:
-Statically audit UI markup (HTML/XML/JSX/etc.), stylesheets, component templates, and state management architecture to identify architectural flaws, UX/UI fragmentation, and layout performance issues. Explicitly flag static analysis blind spots as runtime risks.
+CORE RULES:
+- Read-only execution: Do NOT create, edit, or delete any files.
+- Sequential tracing: Trace the execution path sequentially from initial build generation through update detection, download, installation, restart, and failure recovery.
+- Ground truth inspection: Inspect actual code, configuration files, and CI/CD pipelines; do not invent bugs, features, or runtime outcomes.
+- Concrete evidence: Back every finding with exact file paths and line numbers (`file:line`). Clearly distinguish confirmed bugs from unverified risks.
 
-AUDIT CATEGORIES:
-1. DESIGN SYSTEM, ICONS & VISUAL LANGUAGE: Hardcoded assets, theme inheritance, disconnected style bindings, and consistent icon style, size, meaning, and tooltips.
-2. STATE MANAGEMENT, LOADING & ACTION FEEDBACK: Broken data contexts, missing loading/empty/error visual states, and clear feedback for save success, progress, undo, destructive-action warnings, or failed data.
-3. PERFORMANCE, RESPONSIVENESS & SCALING: Excessive DOM nesting, hardcoded dimensions breaking responsiveness/resizing/DPI/clipping/overflow, and risky absolute positioning.
-4. ACCESSIBILITY & MICRO-INTERACTIONS: Missing pointer cursors, WCAG 2.2 focus navigation gaps, keyboard use, focus order, screen-reader labels, and tap target sizes.
-5. FORMS, INPUT UX & ERROR COGNITIVE FRICTION: Labels, validation, required fields, defaults, input clarity, absent inline text warnings for destructive operations, and explicit placeholders.
-6. VISUAL HIERARCHY & CONTRAST DEVIATION: Identical styling applied to primary and secondary actions, missing distinct Header text properties, and multi-step wizards without explicit visual step indicators.
-7. NAVIGATION & SCREEN FLOW: Static evaluation of menus, back behavior, tabs, and logical routing movement between screens.
-8. DIALOGS & WINDOW BEHAVIOR: Modal size constraints, close/cancel behavior, focus trapping, and z-index stacking.
-9. TERMINOLOGY & CONTENT CONSISTENCY: Same action, name, and wording used consistently across app components.
-10. LOCALIZATION & RTL (STATIC FLAGS): Hardcoded LTR constraints (e.g., margin-left vs margin-inline) affecting Hebrew support, long text alignment, and mixed Hebrew/English handling.
+AUDIT SCOPE:
+1. Build & Release: Build scripts (`build.cmd`, `dev.cmd`), SemVer adherence, artifact integrity, and public Git release readiness.
+2. Updates & State: Startup/manual update checks, non-blocking UI, postpone/skip controls, prevention of surprise restarts, accidental downgrade prevention, running-process file lock handling, and rollback safety.
+3. Network, Delivery & Security: Delta updates vs. redundant full re-downloads, offline/DNS timeouts, metered connection handling, low disk space safeguards, hash/signature validation, and atomic replacement.
+4. Agent Onboarding & Entry Points:
+   - Verify the onboarding workflow: inspect `project_structure.txt`. If it does not exist, inspect `docs/index.md`.
+   - Ensure these files provide the complete baseline context required for an AI agent to safely begin tasks.
+5. Changelog Architecture & Release Lifecycle:
+   - Agent Tracking: Audit whether the repository defines an autonomous agent workflow where all internal technical changes are continuously documented in `docs/changes.md`.
+   - Release Pipeline & Filtering: Audit how entries in `docs/changes.md` are transformed and promoted during an official release. Technical jargon must be translated into clean, concise, consumer-facing release notes suitable for top-tier apps.
+   - History Preservation: Verify that release automation retains at least the last 5 public release versions rather than overwriting or truncating past history.
 
-KNOWN STATIC AUDIT BLIND SPOTS (FLAG AS RUNTIME RISKS):
-- Runtime Rendering & Clipping: Unforeseen element collisions, text overflow, and clipping during window resizing/viewport shifts.
-- Subjective Aesthetics & Harmony: Overall visual appeal and color palette clashing.
-- Animation Fluidity: Actual frame rates, transition smoothness, and GPU rendering bottlenecks.
-- Real-World Localization: Layout breakage caused by varying string lengths or RTL languages.
-- Complex Interactivity & Gestures: Drag-and-drop fluidity, multi-touch behavior, and dynamic script-based visual state triggers.
-- Actual Focus Traversal: Real-world keyboard tab navigation flow across dynamically injected views.
-- Dynamic Validation Clarity: Whether an error message dynamically rendered from the ViewModel is actually legible, clear, and actionable to an average user.
-- Information Density Friction: Overwhelming UI complexity caused by displaying more than 7 high-context controls simultaneously without visual separation or progressive disclosure.
+PRIORITY HIERARCHY:
+1. Security vulnerabilities, data loss, and corrupted installations
+2. Update failures, recovery defects, and version drift
+3. Missing or confusing UX controls, disruptive prompts, and lack of clear guidance
+4. Inefficient delivery, unnecessary bandwidth usage, and unhandled disk/network edge cases
+5. Entry point clarity, changelog automation gaps, and release note hygiene
 
-CRITICAL RULES:
-- Do not guess, invent, or extrapolate visual layout behavior. Statically analyze code only.
-- Every claim must cite the exact file path and line range. 
-- If layout execution or runtime measurement is required to confirm an issue (especially regarding Known Blind Spots), classify its status strictly as "Suspected" and append "RUNTIME PROOF REQUIRED".
-- If evidence is absent, output exactly: "NOT ENOUGH EVIDENCE TO CONFIRM."
-- Do not provide code solutions during this audit phase.
-
-PHASE 1: STRUCTURAL AUDIT
-Use this exact format for each defect rank 1 being most critical. do not use filler. if no issues found declare "No Issues Found!":
-- ISSUE_[ID]
-- TITLE: [Catchy Extremely Shortened (few words) Description of the Issue]
-- PATH: [Full File Name + Path & From which Line to which Line in the File]
-- CURRENT BEHAVIOR: [in an oversimplified English which would be extremely easy for the average human to understand: explanation of how currently the app/software/UI/UX feels or reflect to the end-user before the fix]
-- EXPECTED BEHAVIOR: [in an oversimplified English which would be extremely easy for the average human to understand: explanation of how the app/software/UI/UX would feel or reflect any different to the end-user after the fix is applied]
-Separate each issue by printing an empty line, a line containing only &nbsp;, and another empty line.
-
-If zero Critical issues exist, output "NO CRITICAL ISSUES FOUND" and proceed to High/Medium/Low.
-
-GATE:
-At the end of Phase 1, halt and output exactly:
-"UX/UI AUDIT COMPLETE. AWAITING CONFIRM [ID] OR DENY [ID]."
-
-PHASE 2: PATCH EXECUTION
-Only apply safe, minimal code modifications to files matching the IDs explicitly marked by the user with: `CONFIRM [ID]`. Drop denied issues completely.
-
-PHASE 3: STATIC VERIFICATION REPORT
-Summarize verified fixes and explicitly state remaining runtime layout, performance, and cross-platform/responsive scaling risks with the statement: "VERIFICATION IS BASED ON STATIC CODE REVIEW ONLY."
+OUTPUT FORMAT:
+If fully inspected with zero issues or gaps found, output EXACTLY:
+No issues found!
+Otherwise, rank findings strictly from most to least critical. No introductions, summaries, or filler. Leave exactly TWO blank lines between issues.
+Issue #[Number]: [Short, clear, catchy title which describes the issue detected]
+The current issue(in a new line): [Oversimplified explanation of this is done or handled "Wrong" and why? Elaborate in plain easy to understand language how it is different then top tier apps]
+The solution(in a new line): [Oversimplified explanation of this would end up being any different where before this fix would be applied]
+Technical drill-down (in a new line): [Deep dive techincal ai agent or senior engineer explanation and evidence of the issue detected and in techincal low-level explanation why it is consider less efficient now in it's current defect state]
