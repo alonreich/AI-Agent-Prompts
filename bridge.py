@@ -1349,6 +1349,47 @@ def recycle_list():
 
 
 
+@app.route('/api/prompt-history', methods=['GET'])
+def prompt_history():
+    """Previous versions of ONE prompt, read from the recycle bin.
+
+    Saves archive the old text with original_group = group FOLDER, deletes with
+    the group TITLE, and folders are renumbered on reorder, so both sides are
+    compared by title. Read-only: restoring is done by loading a version into
+    the editor and saving it, which archives the current text as usual.
+    """
+    try:
+        group_folder = request.args.get('group', '')
+        name = request.args.get('name', '')
+        if not group_folder or not name:
+            return jsonify({'status': 'error', 'message': 'group and name are required'}), 400
+        _, want_title = get_group_info(group_folder)
+        want_name = clean_filename(name)
+        versions = []
+        for item in list_recycle_bin():
+            if item.get('type') != 'agent': continue
+            if clean_filename(str(item.get('name', ''))) != want_name: continue
+            _, item_title = get_group_info(str(item.get('original_group', '')))
+            if item_title != want_title: continue
+            prompt_file = os.path.join(RECYCLE_BIN_DIR, clean_filename(item['bin_path']), 'prompt.txt')
+            if not os.path.isfile(prompt_file): continue
+            try:
+                if os.path.getsize(prompt_file) > MAX_PROMPT_SIZE: continue
+                with open(prompt_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+            except Exception as e:
+                logger.warning(f"prompt-history: unreadable version '{item['bin_path']}': {e}")
+                continue
+            versions.append({'bin_path': item['bin_path'], 'saved_at': item.get('deleted_at', 0), 'content': content})
+            if len(versions) >= 100: break
+        return jsonify({'status': 'success', 'versions': versions})
+    except Exception as e:
+        logger.error(f"prompt-history error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+
+
 @app.route('/api/recycle-delete-group', methods=['POST'])
 def recycle_delete_group():
     with migration_lock:

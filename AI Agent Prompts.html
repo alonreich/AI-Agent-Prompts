@@ -736,6 +736,7 @@
             --editor-surface: var(--bg-light);
             --prompt-pad-y: 20px;
             --prompt-pad-x: 24px;
+            --editor-font-size: 14px;
             --prompt-line-height: 24px;
             --line-gutter-width: 52px;
             flex: 1;
@@ -796,7 +797,6 @@
             white-space: nowrap;
             user-select: none;
         }
-        #prompt-box-wrap.editing-state::before { display: block; }
 
 
         #search-overlay {
@@ -852,7 +852,7 @@
             padding: var(--prompt-pad-y) 10px var(--prompt-pad-y) 0;
             text-align: right;
             font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-            font-size: 14px;
+            font-size: var(--editor-font-size);
             line-height: var(--prompt-line-height);
             user-select: none;
             min-width: var(--line-gutter-width);
@@ -915,7 +915,7 @@
             flex: 1;
             white-space: pre-wrap;
             font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-            font-size: 14px;
+            font-size: var(--editor-font-size);
             line-height: var(--prompt-line-height);
             outline: none;
             background: transparent;
@@ -932,8 +932,8 @@
         #prompt-box * {
             margin: 0 !important;
             padding: 0 !important;
-            line-height: 24px !important;
-            font-size: 14px !important;
+            line-height: var(--prompt-line-height) !important;
+            font-size: var(--editor-font-size) !important;
             font-family: inherit !important;
             background: transparent !important;
             color: inherit !important;
@@ -1948,13 +1948,261 @@
         .offline-fix-header { font-size: 14px; color: var(--blue); }
         .offline-fix-list { text-align: left; font-size: 13px; display: inline-block; margin-bottom: 20px; color: var(--text-dim); }
         .offline-debug-info { font-size: 10px; opacity: 0.4; border-top: 1px solid var(--border); padding-top: 15px; }
-        .agent-title-wrap { display: flex; align-items: center; flex: 1 1 260px; min-width: 0; margin: 0 8px; position: relative; }
+        /* min-width makes the action strip wrap onto its own row before the title
+           is crushed; with min-width:0 the edit-mode chips squeezed the title
+           down to one character per line. */
+        .agent-title-wrap { display: flex; align-items: center; flex: 1 1 260px; min-width: min-content; margin: 0 8px; position: relative; }
+        .agent-title-wrap .nav-agent-title { min-width: min(190px, 30vw); }
+        .agent-title-wrap > .breadcrumb, .agent-title-wrap > .editor-timestamp { flex-shrink: 0; }
+        .agent-title-wrap > .editor-timestamp { margin-left: 10px; }
+        /* When the strip wraps onto its own row it stays on the right. */
+        .nav-bar > .prompt-action-strip { margin-left: auto; }
+        @media (max-width: 768px) {
+            .agent-title-wrap { flex-wrap: wrap; min-width: 100%; row-gap: 4px; }
+        }
         .nav-breadcrumb { margin-right: 10px; margin-left: 0; flex-shrink: 0; }
         .nav-agent-title { margin: 0; text-align: left; outline: none; min-width: 0; overflow-wrap: anywhere; }
         .flex-spacer { flex: 1; }
         .prompt-action-strip { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex: 0 1 auto; flex-wrap: wrap; }
         .collision-modal-actions { justify-content: space-between; }
         .collision-btn-group { display: flex; gap: 8px; }
+
+        /* ===================== PROMPT EDITOR UX ===================== */
+
+        /* Edit-mode cue: chip beside the title, a blue band across the top of the
+           editor and a blue rule under the nav bar, so view and edit can never be
+           confused at a glance. */
+        .edit-mode-chip {
+            display: none; align-items: center; gap: 5px; flex-shrink: 0;
+            margin-left: 10px; padding: 3px 9px; border-radius: var(--radius-pill);
+            background: var(--blue); color: #0c162c;
+            font-size: 10px; font-weight: 800; letter-spacing: 0.8px; user-select: none;
+        }
+        .edit-mode-chip svg { width: 11px; height: 11px; fill: currentColor; }
+        #prompt-view.editing-active .edit-mode-chip { display: inline-flex; }
+        #prompt-view.editing-active .nav-bar { box-shadow: 0 2px 0 -1px var(--blue); }
+        #prompt-box-wrap.editing-state { box-shadow: inset 0 3px 0 var(--blue), 0 0 15px rgba(88, 166, 255, 0.12); }
+
+        .dirty-indicator {
+            display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+            margin-left: 8px; padding: 3px 9px; border-radius: var(--radius-pill);
+            border: 1px solid rgba(255, 195, 40, 0.55); color: #ffd479;
+            background: rgba(255, 195, 40, 0.1);
+            font-size: 10px; font-weight: 800; letter-spacing: 0.8px; user-select: none;
+        }
+        .dirty-indicator[hidden] { display: none; }
+        .dirty-dot { width: 7px; height: 7px; border-radius: 50%; background: #ffc328; box-shadow: 0 0 6px rgba(255, 195, 40, 0.8); }
+        .save-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+        .save-btn:disabled:hover { background: var(--success); }
+
+        .diff-btn {
+            height: 34px; padding: 0 12px; border-radius: var(--radius-sm); box-sizing: border-box;
+            background: transparent; border: 1px dashed var(--border); color: var(--text-dim);
+            font-size: 11px; font-weight: 700; letter-spacing: 0.5px; cursor: pointer; transition: 0.2s;
+        }
+        .diff-btn:hover { color: var(--text); border-color: var(--blue); border-style: solid; }
+        .diff-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        /* Overflow menu: external (AI Review) and destructive (Delete) actions live
+           here, away from the primary COPY / EDIT / SAVE buttons. */
+        .prompt-more-wrap { position: relative; display: flex; }
+        .prompt-more-btn {
+            width: 34px; height: 34px; padding: 0; border-radius: var(--radius-sm); box-sizing: border-box;
+            background: transparent; border: 1px solid var(--border); color: var(--text);
+            font-size: 20px; line-height: 1; cursor: pointer; transition: 0.2s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .prompt-more-btn:hover, .prompt-more-btn[aria-expanded="true"] { border-color: var(--blue); color: #fff; background: rgba(88, 166, 255, 0.12); }
+        .prompt-more-menu {
+            position: absolute; top: calc(100% + 6px); right: 0; z-index: 1500; min-width: 230px;
+            display: flex; flex-direction: column; padding: 5px;
+            background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg, 0 10px 30px rgba(0,0,0,0.45));
+        }
+        .prompt-more-menu[hidden] { display: none; }
+        .pmm-item {
+            display: flex; align-items: center; gap: 10px; width: 100%;
+            padding: 8px 10px; border: none; border-radius: var(--radius-sm);
+            background: none; color: var(--text); text-align: left;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+        }
+        .pmm-item svg { width: 15px; height: 15px; fill: currentColor; flex-shrink: 0; }
+        .pmm-item:hover, .pmm-item:focus-visible { background: rgba(88, 166, 255, 0.14); color: #fff; outline: none; }
+        .pmm-hint { margin-left: auto; padding-left: 12px; font-size: 10px; font-weight: 500; color: var(--text-dim); }
+        .pmm-key { width: 15px; text-align: center; font-weight: 800; flex-shrink: 0; }
+        .pmm-ai { color: #bfa3ff; }
+        .pmm-danger { color: var(--error); }
+        .pmm-danger:hover, .pmm-danger:focus-visible { background: rgba(255, 140, 137, 0.14); color: var(--error); }
+        .pmm-sep { height: 1px; margin: 4px 6px; background: var(--border); opacity: 0.6; }
+        #prompt-view:not(.editing-active) .pmm-edit-only { display: none; }
+
+        .draft-banner {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            margin: 0 0 8px; padding: 8px 12px; border-radius: var(--radius-sm);
+            border: 1px solid rgba(88, 166, 255, 0.5); background: rgba(88, 166, 255, 0.1);
+            color: var(--text); font-size: 12px;
+        }
+        .draft-banner[hidden] { display: none; }
+        .draft-banner > span { flex: 1 1 260px; }
+        .draft-banner button {
+            padding: 5px 12px; border-radius: var(--radius-sm); cursor: pointer;
+            font-size: 11px; font-weight: 700; border: 1px solid var(--blue);
+            background: var(--blue); color: #0c162c;
+        }
+        .draft-banner button + button { background: transparent; color: var(--text); border-color: var(--border); }
+
+        /* Current line: gutter number lights up and a faint band sits behind the
+           line. The band is a child of the scroll container, so it scrolls with
+           the text; its top/height come from the matching gutter row. */
+        #active-line-band {
+            position: absolute; left: 0; right: 0; top: 0; height: 0;
+            background: rgba(88, 166, 255, 0.07); pointer-events: none; z-index: 0; display: none;
+        }
+        #prompt-box-wrap.editing-state #active-line-band.on { display: block; }
+        .line-number-row.active-line { color: var(--text); font-weight: 700; }
+
+        /* Structure colouring: the ::highlight(tint-*) rules are generated per
+           colour theme by applyTintTheme() into <style id="tint-theme-style">. */
+
+        /* Section stripe: right edge of each gutter row, colour set per line. */
+        /* Left edge: the numbers are right-aligned, so a right-edge stripe sat on
+           top of their last digit. */
+        .line-number-row { box-shadow: inset 3px 0 0 var(--sec, transparent); }
+
+        /* The box grows with its text (like the gutter) instead of stretching to
+           the visible frame. Text past the first screen used to overflow the box,
+           so a click on an EMPTY line there hit the frame behind it: no caret in
+           edit mode, no double-click-to-edit in view mode. */
+        #prompt-box { align-self: flex-start; min-height: 100%; }
+        /* A trailing newline is not drawn by the browser, so the last empty line
+           had no height and the caret vanished after Enter at the very end. A
+           zero-width character after the text gives that line a box; pseudo
+           content is never part of textContent, so saving is unaffected. */
+        #prompt-box::after { content: "\200B"; }
+
+        .psb-lint { color: #ffb4a8 !important; border-color: rgba(255, 107, 107, 0.45) !important; }
+        .psb-lint[hidden] { display: none; }
+        .psb-legend-wrap { position: relative; display: inline-flex; }
+        .tint-legend {
+            position: absolute; bottom: calc(100% + 8px); right: 0; z-index: 1500; width: 330px;
+            padding: 10px; border-radius: var(--radius-md); border: 1px solid var(--border);
+            background: var(--bg); box-shadow: var(--shadow-lg); user-select: none;
+            font-size: 12px; letter-spacing: 0; text-transform: none;
+        }
+        .tint-legend[hidden] { display: none; }
+        .tint-legend-title { font-size: 11px; font-weight: 800; letter-spacing: 0.8px; color: var(--blue); margin-bottom: 6px; }
+        .tint-legend-themes { display: flex; gap: 4px; margin-bottom: 8px; flex-wrap: wrap; }
+        .tint-theme-btn { padding: 3px 9px; border-radius: var(--radius-pill); border: 1px solid var(--border); background: none; color: var(--text-dim); font-size: 11px; font-weight: 700; cursor: pointer; }
+        .tint-theme-btn:hover { color: #fff; }
+        .tint-theme-btn.active { color: #fff; border-color: var(--blue); background: rgba(88, 166, 255, 0.15); }
+        .tint-legend-list { display: flex; flex-direction: column; gap: 3px; max-height: 52vh; overflow: auto; }
+        .tint-legend-row { display: grid; grid-template-columns: 118px 1fr; gap: 8px; align-items: center; }
+        .tint-legend-name { color: var(--text-dim); font-weight: 600; }
+        .tint-legend-sample { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 11.5px; color: var(--gold); padding: 1px 4px; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Word wrap off: lines run on and the editor scrolls sideways. */
+        #prompt-box-wrap.nowrap { overflow-x: auto; }
+        #prompt-box-wrap.nowrap #prompt-box { white-space: pre !important; overflow-wrap: normal; width: max-content; min-width: 0; flex: 1 0 auto; }
+
+        /* Status bar */
+        /* margin-right keeps the bar clear of the fixed BRIDGE pill (bottom-right,
+           ~136px wide), which used to sit on top of the token count. */
+        #prompt-status-bar { flex-wrap: wrap; row-gap: 4px; margin-right: 150px; }
+        .psb-mode { font-weight: 800; letter-spacing: 0.6px; color: var(--text-dim); white-space: nowrap; }
+        #prompt-view.editing-active .psb-mode { color: var(--blue); }
+        .psb-sel { color: #ffd479; }
+        .psb-item[hidden] { display: none; }
+        .psb-tools { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; padding-left: 8px; border-left: 1px solid var(--border); }
+        .psb-btn {
+            min-width: 24px; height: 20px; padding: 0 6px; border-radius: 4px; cursor: pointer;
+            background: transparent; border: 1px solid transparent; color: var(--text-dim);
+            font-size: 10px; font-weight: 700; letter-spacing: 0.4px; line-height: 1;
+        }
+        .psb-btn:hover { color: #fff; border-color: var(--border); }
+        .psb-btn[aria-pressed="true"] { color: var(--blue); border-color: rgba(88, 166, 255, 0.45); background: rgba(88, 166, 255, 0.1); }
+        .psb-font { min-width: 32px; text-align: center; font-variant-numeric: tabular-nums; }
+
+        /* Focus (zen) mode: only the text and a way out. */
+        .zen-exit-btn { display: none; }
+        #prompt-view.zen .nav-bar > *:not(.zen-exit-btn) { display: none !important; }
+        #prompt-view.zen .nav-bar { justify-content: flex-end; margin-bottom: 4px; min-height: 0; box-shadow: none; }
+        #prompt-view.zen #prompt-status-bar { display: none; }
+        #prompt-view.zen { padding: 6px 10px !important; }
+        #prompt-view.zen .zen-exit-btn {
+            display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: var(--radius-pill);
+            background: transparent; border: 1px solid var(--border); color: var(--text-dim);
+            font-size: 10px; font-weight: 700; letter-spacing: 0.6px; cursor: pointer; opacity: 0.55; transition: 0.2s;
+        }
+        #prompt-view.zen .zen-exit-btn:hover { opacity: 1; color: #fff; border-color: var(--blue); }
+        #prompt-view.zen.is-dirty .zen-exit-btn::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #ffc328; }
+
+        /* Wide modals: diff, history, shortcuts */
+        .wide-card { width: min(980px, 94vw); max-height: 88vh; display: flex; flex-direction: column; text-align: left; box-sizing: border-box; }
+        .wide-card-head { display: flex; align-items: baseline; gap: 12px; }
+        .wide-card-head h3 { margin-bottom: 4px; }
+        .wide-card-sub { font-size: 12px !important; color: var(--text-dim) !important; margin: 0 0 10px !important; }
+        .wide-card-actions { justify-content: flex-end; margin-top: 12px; flex-wrap: wrap; }
+        .diff-stats { font-size: 12px; font-weight: 700; color: var(--text-dim); }
+        .diff-stats .add { color: #56d364; }
+        .diff-stats .del { color: #ff7b72; }
+        .diff-view {
+            flex: 1 1 auto; min-height: 160px; overflow: auto;
+            background: var(--bg-light); border: 1px solid var(--border); border-radius: var(--radius-sm);
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 12px; line-height: 19px;
+        }
+        .diff-line { display: grid; grid-template-columns: 44px 44px 18px 1fr; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .diff-line .ln { color: #6e7f94; text-align: right; padding-right: 6px; user-select: none; }
+        .diff-line .sign { text-align: center; user-select: none; color: var(--text-dim); }
+        .diff-line .txt { color: var(--text); padding-right: 10px; }
+        .diff-line.add { background: rgba(46, 160, 67, 0.16); }
+        .diff-line.add .sign, .diff-line.add .txt { color: #aff5b4; }
+        .diff-line.del { background: rgba(248, 81, 73, 0.15); }
+        .diff-line.del .sign, .diff-line.del .txt { color: #ffdcd7; }
+        .diff-line.del .txt { text-decoration: line-through; text-decoration-color: rgba(255, 123, 114, 0.5); }
+        .diff-gap {
+            padding: 3px 10px; color: var(--text-dim); font-size: 11px; font-style: italic;
+            background: rgba(88, 166, 255, 0.06); border-top: 1px dashed var(--border); border-bottom: 1px dashed var(--border);
+            cursor: pointer; user-select: none;
+        }
+        .diff-gap:hover { color: var(--text); }
+        .diff-empty { padding: 28px; text-align: center; color: var(--text-dim); font-family: inherit; }
+        .diff-plain { padding: 10px 12px; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text); }
+
+        .history-layout { display: grid; grid-template-columns: 240px 1fr; gap: 10px; flex: 1 1 auto; min-height: 0; height: 56vh; }
+        .history-list { overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-light); }
+        .history-item {
+            display: block; width: 100%; text-align: left; padding: 8px 10px; cursor: pointer;
+            background: none; border: none; border-bottom: 1px solid rgba(90, 115, 149, 0.35); color: var(--text);
+        }
+        .history-item:hover { background: rgba(88, 166, 255, 0.08); }
+        .history-item.active { background: rgba(88, 166, 255, 0.18); box-shadow: inset 3px 0 0 var(--blue); }
+        .history-item .hi-when { display: block; font-size: 13px; font-weight: 700; }
+        .history-item .hi-meta { display: block; font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+        .history-preview-wrap { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+        .history-preview-tabs { display: flex; gap: 4px; margin-bottom: 6px; }
+        .history-tab { padding: 4px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: none; color: var(--text-dim); font-size: 10px; font-weight: 700; letter-spacing: 0.5px; cursor: pointer; }
+        .history-tab.active { color: #fff; border-color: var(--blue); background: rgba(88, 166, 255, 0.15); }
+        .history-preview-wrap .diff-view { min-height: 0; }
+        .wiz-save:disabled, .wiz-cancel:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        .shortcuts-card { width: min(760px, 94vw); }
+        .shortcut-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 28px; overflow: auto; }
+        .shortcut-list { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0 0 12px; align-items: baseline; font-size: 13px; }
+        .shortcut-list dt { white-space: nowrap; color: var(--text); }
+        .shortcut-list dd { margin: 0; color: var(--text-dim); }
+        .shortcut-list .shortcut-head { grid-column: 1 / -1; margin-top: 8px; color: var(--blue); font-size: 11px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; }
+        .shortcut-list .shortcut-head + dd { display: none; }
+        kbd {
+            display: inline-block; min-width: 18px; padding: 1px 6px; border-radius: 4px; text-align: center;
+            border: 1px solid var(--border); border-bottom-width: 2px; background: var(--bg-light);
+            font-family: 'SFMono-Regular', Consolas, monospace; font-size: 11px; color: var(--text);
+        }
+        @media (max-width: 768px) {
+            .history-layout { grid-template-columns: 1fr; grid-template-rows: 150px 1fr; height: 70vh; }
+            .shortcut-cols { grid-template-columns: 1fr; }
+            .diff-line { grid-template-columns: 34px 34px 16px 1fr; }
+            .psb-tools { margin-left: 0; padding-left: 0; border-left: none; }
+        }
     </style>
 </head>
 <body>
@@ -2098,9 +2346,12 @@
                 <button class="edit-title-btn" onclick="startEditTitle()" aria-label="Edit Agent Name">
                     <svg aria-hidden="true"><use href="#icon-edit"/></svg>
                 </button>
-                <button class="delete-agent-btn" id="delete-agent-btn" onclick="deleteCurrentAgent()" aria-label="Delete Agent">
-                    <svg aria-hidden="true"><use href="#icon-trash"/></svg>
-                </button>
+                <span id="edit-mode-chip" class="edit-mode-chip" aria-hidden="true">
+                    <svg aria-hidden="true"><use href="#icon-edit"/></svg>EDITING
+                </span>
+                <span id="dirty-indicator" class="dirty-indicator" role="status" aria-live="polite" hidden>
+                    <span class="dirty-dot" aria-hidden="true"></span>UNSAVED
+                </span>
                 <div class="flex-spacer"></div>
                 <span id="prompt-copy-timestamp" class="editor-timestamp"></span>
             </div>
@@ -2110,13 +2361,42 @@
                     <svg aria-hidden="true"><use href="#icon-edit"/></svg>
                     EDIT PROMPT
                 </button>
-                <button id="save-btn" class="btn btn-success save-btn" style="display:none" onclick="saveEdit()">SAVE CHANGES</button>
+                <button id="diff-btn" class="diff-btn" style="display:none" onclick="openDiffModal('review')" title="Review changes (Ctrl+Shift+D)">DIFF</button>
                 <button id="cancel-btn" class="btn btn-secondary cancel-btn" style="display:none" onclick="cancelEdit()">CANCEL</button>
-                <button class="ai-review-btn" onclick="reviewPromptWithAI()" title="Allow AI to review and improve this AI Agent prompt">
-                    <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                    AI REVIEW
-                </button>
+                <button id="save-btn" class="btn btn-success save-btn" style="display:none" onclick="saveEdit(false, { exit: true })" title="Save and close the editor (Ctrl+Enter). Ctrl+S saves and keeps editing.">SAVE CHANGES</button>
+                <div class="prompt-more-wrap">
+                    <button id="prompt-more-btn" class="prompt-more-btn" onclick="togglePromptMoreMenu()" aria-label="More actions" aria-haspopup="menu" aria-expanded="false" aria-controls="prompt-more-menu" title="More actions">&#8943;</button>
+                    <div id="prompt-more-menu" class="prompt-more-menu" role="menu" aria-labelledby="prompt-more-btn" hidden>
+                        <button type="button" role="menuitem" class="pmm-item pmm-ai" onclick="runPromptMenuAction(reviewPromptWithAI)">
+                            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                            AI Review<span class="pmm-hint">opens ChatGPT</span>
+                        </button>
+                        <button type="button" role="menuitem" class="pmm-item" onclick="runPromptMenuAction(openHistoryModal)">
+                            <svg aria-hidden="true"><use href="#icon-undo"/></svg>
+                            Version history
+                        </button>
+                        <button type="button" role="menuitem" class="pmm-item pmm-edit-only" onclick="runPromptMenuAction(() => openDiffModal('review'))">
+                            <svg aria-hidden="true"><use href="#icon-search"/></svg>
+                            Review changes<span class="pmm-hint">Ctrl+Shift+D</span>
+                        </button>
+                        <button type="button" role="menuitem" class="pmm-item" onclick="runPromptMenuAction(openShortcutsModal)">
+                            <span class="pmm-key" aria-hidden="true">?</span>
+                            Keyboard shortcuts<span class="pmm-hint">Ctrl+/</span>
+                        </button>
+                        <div class="pmm-sep" role="separator"></div>
+                        <button type="button" role="menuitem" class="pmm-item pmm-danger" onclick="runPromptMenuAction(deleteCurrentAgent)">
+                            <svg aria-hidden="true"><use href="#icon-trash"/></svg>
+                            Delete prompt
+                        </button>
+                    </div>
+                </div>
             </div>
+            <button id="zen-exit-btn" class="zen-exit-btn" onclick="toggleZenMode(false)" title="Exit focus mode (Ctrl+Shift+F)">EXIT FOCUS</button>
+        </div>
+        <div id="draft-banner" class="draft-banner" hidden>
+            <span><strong>Unsaved draft found</strong> <span id="draft-banner-detail"></span></span>
+            <button type="button" onclick="restorePromptDraft()">RESTORE DRAFT</button>
+            <button type="button" onclick="discardPromptDraft()">DISCARD</button>
         </div>
         <div id="editor-conflict-banner" class="editor-conflict-banner" hidden>
             Changed outside this editor.
@@ -2148,17 +2428,40 @@
             </div>
         </div>
         <div id="prompt-box-wrap">
+            <div id="active-line-band" aria-hidden="true"></div>
             <div id="line-gutter"></div>
-            <div id="prompt-box" ondblclick="startEdit()" role="textbox" aria-multiline="true" aria-label="Prompt content" aria-readonly="true"></div>
+            <div id="prompt-box" role="textbox" aria-multiline="true" aria-label="Prompt content" aria-readonly="true"></div>
         </div>
-        <div id="prompt-status-bar" aria-hidden="true">
-            <span class="psb-item" id="psb-lines">0 Ln</span>
-            <span class="psb-dot"></span>
-            <span class="psb-item" id="psb-words">0 Wr</span>
-            <span class="psb-dot"></span>
-            <span class="psb-item" id="psb-chars">0 Ch</span>
+        <div id="prompt-status-bar">
+            <span class="psb-mode" id="psb-mode">VIEW &middot; double-click to edit</span>
+            <span class="psb-item" id="psb-caret" hidden></span>
+            <span class="psb-item psb-sel" id="psb-sel" hidden></span>
+            <button type="button" class="psb-btn psb-lint" id="psb-lint" onclick="jumpToNextLintIssue()" hidden></button>
             <span class="psb-flex"></span>
-            <span class="psb-item psb-tokens" id="psb-tokens" title="Estimated AI tokens (about 4 characters each) — amber when nearing small-model context limits, red when very large">&#8776; 0 tokens</span>
+            <span class="psb-item" id="psb-lines" aria-hidden="true">0 Ln</span>
+            <span class="psb-dot" aria-hidden="true"></span>
+            <span class="psb-item" id="psb-words" aria-hidden="true">0 Wr</span>
+            <span class="psb-dot" aria-hidden="true"></span>
+            <span class="psb-item" id="psb-chars" aria-hidden="true">0 Ch</span>
+            <span class="psb-dot" aria-hidden="true"></span>
+            <span class="psb-item psb-tokens" id="psb-tokens" aria-hidden="true" title="Estimated AI tokens (about 4 characters each) — amber when nearing small-model context limits, red when very large">&#8776; 0 tokens</span>
+            <span class="psb-tools">
+                <button type="button" class="psb-btn" onclick="changeEditorFontSize(-1)" title="Smaller text (Ctrl+-)" aria-label="Smaller editor text">A&minus;</button>
+                <span class="psb-font" id="psb-font" title="Editor text size (Ctrl+0 resets)">14px</span>
+                <button type="button" class="psb-btn" onclick="changeEditorFontSize(1)" title="Larger text (Ctrl+=)" aria-label="Larger editor text">A+</button>
+                <button type="button" class="psb-btn" id="psb-wrap-btn" onclick="toggleEditorWrap()" title="Toggle word wrap (Alt+Z)" aria-pressed="true">WRAP</button>
+                <button type="button" class="psb-btn" id="psb-tint-btn" onclick="toggleEditorTint()" title="Toggle structure colouring" aria-pressed="true">COLOR</button>
+                <span class="psb-legend-wrap">
+                    <button type="button" class="psb-btn" id="psb-legend-btn" onclick="toggleTintLegend()" title="Colour key and themes" aria-haspopup="dialog" aria-expanded="false" aria-controls="tint-legend">KEY</button>
+                    <div id="tint-legend" class="tint-legend" role="dialog" aria-label="Colour key" hidden>
+                        <div class="tint-legend-title">COLOUR KEY</div>
+                        <div id="tint-legend-themes" class="tint-legend-themes"></div>
+                        <div id="tint-legend-list" class="tint-legend-list"></div>
+                    </div>
+                </span>
+                <button type="button" class="psb-btn" id="psb-zen-btn" onclick="toggleZenMode()" title="Focus mode (Ctrl+Shift+F)" aria-pressed="false">FOCUS</button>
+                <button type="button" class="psb-btn" onclick="openShortcutsModal()" title="Keyboard shortcuts (Ctrl+/)" aria-label="Keyboard shortcuts">?</button>
+            </span>
         </div>
     </div>
 
@@ -2203,6 +2506,85 @@
             <div class="modal-actions">
                 <button class="wiz-save" id="bulk-move-confirm-btn" onclick="confirmBulkMove()">MOVE NOW</button>
                 <button class="wiz-cancel" onclick="closeBulkMove()">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="diff-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="diff-modal-title">
+        <div class="modal-card wide-card">
+            <div class="wide-card-head">
+                <h3 id="diff-modal-title">Review Changes</h3>
+                <span id="diff-modal-stats" class="diff-stats"></span>
+            </div>
+            <p id="diff-modal-text" class="wide-card-sub"></p>
+            <div id="diff-modal-body" class="diff-view" tabindex="0" aria-label="Changes"></div>
+            <div class="modal-actions wide-card-actions">
+                <button id="diff-modal-secondary" class="wiz-cancel">CLOSE</button>
+                <button id="diff-modal-primary" class="wiz-save">SAVE CHANGES</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="history-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="history-modal-title">
+        <div class="modal-card wide-card">
+            <div class="wide-card-head">
+                <h3 id="history-modal-title">Version History</h3>
+                <span id="history-modal-sub" class="diff-stats"></span>
+            </div>
+            <p class="wide-card-sub">Earlier saved versions of this prompt (kept 30 days in the Recycle Bin). Loading one puts it in the editor; nothing changes on disk until you save.</p>
+            <div class="history-layout">
+                <div id="history-list" class="history-list" role="listbox" aria-label="Saved versions"></div>
+                <div class="history-preview-wrap">
+                    <div class="history-preview-tabs" role="tablist">
+                        <button type="button" role="tab" id="history-tab-diff" class="history-tab active" aria-selected="true" onclick="setHistoryPreviewMode('diff')" title="What loading this version would change in the current text">CHANGES IF LOADED</button>
+                        <button type="button" role="tab" id="history-tab-text" class="history-tab" aria-selected="false" onclick="setHistoryPreviewMode('text')">FULL TEXT</button>
+                    </div>
+                    <div id="history-preview" class="diff-view" tabindex="0" aria-label="Version preview"></div>
+                </div>
+            </div>
+            <div class="modal-actions wide-card-actions">
+                <button class="wiz-cancel" onclick="closeHistoryModal()">CLOSE</button>
+                <button id="history-copy-btn" class="wiz-cancel" onclick="copyHistoryVersion()" disabled>COPY VERSION</button>
+                <button id="history-load-btn" class="wiz-save" onclick="loadHistoryVersion()" disabled>LOAD INTO EDITOR</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="shortcuts-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="shortcuts-modal-title">
+        <div class="modal-card wide-card shortcuts-card">
+            <h3 id="shortcuts-modal-title">Keyboard Shortcuts</h3>
+            <div class="shortcut-cols">
+                <dl class="shortcut-list">
+                    <dt class="shortcut-head">Saving</dt><dd></dd>
+                    <dt><kbd>Ctrl</kbd>+<kbd>S</kbd></dt><dd>Save and keep editing</dd>
+                    <dt><kbd>Ctrl</kbd>+<kbd>Enter</kbd></dt><dd>Save and close the editor</dd>
+                    <dt><kbd>Esc</kbd></dt><dd>Close search / focus mode, else cancel edit</dd>
+                    <dt><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd></dt><dd>Review changes (diff)</dd>
+                    <dt class="shortcut-head">Editing</dt><dd></dd>
+                    <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd></dt><dd>Undo / Redo</dd>
+                    <dt><kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd></dt><dd>Indent / outdent line(s)</dd>
+                    <dt><kbd>Enter</kbd></dt><dd>New line, continues lists</dd>
+                    <dt><kbd>Alt</kbd>+<kbd>&uarr;</kbd> / <kbd>&darr;</kbd></dt><dd>Move line(s) up / down</dd>
+                    <dt><kbd>Ctrl</kbd>+<kbd>D</kbd></dt><dd>Duplicate line(s)</dd>
+                    <dt><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd></dt><dd>Delete line(s)</dd>
+                </dl>
+                <dl class="shortcut-list">
+                    <dt class="shortcut-head">Find &amp; navigate</dt><dd></dd>
+                    <dt><kbd>Ctrl</kbd>+<kbd>F</kbd></dt><dd>Find</dd>
+                    <dt><kbd>Ctrl</kbd>+<kbd>H</kbd></dt><dd>Find &amp; replace</dd>
+                    <dt><kbd>F3</kbd> / <kbd>Shift</kbd>+<kbd>F3</kbd></dt><dd>Next / previous match</dd>
+                    <dt><kbd>Ctrl</kbd>+<kbd>G</kbd></dt><dd>Go to line</dd>
+                    <dt class="shortcut-head">View</dt><dd></dd>
+                    <dt><kbd>Ctrl</kbd>+<kbd>=</kbd> / <kbd>Ctrl</kbd>+<kbd>-</kbd></dt><dd>Larger / smaller text</dd>
+                    <dt><kbd>Ctrl</kbd>+<kbd>0</kbd></dt><dd>Reset text size</dd>
+                    <dt><kbd>Alt</kbd>+<kbd>Z</kbd></dt><dd>Toggle word wrap</dd>
+                    <dt><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd></dt><dd>Focus mode</dd>
+                    <dt><kbd>Ctrl</kbd>+<kbd>/</kbd></dt><dd>This list</dd>
+                </dl>
+            </div>
+            <p class="wide-card-sub">Tab indents while editing. To move focus out of the editor with the keyboard, press <kbd>Ctrl</kbd>+<kbd>M</kbd> first; then Tab moves focus as normal until you press it again.</p>
+            <div class="modal-actions">
+                <button class="wiz-save" onclick="closeShortcutsModal()">GOT IT</button>
             </div>
         </div>
     </div>
@@ -2605,6 +2987,7 @@
         function setPromptBoxEditing(isEditing) {
             box.setAttribute('aria-readonly', isEditing ? 'false' : 'true');
             view.classList.toggle('editing-active', isEditing);
+            if (typeof updateEditorModeUi === 'function') updateEditorModeUi();
         }
 
         function apiErrorMessage(res, fallback) {
@@ -2915,10 +3298,15 @@
             return getEditorText() !== editBaseContent;
         }
 
+        // Same cleanup the backend applies (clean_filename), so "changed?" is
+        // judged on the name that would actually be written to disk.
+        function sanitizeTitle(raw) {
+            return String(raw || '').trim().replace(ILLEGAL_CHARS, '_');
+        }
+
         function hasUnsavedTitleChanges() {
-            const saveBtn = document.getElementById('title-save-btn');
-            if (!saveBtn || saveBtn.style.display !== 'flex') return false;
-            return title.innerText.trim() !== currentAgent;
+            if (title.contentEditable !== 'true') return false;
+            return sanitizeTitle(title.innerText) !== currentAgent;
         }
 
         function hasUnsavedWork() {
@@ -3086,6 +3474,8 @@
             const text = (e.originalEvent || e).clipboardData.getData('text/plain');
             insertTextAtCursor(text);
             scheduleEditorHistoryRecord();
+            // A cancelled paste fires no input event, so nothing else refreshes the gutter.
+            scheduleUpdateLineNumbers();
         });
 
 
@@ -3258,6 +3648,9 @@
 
             gutter.dataset.count = String(lines.length);
             gutterCache = { width: availWidth, lines, heights };
+            // Row heights may have just changed, so the current-line band follows.
+            if (typeof syncActiveLineBand === 'function') syncActiveLineBand();
+            if (typeof paintSectionStripes === 'function') paintSectionStripes();
         }
 
         async function api(endpoint, method = 'GET', body = null) {
@@ -3918,7 +4311,7 @@
                     const agentExists = groups[currentGroup] && groups[currentGroup].agents && groups[currentGroup].agents.hasOwnProperty(currentAgent);
                     if (!agentExists) {
                         showToast("AGENT WAS DELETED EXTERNALLY", wasEditing ? "error" : "warning");
-                        stopEdit(); cancelTitleEdit(); view.style.display = 'none';
+                        stopEdit({ keepDraft: true }); cancelTitleEdit(); view.style.display = 'none';
                         document.getElementById('menu-container').style.display = 'flex';
                         setRoute(boardRoute());
                         return true;
@@ -5702,7 +6095,10 @@
 
         function showPrompt(folder, agent, fromRoute = false) {
             if (!fromRoute) setRoute(promptRoute(folder, agent));
-            currentGroup = folder; currentAgent = agent; stopEdit(); cancelTitleEdit();
+            // Leave the previous prompt BEFORE switching names: stopEdit() clears
+            // the draft of the prompt being left, never the one being opened.
+            stopEdit(); cancelTitleEdit(); closePromptMoreMenu(false);
+            currentGroup = folder; currentAgent = agent;
             document.getElementById('menu-container').style.display = 'none';
             view.style.display = 'flex'; title.innerText = agent; box.textContent = groups[folder].agents[agent];
             editBaseContent = groups[folder].agents[agent];
@@ -5713,13 +6109,23 @@
             setPromptBoxEditing(false);
             updateNavArrows(); updateBreadcrumb(); updateEditorTimestamp();
             schedulePromptStats();
+            updateDirtyState();
+            checkPromptDraft();
+            scheduleEditorTint();
+            // The editor frame is reused for every prompt, so it kept the previous
+            // prompt's scroll offset: opening a long prompt after scrolling to the
+            // bottom of another one landed at the bottom. Always start at the top,
+            // once now and once after the gutter/colouring pass settles layout.
+            const scrollToTop = () => { promptBoxWrap.scrollTop = 0; promptBoxWrap.scrollLeft = 0; window.scrollTo(0, 0); };
+            scrollToTop();
+            requestAnimationFrame(scrollToTop);
         }
 
         function showMenu(fromRoute = false) {
             if (hasUnsavedWork()) {
                 showConfirm('Discard unsaved changes?', "Unsaved Changes").then(res => {
                     if (res) {
-                        stopEdit(); cancelTitleEdit(); view.style.display = 'none';
+                        stopEdit(); cancelTitleEdit(); toggleZenMode(false); view.style.display = 'none';
                         document.getElementById('menu-container').style.display = 'flex';
                         syncFromBridge();
                         if (!fromRoute) setRoute(boardRoute());
@@ -5729,7 +6135,7 @@
                 });
                 return;
             }
-            stopEdit(); cancelTitleEdit(); view.style.display = 'none';
+            stopEdit(); cancelTitleEdit(); toggleZenMode(false); closePromptMoreMenu(false); view.style.display = 'none';
             document.getElementById('menu-container').style.display = 'flex';
             syncFromBridge();
             if (!fromRoute) setRoute(boardRoute());
@@ -5933,40 +6339,82 @@
             setPromptBoxEditing(true);
             document.getElementById('main-copy-btn').style.display = 'none';
             document.getElementById('save-btn').style.display = 'block'; document.getElementById('cancel-btn').style.display = 'block';
+            document.getElementById('diff-btn').style.display = 'block';
+            // A rename started in view mode joins this edit session: one SAVE
+            // commits both, so its own check/cross buttons go away.
+            if (title.contentEditable === 'true') {
+                document.getElementById('title-save-btn').style.display = 'none';
+                document.getElementById('title-cancel-btn').style.display = 'none';
+            }
             promptBoxWrap.classList.add('editing-state');
             box.oninput = () => {
                 scheduleUpdateLineNumbers();
                 schedulePromptSearchStats();
                 scheduleEditorHistoryRecord();
             };
-            box.onkeydown = (e) => {
-                if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
-                    e.preventDefault();
-                    insertTextAtCursor('\n');
-                    return;
-                }
-                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveEdit(); return; }
-                if (e.key === 'Escape') {
-                    const searchOverlay = document.getElementById('search-overlay');
-                    if (searchOverlay && searchOverlay.classList.contains('visible')) {
-                        e.preventDefault(); e.stopPropagation(); closeSearch(); return;
-                    }
-                    // stopPropagation matters: without it this same keypress also
-                    // bubbled up and kicked the user out of the prompt entirely.
-                    e.preventDefault(); e.stopPropagation();
-                    cancelEdit();
-                }
-            };
+            box.onkeydown = handleEditorKeydown;
+            updateDirtyState();
         }
 
+        function handleEditorKeydown(e) {
+            const ctrl = e.ctrlKey || e.metaKey;
+            if (e.key === 'Enter' && !ctrl && !e.shiftKey && !e.altKey) {
+                e.preventDefault();
+                handleEditorEnter();
+                return;
+            }
+            if (e.key === 'Enter' && ctrl) { e.preventDefault(); saveEdit(false, { exit: true }); return; }
+            if (ctrl && !e.shiftKey && !e.altKey && e.code === 'KeyM') {
+                e.preventDefault();
+                tabMovesFocus = !tabMovesFocus;
+                updateEditorModeUi();
+                showToast(tabMovesFocus ? 'TAB NOW MOVES FOCUS (CTRL+M TO INDENT AGAIN)' : 'TAB NOW INDENTS', 'info');
+                return;
+            }
+            if (e.key === 'Tab' && !ctrl && !e.altKey && !tabMovesFocus) {
+                e.preventDefault();
+                indentEditorSelection(e.shiftKey ? -1 : 1);
+                return;
+            }
+            if (e.altKey && !ctrl && !e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+                e.preventDefault();
+                editorLineOp(e.key === 'ArrowUp' ? 'up' : 'down');
+                return;
+            }
+            if (ctrl && !e.shiftKey && !e.altKey && e.code === 'KeyD') {
+                e.preventDefault();
+                editorLineOp('dup');
+                return;
+            }
+            if (ctrl && e.shiftKey && !e.altKey && e.code === 'KeyK') {
+                e.preventDefault();
+                editorLineOp('del');
+                return;
+            }
+            if (e.key === 'Escape') {
+                const searchOverlay = document.getElementById('search-overlay');
+                if (searchOverlay && searchOverlay.classList.contains('visible')) {
+                    e.preventDefault(); e.stopPropagation(); closeSearch(); return;
+                }
+                // stopPropagation matters: without it this same keypress also
+                // bubbled up and kicked the user out of the prompt entirely.
+                e.preventDefault(); e.stopPropagation();
+                if (view.classList.contains('zen')) { toggleZenMode(false); return; }
+                cancelEdit();
+            }
+        }
+
+        // Unsaved work is shown as a diff before it is thrown away, so the user
+        // sees exactly what "discard" means instead of answering a bare yes/no.
         async function cancelEdit() {
-            if (hasUnsavedPromptChanges()) {
-                const ok = await showConfirm('Discard unsaved changes to this prompt?', 'Unsaved Changes');
-                if (!ok) {
+            if (hasUnsavedWork()) {
+                const choice = await openDiffModal('discard');
+                if (choice !== 'discard') {
                     if (box.classList.contains('editing')) box.focus({ preventScroll: true });
                     return false;
                 }
             }
+            if (title.contentEditable === 'true') cancelTitleEdit();
             stopEdit();
             return true;
         }
@@ -6047,30 +6495,62 @@
             if (!opened) showToast('CHATGPT POPUP WAS BLOCKED', 'warning');
         }
 
+        /* Renaming. Inside an edit session the name is part of that session and is
+           committed by the one SAVE (Enter just hops back to the text). Outside an
+           edit session it is a quick standalone rename that SAVES on Enter or blur;
+           it used to silently throw the new name away on blur. */
         function startEditTitle() {
+            if (title.contentEditable === 'true') { title.focus(); return; }
+            const inEditSession = box.classList.contains('editing');
             titleEditBackup = currentAgent; title.contentEditable = true; title.focus();
             const range = document.createRange(); range.selectNodeContents(title);
             const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
-            document.getElementById('title-save-btn').style.display = 'flex';
-            document.getElementById('title-cancel-btn').style.display = 'flex';
+            document.getElementById('title-save-btn').style.display = inEditSession ? 'none' : 'flex';
+            document.getElementById('title-cancel-btn').style.display = inEditSession ? 'none' : 'flex';
             document.querySelector('.edit-title-btn').style.display = 'none';
-            document.getElementById('delete-agent-btn').style.display = 'none';
             title.setAttribute('role', 'textbox');
             title.setAttribute('aria-label', 'Agent name');
-            title.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); saveTitleEdit(); } if (e.key === 'Escape') cancelTitleEdit(); };
-            title.onblur = () => { setTimeout(() => { if (title.contentEditable === 'true') cancelTitleEdit(); }, 200); };
+            title.oninput = () => { updateDirtyState(); if (box.classList.contains('editing')) scheduleDraftSave(); };
+            title.onkeydown = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (box.classList.contains('editing')) box.focus();
+                    else saveTitleEdit();
+                }
+                if (e.key === 'Escape') {
+                    // Stop here: the window handler would otherwise leave the prompt.
+                    e.preventDefault(); e.stopPropagation();
+                    const editing = box.classList.contains('editing');
+                    cancelTitleEdit();
+                    if (editing) box.focus();
+                }
+            };
+            title.onblur = () => {
+                setTimeout(() => {
+                    if (title.contentEditable !== 'true' || box.classList.contains('editing')) return;
+                    if (hasUnsavedTitleChanges()) saveTitleEdit(); else cancelTitleEdit();
+                }, 200);
+            };
+            updateDirtyState();
         }
 
         async function saveTitleEdit() {
-            const newName = title.innerText.trim().replace(ILLEGAL_CHARS, '_'), prev = titleEditBackup;
+            if (box.classList.contains('editing')) return;
+            const newName = sanitizeTitle(title.innerText), prev = titleEditBackup;
             title.contentEditable = false; document.getElementById('title-save-btn').style.display = 'none';
             document.getElementById('title-cancel-btn').style.display = 'none'; document.querySelector('.edit-title-btn').style.display = 'flex';
-            document.getElementById('delete-agent-btn').style.display = 'flex';
             title.removeAttribute('role');
+            updateDirtyState();
+            if (newName && newName !== prev && groups[currentGroup]?.agents && Object.prototype.hasOwnProperty.call(groups[currentGroup].agents, newName)) {
+                title.innerText = prev;
+                showAlert(`A prompt named "${newName}" already exists in this group.`, 'Name Taken');
+                return;
+            }
             if (newName && newName !== prev) {
                 const res = await api('save', 'POST', { group: currentGroup, name: newName, content: getEditorText(), old_name: prev });
                 if (res && res.status === 'success') {
-                    currentAgent = newName; await syncFromBridge(); title.innerText = newName;
+                    currentAgent = newName; setRoute(promptRoute(currentGroup, newName));
+                    await syncFromBridge(); title.innerText = newName;
                     showToast("AGENT RENAMED", "success"); updateNavArrows(); updateBreadcrumb(); updateEditorTimestamp();
                 } else { title.innerText = prev; showApiError(res, "RENAME FAILED"); }
             } else title.innerText = prev;
@@ -6081,13 +6561,20 @@
             document.getElementById('title-save-btn').style.display = 'none';
             document.getElementById('title-cancel-btn').style.display = 'none';
             document.querySelector('.edit-title-btn').style.display = 'flex';
-            document.getElementById('delete-agent-btn').style.display = 'flex';
             title.removeAttribute('role');
+            title.oninput = null;
+            updateDirtyState();
         }
 
-        function stopEdit() {
+        // keepDraft: the prompt vanished underneath the editor (deleted
+        // externally), so the local draft is the only copy of the user's edits.
+        function stopEdit(options = {}) {
+            const wasEditing = box.classList.contains('editing');
+            if (wasEditing && !options.keepDraft) clearPromptDraft(currentGroup, currentAgent);
+            if (draftTimer) { clearTimeout(draftTimer); draftTimer = null; }
             invalidateGutterCache();
             box.contentEditable = false; box.classList.remove('editing'); title.contentEditable = false; box.onkeydown = null;
+            title.removeAttribute('role'); title.oninput = null;
             setPromptBoxEditing(false);
             editBaseContent = '';
             latestExternalContent = '';
@@ -6095,8 +6582,10 @@
             hideEditorConflictBanner();
             document.getElementById('main-copy-btn').style.display = 'block';
             document.getElementById('save-btn').style.display = 'none'; document.getElementById('cancel-btn').style.display = 'none';
+            document.getElementById('diff-btn').style.display = 'none';
+            document.getElementById('title-save-btn').style.display = 'none';
+            document.getElementById('title-cancel-btn').style.display = 'none';
             document.querySelector('.edit-title-btn').style.display = 'flex';
-            document.getElementById('delete-agent-btn').style.display = 'flex';
             promptBoxWrap.classList.remove('editing-state');
             if (currentAgent && groups[currentGroup]?.agents?.[currentAgent]) {
                 title.innerText = currentAgent; box.textContent = groups[currentGroup].agents[currentAgent];
@@ -6107,12 +6596,29 @@
             updateLineNumbers();
             setSearchReplaceDirty(false);
             if (typeof updateEditorTimestamp === 'function') updateEditorTimestamp();
+            updateDirtyState();
         }
 
+        /* exit: true  -> save and close the editor (SAVE button, Ctrl+Enter)
+           exit: false -> save and keep editing (Ctrl+S), undo history kept.
+           A rename typed during the session is committed by this same request. */
         let saveInFlight = false;
-        async function saveEdit(forceSave = false) {
+        async function saveEdit(forceSave = false, options = {}) {
+            const exitAfter = Boolean(options.exit);
             if (saveInFlight) return;
             if (!box.classList.contains('editing')) return;
+            const titleDirty = hasUnsavedTitleChanges();
+            const newName = titleDirty ? sanitizeTitle(title.innerText) : currentAgent;
+            if (!newName) { showToast('PROMPT NAME CANNOT BE EMPTY', 'warning'); title.focus(); return; }
+            if (titleDirty && groups[currentGroup]?.agents && Object.prototype.hasOwnProperty.call(groups[currentGroup].agents, newName)) {
+                showAlert(`A prompt named "${newName}" already exists in this group. Choose another name.`, 'Name Taken');
+                return;
+            }
+            if (!forceSave && !titleDirty && !hasUnsavedPromptChanges()) {
+                if (exitAfter) stopEdit();
+                else showToast('NO CHANGES TO SAVE', 'info');
+                return;
+            }
             if (hasExternalEditConflict && !forceSave) {
                 const confirmed = await showConfirm('This prompt changed outside this editor. Save your version over the newer file?', 'External Change');
                 if (!confirmed) return;
@@ -6124,11 +6630,12 @@
             saveBtn.innerText = "SAVING...";
             saveBtn.disabled = true;
             const newContent = getEditorText();
+            const oldName = currentAgent;
             const res = await api('save', 'POST', {
                 group: currentGroup,
-                name: currentAgent,
+                name: newName,
                 content: newContent,
-                old_name: currentAgent,
+                old_name: oldName,
                 base_content: editBaseContent,
                 force: forceSave
             });
@@ -6140,6 +6647,7 @@
                 hasExternalEditConflict = true;
                 showEditorConflictBanner();
                 showToast(apiErrorMessage(res, 'Prompt changed outside this editor.'), 'warning');
+                updateDirtyState();
                 return;
             }
             if (res && res.status === 'success') {
@@ -6148,11 +6656,1462 @@
                 hasExternalEditConflict = false;
                 hideEditorConflictBanner();
                 setSearchReplaceDirty(false);
-                showToast("PROMPT SAVED", "success");
+                clearPromptDraft(currentGroup, oldName);
+                if (newName !== oldName) {
+                    // Must happen before the sync, or the sync sees the old name
+                    // gone and reports the prompt as deleted externally.
+                    currentAgent = newName;
+                    titleEditBackup = newName;
+                    title.contentEditable = false;
+                    title.removeAttribute('role');
+                    title.oninput = null;
+                    title.innerText = newName;
+                    document.querySelector('.edit-title-btn').style.display = 'flex';
+                    setRoute(promptRoute(currentGroup, newName));
+                }
+                showToast(exitAfter ? "PROMPT SAVED" : "SAVED - STILL EDITING", "success");
                 await syncFromBridge();
-                stopEdit();
+                if (newName !== oldName) { updateNavArrows(); updateBreadcrumb(); updateEditorTimestamp(); }
+                if (exitAfter) stopEdit();
+                else { updateDirtyState(); clearPromptDraft(currentGroup, currentAgent); }
             }
-            else showApiError(res, "SAVE FAILED");
+            else { showApiError(res, "SAVE FAILED"); updateDirtyState(); }
+        }
+
+        /* ==========================================================================
+           PROMPT EDITOR UX
+           Dirty indicator, crash-safe drafts, text operations (indent, lists, line
+           moves), caret/selection readout, structure colouring, view settings,
+           diff review, version history, overflow menu and the shortcut sheet.
+           Every text operation goes through replaceEditorRange(), which records
+           undo history, so Ctrl+Z reverses each of them as one step.
+           ========================================================================== */
+
+        const baseDocumentTitle = document.title;
+        let tabMovesFocus = false;
+
+        function updateEditorModeUi() {
+            const el = document.getElementById('psb-mode');
+            if (!el) return;
+            if (box.classList.contains('editing')) {
+                el.textContent = tabMovesFocus ? 'EDITING · Tab moves focus' : 'EDITING';
+            } else {
+                el.textContent = 'VIEW · double-click to edit';
+            }
+        }
+
+        /* ---------- #1 unsaved-changes indicator ---------- */
+
+        function updateDirtyState() {
+            const editing = box.classList.contains('editing');
+            const dirty = hasUnsavedWork();
+            const indicator = document.getElementById('dirty-indicator');
+            if (indicator) indicator.hidden = !dirty;
+            const saveBtn = document.getElementById('save-btn');
+            if (saveBtn && !saveInFlight) saveBtn.disabled = editing && !dirty && !hasExternalEditConflict;
+            const diffBtn = document.getElementById('diff-btn');
+            if (diffBtn) diffBtn.disabled = !dirty;
+            view.classList.toggle('is-dirty', dirty);
+            document.title = (dirty ? '● ' : '') + baseDocumentTitle;
+        }
+
+        // One observer catches every way the text can change (typing, paste,
+        // undo, replace, reload, history load) and batches the follow-up work.
+        let editorUxFrame = null;
+        function scheduleEditorUxRefresh() {
+            if (editorUxFrame) return;
+            editorUxFrame = requestAnimationFrame(() => {
+                editorUxFrame = null;
+                updateDirtyState();
+                if (box.classList.contains('editing')) scheduleDraftSave();
+                scheduleEditorTint();
+                scheduleCaretInfo();
+            });
+        }
+        new MutationObserver(scheduleEditorUxRefresh).observe(box, { childList: true, characterData: true, subtree: true });
+
+        /* ---------- #2 crash-safe local drafts ---------- */
+
+        const DRAFT_PREFIX = 'promptDraft:';
+        const DRAFT_MAX_AGE_MS = 30 * 24 * 3600 * 1000;
+        let draftTimer = null;
+        let draftQuotaWarned = false;
+        let pendingDraft = null;
+
+        function draftKey(folder, agent) { return DRAFT_PREFIX + folder + '||' + agent; }
+
+        function readPromptDraft(folder, agent) {
+            try {
+                const raw = localStorage.getItem(draftKey(folder, agent));
+                if (!raw) return null;
+                const d = JSON.parse(raw);
+                return d && typeof d.text === 'string' ? d : null;
+            } catch (e) { return null; }
+        }
+
+        function clearPromptDraft(folder, agent) {
+            if (!folder || !agent) return;
+            try { localStorage.removeItem(draftKey(folder, agent)); } catch (e) {}
+        }
+
+        function writePromptDraftNow() {
+            if (draftTimer) { clearTimeout(draftTimer); draftTimer = null; }
+            if (!box.classList.contains('editing') || !currentGroup || !currentAgent) return;
+            if (!hasUnsavedWork()) { clearPromptDraft(currentGroup, currentAgent); return; }
+            // The user is now writing a new draft, so the old one is superseded.
+            if (pendingDraft) { pendingDraft = null; document.getElementById('draft-banner').hidden = true; }
+            const draft = {
+                text: getEditorText(),
+                title: title.contentEditable === 'true' ? sanitizeTitle(title.innerText) : currentAgent,
+                base: editBaseContent,
+                ts: Date.now()
+            };
+            try {
+                localStorage.setItem(draftKey(currentGroup, currentAgent), JSON.stringify(draft));
+            } catch (e) {
+                if (!draftQuotaWarned) {
+                    draftQuotaWarned = true;
+                    showToast('PROMPT TOO LARGE FOR A LOCAL DRAFT BACKUP - SAVE OFTEN', 'warning');
+                }
+            }
+        }
+
+        // Throttled, not debounced: continuous typing still produces a draft
+        // every 1.5 s instead of postponing it until the user pauses.
+        function scheduleDraftSave() {
+            if (draftTimer) return;
+            draftTimer = setTimeout(writePromptDraftNow, 1500);
+        }
+
+        function checkPromptDraft() {
+            const banner = document.getElementById('draft-banner');
+            pendingDraft = null;
+            banner.hidden = true;
+            const d = readPromptDraft(currentGroup, currentAgent);
+            if (!d) return;
+            const stored = groups[currentGroup]?.agents?.[currentAgent];
+            if (d.text === stored && (!d.title || d.title === currentAgent)) { clearPromptDraft(currentGroup, currentAgent); return; }
+            pendingDraft = d;
+            const changedSince = typeof d.base === 'string' && d.base !== stored;
+            document.getElementById('draft-banner-detail').textContent =
+                `from ${formatHistoryTime(d.ts)} that was never saved.` +
+                (changedSince ? ' The saved prompt has changed since - use DIFF after restoring to compare.' : '');
+            banner.hidden = false;
+        }
+
+        async function restorePromptDraft() {
+            const d = pendingDraft;
+            if (!d) return;
+            if (box.classList.contains('editing') && hasUnsavedPromptChanges()) {
+                const ok = await showConfirm('Replace your current unsaved edits with the draft?', 'Restore Draft');
+                if (!ok) return;
+            }
+            pendingDraft = null;
+            document.getElementById('draft-banner').hidden = true;
+            if (!box.classList.contains('editing')) startEdit();
+            box.focus({ preventScroll: true });
+            replaceEditorRange(0, getEditorText().length, d.text, 0);
+            if (d.title && d.title !== currentAgent) {
+                startEditTitle();
+                title.innerText = d.title;
+                box.focus({ preventScroll: true });
+            }
+            updateDirtyState();
+            showToast('DRAFT RESTORED - SAVE TO KEEP IT', 'warning');
+        }
+
+        function discardPromptDraft() {
+            clearPromptDraft(currentGroup, currentAgent);
+            pendingDraft = null;
+            document.getElementById('draft-banner').hidden = true;
+            showToast('DRAFT DISCARDED', 'info');
+        }
+
+        (function prunePromptDrafts() {
+            try {
+                const now = Date.now();
+                const stale = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (!key || !key.startsWith(DRAFT_PREFIX)) continue;
+                    try {
+                        const d = JSON.parse(localStorage.getItem(key));
+                        if (!d || !d.ts || now - d.ts > DRAFT_MAX_AGE_MS) stale.push(key);
+                    } catch (e) { stale.push(key); }
+                }
+                stale.forEach(k => localStorage.removeItem(k));
+            } catch (e) {}
+        })();
+
+        /* ---------- text-operation primitives ---------- */
+
+        function getEditorSelectionOffsets() {
+            const sel = window.getSelection();
+            if (!sel || !sel.rangeCount) return null;
+            const range = sel.getRangeAt(0);
+            if (!box.contains(range.startContainer) || !box.contains(range.endContainer)) return null;
+            const pre = document.createRange();
+            pre.selectNodeContents(box);
+            pre.setEnd(range.startContainer, range.startOffset);
+            const start = pre.toString().length;
+            pre.setEnd(range.endContainer, range.endOffset);
+            const end = pre.toString().length;
+            return { start, end };
+        }
+
+        function setEditorSelectionOffsets(start, end = start) {
+            const sel = window.getSelection();
+            if (!sel) return;
+            const a = locateEditorOffset(start), b = locateEditorOffset(end);
+            const range = document.createRange();
+            if (a && b) { range.setStart(a.node, a.offset); range.setEnd(b.node, b.offset); }
+            else { range.selectNodeContents(box); range.collapse(true); }
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+
+        function lineStartOf(text, pos) {
+            return pos <= 0 ? 0 : text.lastIndexOf('\n', pos - 1) + 1;
+        }
+
+        // The whole lines touched by a selection. A selection ending at column 0
+        // of a line does not include that line (same as every code editor).
+        function getLineBlock(text, start, end) {
+            const blockStart = lineStartOf(text, start);
+            const effEnd = (end > start && text[end - 1] === '\n') ? end - 1 : end;
+            let blockEnd = text.indexOf('\n', Math.max(effEnd, blockStart));
+            if (blockEnd === -1) blockEnd = text.length;
+            return { blockStart, blockEnd };
+        }
+
+        function replaceEditorRange(start, end, replacement, selStart, selEnd = selStart) {
+            if (editorHistoryTimer) { clearTimeout(editorHistoryTimer); editorHistoryTimer = null; }
+            recordEditorHistoryNow();
+            const a = locateEditorOffset(start), b = locateEditorOffset(end);
+            const range = document.createRange();
+            if (a && b) { range.setStart(a.node, a.offset); range.setEnd(b.node, b.offset); }
+            else { range.selectNodeContents(box); range.collapse(false); }
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+            insertTextAtCursor(replacement);
+            box.normalize();
+            setEditorSelectionOffsets(selStart, selEnd);
+            recordEditorHistoryNow();
+            scheduleUpdateLineNumbers();
+            schedulePromptSearchStats();
+            scrollEditorCaretIntoView();
+        }
+
+        /* ---------- #5 Tab / Shift+Tab ---------- */
+
+        const EDITOR_INDENT = '    ';
+
+        function indentEditorSelection(dir) {
+            const sel = getEditorSelectionOffsets();
+            if (!sel) return;
+            const text = getEditorText();
+            if (dir > 0 && sel.start === sel.end) {
+                replaceEditorRange(sel.start, sel.end, EDITOR_INDENT, sel.start + EDITOR_INDENT.length);
+                return;
+            }
+            const { blockStart, blockEnd } = getLineBlock(text, sel.start, sel.end);
+            let firstDelta = 0, totalDelta = 0;
+            const lines = text.slice(blockStart, blockEnd).split('\n').map((ln, i) => {
+                let d = 0;
+                if (dir > 0) { d = EDITOR_INDENT.length; ln = EDITOR_INDENT + ln; }
+                else {
+                    const m = ln.match(/^( {1,4}|\t)/);
+                    if (m) { d = -m[0].length; ln = ln.slice(m[0].length); }
+                }
+                if (i === 0) firstDelta = d;
+                totalDelta += d;
+                return ln;
+            });
+            if (totalDelta === 0) return;
+            const newStart = Math.max(blockStart, sel.start + firstDelta);
+            const newEnd = sel.start === sel.end ? newStart : Math.max(newStart, sel.end + totalDelta);
+            replaceEditorRange(blockStart, blockEnd, lines.join('\n'), newStart, newEnd);
+        }
+
+        /* ---------- #6 Enter: continue lists, keep indentation ---------- */
+
+        const LIST_ITEM_RE = /^([ \t]*)([-*+•]|\d{1,4}[.)])([ \t]+)(\[[ xX]\][ \t]+)?/;
+
+        function handleEditorEnter() {
+            const sel = getEditorSelectionOffsets();
+            if (!sel) { insertTextAtCursor('\n'); scheduleUpdateLineNumbers(); return; }
+            const text = getEditorText();
+            const ls = lineStartOf(text, sel.start);
+            const before = text.slice(ls, sel.start);
+            const m = sel.start === sel.end ? before.match(LIST_ITEM_RE) : null;
+            if (m) {
+                let lineEnd = text.indexOf('\n', ls);
+                if (lineEnd === -1) lineEnd = text.length;
+                if (text.slice(ls + m[0].length, lineEnd).trim() === '') {
+                    // Enter on an empty bullet ends the list instead of adding another.
+                    replaceEditorRange(ls, lineEnd, '', ls);
+                    return;
+                }
+                let marker = m[2];
+                const num = marker.match(/^(\d+)([.)])$/);
+                if (num) marker = (parseInt(num[1], 10) + 1) + num[2];
+                const insert = '\n' + m[1] + marker + m[3] + (m[4] ? '[ ] ' : '');
+                replaceEditorRange(sel.start, sel.end, insert, sel.start + insert.length);
+                return;
+            }
+            const indent = (before.match(/^[ \t]*/) || [''])[0];
+            const insert = '\n' + indent;
+            replaceEditorRange(sel.start, sel.end, insert, sel.start + insert.length);
+        }
+
+        /* ---------- #7 line operations ---------- */
+
+        function editorLineOp(op) {
+            const sel = getEditorSelectionOffsets();
+            if (!sel) return;
+            const text = getEditorText();
+            const { blockStart, blockEnd } = getLineBlock(text, sel.start, sel.end);
+            const block = text.slice(blockStart, blockEnd);
+            if (op === 'up') {
+                if (blockStart === 0) return;
+                const prevStart = lineStartOf(text, blockStart - 1);
+                const prev = text.slice(prevStart, blockStart - 1);
+                const shift = -(prev.length + 1);
+                replaceEditorRange(prevStart, blockEnd, block + '\n' + prev, sel.start + shift, sel.end + shift);
+            } else if (op === 'down') {
+                if (blockEnd >= text.length) return;
+                let nextEnd = text.indexOf('\n', blockEnd + 1);
+                if (nextEnd === -1) nextEnd = text.length;
+                const next = text.slice(blockEnd + 1, nextEnd);
+                const shift = next.length + 1;
+                replaceEditorRange(blockStart, nextEnd, next + '\n' + block, sel.start + shift, sel.end + shift);
+            } else if (op === 'dup') {
+                const shift = block.length + 1;
+                replaceEditorRange(blockEnd, blockEnd, '\n' + block, sel.start + shift, sel.end + shift);
+            } else if (op === 'del') {
+                let s = blockStart, e = blockEnd;
+                if (e < text.length) e += 1;
+                else if (s > 0) s -= 1;
+                if (s === e) return;
+                replaceEditorRange(s, e, '', s === blockStart ? s : lineStartOf(text, s));
+            }
+        }
+
+        /* ---------- #8 / #9 caret position, current line, selection stats ---------- */
+
+        let caretInfoFrame = null;
+        let activeLineIndex = -1;
+
+        function scheduleCaretInfo() {
+            if (caretInfoFrame) return;
+            caretInfoFrame = requestAnimationFrame(updateCaretInfo);
+        }
+
+        function updateCaretInfo() {
+            caretInfoFrame = null;
+            const caretEl = document.getElementById('psb-caret');
+            const selEl = document.getElementById('psb-sel');
+            if (!caretEl || view.style.display !== 'flex') return;
+            const editing = box.classList.contains('editing');
+            const sel = getEditorSelectionOffsets();
+            if (!sel) {
+                // Focus moved to a button or the find bar: keep the last readout
+                // while editing, clear it in view mode.
+                if (!editing) { caretEl.hidden = true; selEl.hidden = true; setActiveLine(-1); }
+                if (window.CSS && CSS.highlights) CSS.highlights.delete('tag-match');
+                return;
+            }
+            const text = getEditorText();
+            let line = 1;
+            for (let i = text.indexOf('\n'); i !== -1 && i < sel.end; i = text.indexOf('\n', i + 1)) line++;
+            const col = sel.end - lineStartOf(text, sel.end) + 1;
+            caretEl.textContent = `Ln ${line}, Col ${col}`;
+            caretEl.hidden = !editing && sel.start === sel.end;
+            if (sel.end > sel.start) {
+                const chunk = text.slice(sel.start, sel.end);
+                const words = (chunk.match(/\S+/g) || []).length;
+                const lines = chunk.split('\n').length;
+                selEl.textContent = `Sel ${lines > 1 ? lines.toLocaleString() + ' Ln · ' : ''}${words.toLocaleString()} Wr · ${chunk.length.toLocaleString()} Ch · ≈ ${Math.round(chunk.length / 4).toLocaleString()} tok`;
+                selEl.hidden = false;
+            } else {
+                selEl.hidden = true;
+            }
+            setActiveLine(editing ? line - 1 : -1);
+            updateTagMatch(sel, text);
+        }
+
+        function setActiveLine(index) {
+            if (activeLineIndex !== index) {
+                const old = gutter.children[activeLineIndex];
+                if (old) old.classList.remove('active-line');
+                activeLineIndex = index;
+            }
+            syncActiveLineBand();
+        }
+
+        function syncActiveLineBand() {
+            const band = document.getElementById('active-line-band');
+            if (!band) return;
+            const row = activeLineIndex >= 0 ? gutter.children[activeLineIndex] : null;
+            if (!row) { band.classList.remove('on'); return; }
+            row.classList.add('active-line');
+            band.style.top = row.offsetTop + 'px';
+            band.style.height = row.offsetHeight + 'px';
+            band.classList.add('on');
+        }
+
+        document.addEventListener('selectionchange', () => {
+            if (view.style.display === 'flex') scheduleCaretInfo();
+        });
+
+        /* Clicks anywhere in the editor frame land in the text: the gutter, the
+           padding, or the blank part of a line. x is clamped into the text column,
+           so a click on a line number puts the caret at the start of that line. */
+        function caretOffsetFromPoint(x, y) {
+            const br = box.getBoundingClientRect();
+            const cs = getComputedStyle(box);
+            const left = br.left + (parseFloat(cs.paddingLeft) || 0) + 1;
+            const right = br.right - (parseFloat(cs.paddingRight) || 0) - 1;
+            const px = Math.min(Math.max(x, left), Math.max(left, right));
+            let node = null, off = 0;
+            if (document.caretRangeFromPoint) {
+                const r = document.caretRangeFromPoint(px, y);
+                if (r) { node = r.startContainer; off = r.startOffset; }
+            } else if (document.caretPositionFromPoint) {
+                const p = document.caretPositionFromPoint(px, y);
+                if (p) { node = p.offsetNode; off = p.offset; }
+            }
+            if (!node || !box.contains(node)) return null;
+            const pre = document.createRange();
+            pre.selectNodeContents(box);
+            pre.setEnd(node, off);
+            return pre.toString().length;
+        }
+
+        // Double-click enters edit mode with the caret exactly where you clicked,
+        // ready to type - no second click needed.
+        promptBoxWrap.addEventListener('dblclick', (e) => {
+            if (box.classList.contains('editing') || view.style.display !== 'flex') return;
+            const offset = caretOffsetFromPoint(e.clientX, e.clientY);
+            startEdit();
+            box.focus({ preventScroll: true });
+            setEditorSelectionOffsets(offset === null ? getEditorText().length : offset);
+        });
+
+        promptBoxWrap.addEventListener('mousedown', (e) => {
+            if (!box.classList.contains('editing') || e.button !== 0 || e.target !== promptBoxWrap) return;
+            const offset = caretOffsetFromPoint(e.clientX, e.clientY);
+            if (offset === null) return;
+            e.preventDefault();
+            box.focus({ preventScroll: true });
+            setEditorSelectionOffsets(offset);
+        });
+
+        /* ---------- #10 prompt-aware structure colouring ----------
+           A "syntax highlighter" for plain-text AI prompts. Each group below is one
+           CSS Custom Highlight; the DOM is never touched, so textContent remains
+           the single source of truth. Group order is paint priority: later groups
+           win where ranges overlap (a MUST inside a heading still reads as a rule).
+           Text inside ``` fenced blocks gets only the code-block group. */
+
+        const TINT_GROUPS = [
+            { key: 'codeblock', label: 'Code block',        sample: '```json … ```' },
+            { key: 'quote',     label: 'Quote / example',   sample: '"exact text"  e.g. …' },
+            { key: 'note',      label: 'Note / optional',   sample: 'Note: …  (optional)' },
+            { key: 'heading',   label: 'Heading / section', sample: '## RULES' },
+            { key: 'role',      label: 'Role line',         sample: 'You are a …' },
+            { key: 'rule',      label: 'Separator',         sample: '---' },
+            { key: 'bullet',    label: 'List marker',       sample: '-  1.  a)' },
+            { key: 'cond',      label: 'Condition',         sample: 'IF  WHEN  OTHERWISE' },
+            { key: 'limit',     label: 'Limit / number',    sample: 'max 10 words' },
+            { key: 'must',      label: 'Do rule',           sample: 'MUST  ALWAYS' },
+            { key: 'never',     label: "Don't rule",        sample: 'NEVER  DO NOT' },
+            { key: 'emph',      label: 'Emphasis',          sample: 'IMPORTANT  CRITICAL' },
+            { key: 'tag',       label: 'XML tag',           sample: '<rules> </rules>' },
+            { key: 'var',       label: 'Placeholder',       sample: '{{name}}  [TOPIC]' },
+            { key: 'code',      label: 'Code / path / URL', sample: '`cmd`  src/app.py' }
+        ];
+
+        // b: fake bold (::highlight cannot set font-weight), u: underline style.
+        const TINT_THEMES = {
+            vivid: {
+                label: 'Vivid',
+                stripes: ['#58a6ff', '#3fb950', '#d29922', '#f778ba', '#a371f7', '#39c5cf'],
+                lint: '#ff6b6b', match: 'rgba(88, 166, 255, 0.38)',
+                colors: {
+                    codeblock: { c: '#c9d1d9', bg: 'rgba(0, 0, 0, 0.35)' },
+                    quote: { c: '#e6edf3' },
+                    note: { c: '#8b949e' },
+                    heading: { c: '#79c0ff', b: 1 },
+                    role: { c: '#2fd4c9' },
+                    rule: { c: '#6e7681' },
+                    bullet: { c: '#9aa9bd', b: 1 },
+                    cond: { c: '#f778ba' },
+                    limit: { c: '#a5d6ff', u: 'dotted' },
+                    must: { c: '#56d364' },
+                    never: { c: '#ff7b72' },
+                    emph: { c: '#ffa657', b: 1 },
+                    tag: { c: '#7dd3fc' },
+                    var: { c: '#d2a8ff', bg: 'rgba(210, 168, 255, 0.14)' },
+                    code: { c: '#b6f0ff', bg: 'rgba(110, 118, 129, 0.35)' }
+                }
+            },
+            calm: {
+                label: 'Calm',
+                stripes: ['#5d7fa3', '#5f8f6b', '#a08850', '#a0708c', '#7d6fa6', '#5a9196'],
+                lint: '#e09a94', match: 'rgba(120, 150, 190, 0.3)',
+                colors: {
+                    codeblock: { c: '#b8c0c8', bg: 'rgba(0, 0, 0, 0.25)' },
+                    quote: { c: '#d8dee4' },
+                    note: { c: '#7d8590' },
+                    heading: { c: '#8fb8de', b: 1 },
+                    role: { c: '#7cc4bf' },
+                    rule: { c: '#5c6570' },
+                    bullet: { c: '#8d99a8' },
+                    cond: { c: '#d39bbd' },
+                    limit: { c: '#a9c4dc', u: 'dotted' },
+                    must: { c: '#8cc79a' },
+                    never: { c: '#e09a94' },
+                    emph: { c: '#d9a66f' },
+                    tag: { c: '#8fbfd4' },
+                    var: { c: '#bba6dd', bg: 'rgba(187, 166, 221, 0.1)' },
+                    code: { c: '#c3dde6', bg: 'rgba(110, 118, 129, 0.25)' }
+                }
+            },
+            // Okabe-Ito based: "do" vs "don't" is blue vs orange (never red vs
+            // green) and the "don't" group also carries a shape cue (bold).
+            cb: {
+                label: 'Colour-blind safe',
+                stripes: ['#56B4E9', '#E69F00', '#009E73', '#CC79A7', '#0072B2', '#D55E00'],
+                lint: '#F0E442', match: 'rgba(86, 180, 233, 0.35)',
+                colors: {
+                    codeblock: { c: '#d0d7de', bg: 'rgba(0, 0, 0, 0.35)' },
+                    quote: { c: '#f0f0f0' },
+                    note: { c: '#9a9a9a' },
+                    heading: { c: '#ffffff', b: 1 },
+                    role: { c: '#7fd6c2' },
+                    rule: { c: '#777777' },
+                    bullet: { c: '#bbbbbb', b: 1 },
+                    cond: { c: '#CC79A7' },
+                    limit: { c: '#a0d8f0', u: 'dotted' },
+                    must: { c: '#56B4E9' },
+                    never: { c: '#E69F00', b: 1 },
+                    emph: { c: '#ff8a3d', u: 'solid' },
+                    tag: { c: '#9ecae1' },
+                    var: { c: '#e0b0ff', bg: 'rgba(224, 176, 255, 0.14)' },
+                    code: { c: '#cfe8ff', bg: 'rgba(110, 118, 129, 0.35)' }
+                }
+            }
+        };
+
+        const TINT_MAX_CHARS = 400000;
+        const TINT_MAX_RANGES = 12000;
+
+        // [group, regex]. Several regexes may feed one group.
+        const TINT_RULES = [
+            ['quote', /"[^"\n]{1,200}"|“[^”\n]{1,200}”/g],
+            ['quote', /^[ \t]*(?:[-*]\s+)?(?:e\.g\.|i\.e\.|examples?\s*\d*\s*:|for\s+example|sample\s*:).*$/gim],
+            ['quote', /\((?:e\.g\.|i\.e\.|for example)[^)\n]{0,200}\)/gi],
+            ['note', /^[ \t]*(?:[-*]\s+)?(?:note|nb|n\.b\.|tip|hint|p\.s\.|fyi|remark)\s*:.*$/gim],
+            ['note', /\((?:optional(?:ly)?|if\s+(?:needed|applicable|possible|relevant|any)|where\s+(?:applicable|possible|relevant))[^)\n]{0,120}\)/gi],
+            ['note', /^[ \t]*\/\/.*$/gm],
+            ['note', /<!--[\s\S]{0,2000}?-->/g],
+            ['heading', /^[ \t]*#{1,6}[ \t].*$/gm],
+            ['heading', /^[ \t]*[A-Z][A-Z0-9 &\/()'-]{2,60}:[ \t]*$/gm],
+            ['heading', /^[ \t]*\*\*[^*\n]{2,80}\*\*:?[ \t]*$/gm],
+            ['role', /^[ \t]*(?:[-*]\s+)?(?:you\s+are\b|you're\b|act\s+as\b|acting\s+as\b|your\s+(?:role|task|job|goal|mission|purpose|objective)\s+is\b|(?:persona|role)\s*:).*$/gim],
+            ['rule', /^[ \t]*(?:={3,}|-{3,}|_{3,}|\*{3,}|~{3,}|[═─━▬]{3,})[ \t]*$/gm],
+            ['bullet', /^[ \t]*(?:[-*+•]|\d{1,4}[.)]|[a-z][.)])(?=[ \t])/gm],
+            ['cond', /\b(?:only\s+if|in\s+case|if|unless|otherwise|else|when(?:ever)?|except|until)\b/gi],
+            ['limit', /\b(?:max(?:imum)?|min(?:imum)?|at\s+(?:most|least)|up\s+to|no\s+(?:more|fewer)\s+than|fewer\s+than|less\s+than|more\s+than|exactly|under|over|within|between)\s+\d[\d,.]*(?:\s*(?:-|to|and)\s*\d[\d,.]*)?(?:\s*(?:%|[a-z]+))?/gi],
+            ['limit', /[≤≥]\s*\d[\d,.]*(?:\s*[a-z%]+)?|(?<![<\w])[<>]=?\s*\d[\d,.]*(?:\s*[a-z%]+)?/gi],
+            ['limit', /\b\d[\d,.]*\s*(?:%|percent|words?|lines?|chars?|characters?|tokens?|items?|sentences?|paragraphs?|bullets?|points?|steps?|times?|kb|mb|gb|ms|sec(?:onds?)?|min(?:utes?)?|hours?|days?|weeks?|retries|attempts?)\b/gi],
+            ['must', /\b(?:must(?!\s+not\b|n't)|always|required|mandatory|shall(?!\s+not\b)|ensure)\b/gi],
+            ['must', /\bONLY\b/g],
+            ['never', /\b(?:must\s+not|mustn't|do\s+not|don't|never|shall\s+not|forbidden|prohibited|not\s+allowed|avoid)\b/gi],
+            ['never', /\b(?:NO|NOT)\b/g],
+            ['emph', /\b(?:IMPORTANT|CRITICAL|WARNING|CAUTION|ATTENTION|STRICTLY|STRICT|PRIORITY|CRUCIAL|ESSENTIAL)\b/g],
+            ['tag', /<\/?[a-z][\w-]{0,40}(?:\s[^<>\n]{0,120})?\/?>/g],
+            ['var', /\{\{[^{}\n]{1,80}\}\}|\{[A-Za-z_][\w.-]{0,60}\}|\[[A-Z][A-Z0-9_ -]{1,60}\]|\$\{?[A-Z][A-Z0-9_]{1,60}\}?|<[A-Z][^<>\n]{0,60}>/g],
+            ['var', /<(?:your|insert|enter|add|fill)\b[^<>\n]{0,60}>/gi],
+            ['code', /`[^`\n]{1,200}`/g],
+            ['code', /\bhttps?:\/\/[^\s<>"'`)\]]+/g],
+            ['code', /(?:[A-Za-z]:\\|\.{1,2}[\\/]|~[\\/])(?:[\w.-]+[\\/])*[\w.-]*[\w-]|(?:[\w.-]+[\\/])+[\w-]+\.[A-Za-z0-9]{1,6}\b/g],
+            ['code', /\b[\w-]+\.(?:md|txt|json|jsonc|py|js|mjs|cjs|ts|tsx|jsx|html?|css|scss|ya?ml|toml|bat|cmd|ps1|sh|sql|csv|xml|env|lock|cfg|ini|log|rs|go|java|cs|cpp|rb|php|kt|swift)\b/g],
+            ['code', /^[ \t]*[$>][ \t]+\S.*$/gm],
+            ['code', /\b(?:git|npm|npx|pnpm|yarn|pip3?|docker|kubectl|cargo|dotnet|winget|choco|brew|apt|curl|wget)\s+[a-z][\w-]*(?:\s+--?[\w-]+)*/g]
+        ];
+
+        const TINT_NAMES = TINT_GROUPS.map(g => 'tint-' + g.key).concat(['tint-lint']);
+        let tintEnabled = true;
+        let tintThemeKey = 'vivid';
+        try {
+            tintEnabled = localStorage.getItem('editorTint') !== '0';
+            const savedTheme = localStorage.getItem('editorTintTheme');
+            if (savedTheme && TINT_THEMES[savedTheme]) tintThemeKey = savedTheme;
+        } catch (e) {}
+        let tintTimer = null;
+        let sectionColorByLine = [];
+        let lintIssues = [];
+        let lintCursor = -1;
+        let tagScanCache = { text: null, tags: [], partner: new Map(), unmatched: [] };
+
+        function applyTintTheme() {
+            const theme = TINT_THEMES[tintThemeKey] || TINT_THEMES.vivid;
+            const css = TINT_GROUPS.map(g => {
+                const s = theme.colors[g.key] || {};
+                const parts = [];
+                if (s.c) parts.push(`color: ${s.c}`);
+                if (s.bg) parts.push(`background-color: ${s.bg}`);
+                if (s.u) parts.push(`text-decoration: underline ${s.u} ${s.c}`);
+                if (s.b) parts.push(`text-shadow: 0.45px 0 0 ${s.c}`);
+                return `::highlight(tint-${g.key}) { ${parts.join('; ')}; }`;
+            });
+            css.push(`::highlight(tint-lint) { text-decoration: underline wavy ${theme.lint}; text-decoration-thickness: 1.5px; }`);
+            css.push(`::highlight(tag-match) { background-color: ${theme.match}; }`);
+            let style = document.getElementById('tint-theme-style');
+            if (!style) {
+                style = document.createElement('style');
+                style.id = 'tint-theme-style';
+                document.head.appendChild(style);
+            }
+            style.textContent = css.join('\n');
+        }
+
+        function scheduleEditorTint() {
+            if (tintTimer) clearTimeout(tintTimer);
+            tintTimer = setTimeout(applyEditorTint, 120);
+        }
+
+        // Builds Ranges from character offsets without walking the tree per match.
+        function makeOffsetRangeFactory() {
+            const nodes = [];
+            const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null, false);
+            let running = 0;
+            for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+                nodes.push({ node: n, start: running });
+                running += n.nodeValue.length;
+            }
+            const pointAt = (offset) => {
+                let lo = 0, hi = nodes.length - 1;
+                while (lo < hi) {
+                    const mid = (lo + hi + 1) >> 1;
+                    if (nodes[mid].start <= offset) lo = mid; else hi = mid - 1;
+                }
+                const item = nodes[lo];
+                return { node: item.node, offset: Math.min(item.node.nodeValue.length, offset - item.start) };
+            };
+            return (s, e) => {
+                if (!nodes.length) return null;
+                try {
+                    const a = pointAt(s), b = pointAt(e);
+                    const r = document.createRange();
+                    r.setStart(a.node, a.offset);
+                    r.setEnd(b.node, b.offset);
+                    return r;
+                } catch (err) { return null; }
+            };
+        }
+
+        /* #13 XML-style tag pairing: a stack walk over lowercase tags.
+           partner maps a tag's index to its pair's index; unmatched lists tags
+           with no partner (unclosed opener or stray closer). */
+        function scanPromptTags(text) {
+            if (tagScanCache.text === text) return tagScanCache;
+            const tags = [];
+            const re = /<(\/?)([a-z][\w-]{0,40})(?:\s[^<>\n]{0,120})?(\/?)>/g;
+            let m;
+            while ((m = re.exec(text)) !== null) {
+                if (m[3]) continue; // self-closing
+                tags.push({ s: m.index, e: m.index + m[0].length, name: m[2], close: m[1] === '/' });
+            }
+            const partner = new Map();
+            const stack = [];
+            const unmatched = [];
+            tags.forEach((t, i) => {
+                if (!t.close) { stack.push(i); return; }
+                let j = stack.length - 1;
+                while (j >= 0 && tags[stack[j]].name !== t.name) j--;
+                if (j < 0) { unmatched.push(i); return; }
+                // Anything opened after the matching opener was never closed.
+                for (let k = stack.length - 1; k > j; k--) unmatched.push(stack[k]);
+                partner.set(i, stack[j]);
+                partner.set(stack[j], i);
+                stack.length = j;
+            });
+            stack.forEach(i => unmatched.push(i));
+            tagScanCache = { text, tags, partner, unmatched };
+            return tagScanCache;
+        }
+
+        function updateTagMatch(sel, text) {
+            if (!window.CSS || !CSS.highlights) return;
+            CSS.highlights.delete('tag-match');
+            if (!tintEnabled || !sel || sel.start !== sel.end || text.length > TINT_MAX_CHARS) return;
+            const scan = scanPromptTags(text);
+            const idx = scan.tags.findIndex(t => sel.end >= t.s && sel.end <= t.e);
+            if (idx === -1 || !scan.partner.has(idx)) return;
+            const make = makeOffsetRangeFactory();
+            const hl = new Highlight();
+            [idx, scan.partner.get(idx)].forEach(i => {
+                const r = make(scan.tags[i].s, scan.tags[i].e);
+                if (r) hl.add(r);
+            });
+            hl.priority = 40;
+            CSS.highlights.set('tag-match', hl);
+        }
+
+        /* #14 Problem finder. Each issue is {s, e, reason}. */
+        const LINT_STOPWORDS = new Set(['the', 'a', 'an', 'to', 'be', 'you', 'your', 'any', 'all', 'of', 'that', 'this', 'it', 'is', 'are', 'and', 'or', 'in', 'on', 'for', 'with', 'use', 'ever']);
+
+        function findPromptIssues(text, inBlock) {
+            const issues = [];
+            const lineOf = (pos) => { let n = 1; for (let i = text.indexOf('\n'); i !== -1 && i < pos; i = text.indexOf('\n', i + 1)) n++; return n; };
+
+            // Only placeholder-shaped TODOs: a prompt that merely talks about TODO
+            // comments must not be flagged.
+            const todo = /\[(?:TODO|TBD|FIXME|insert|add|fill|your)\b[^\]\n]{0,60}\]|\{(?:TODO|TBD)\}|^[ \t]*(?:TODO|TBD|FIXME)\b:?|\bTBD\b|<(?:insert|fill|todo)\b[^>\n]{0,60}>/gim;
+            let m;
+            while ((m = todo.exec(text)) !== null) {
+                if (!m[0].length) { todo.lastIndex++; continue; }
+                if (!inBlock(m.index)) issues.push({ s: m.index, e: m.index + m[0].length, reason: `Unfilled placeholder "${m[0].trim()}"` });
+            }
+
+            // Unclosed tags only where tags are clearly used as structure: the tag
+            // sits on its own line, or the same name is closed somewhere else.
+            // "<br>", "<p>" or "npm install <package>" inside a sentence are prose.
+            const HTML_VOID = new Set(['br', 'hr', 'img', 'input', 'meta', 'link', 'area', 'base', 'col', 'embed', 'source', 'track', 'wbr']);
+            const scan = scanPromptTags(text);
+            const closedNames = new Set(scan.tags.filter(t => t.close).map(t => t.name));
+            const openedNames = new Set(scan.tags.filter(t => !t.close).map(t => t.name));
+            const aloneOnLine = (t) => {
+                const ls = text.lastIndexOf('\n', t.s - 1) + 1;
+                let le = text.indexOf('\n', t.e); if (le === -1) le = text.length;
+                return text.slice(ls, t.s).trim() === '' && text.slice(t.e, le).trim() === '';
+            };
+            scan.unmatched.forEach(i => {
+                const t = scan.tags[i];
+                if (inBlock(t.s) || HTML_VOID.has(t.name)) return;
+                const structural = aloneOnLine(t) || (t.close ? openedNames.has(t.name) : closedNames.has(t.name));
+                if (!structural) return;
+                issues.push({ s: t.s, e: t.e, reason: t.close ? `Closing </${t.name}> has no opening tag` : `<${t.name}> is never closed` });
+            });
+
+            // Repeated lines: every copy after the first is flagged.
+            const seen = new Map();
+            let pos = 0;
+            text.split('\n').forEach((line, i) => {
+                const key = line.trim().toLowerCase();
+                // Lines without letters or digits are decoration (═══ frames).
+                if (key.length >= 25 && /[\p{L}\p{N}]/u.test(key) && !inBlock(pos)) {
+                    if (seen.has(key)) issues.push({ s: pos + line.indexOf(line.trim()), e: pos + line.length, reason: `Repeated line (same as line ${seen.get(key)})` });
+                    else seen.set(key, i + 1);
+                }
+                pos += line.length + 1;
+            });
+
+            // Contradictions: "MUST <x y>" and "NEVER <x y>" on the same two content words.
+            const phraseKey = (rest) => rest.toLowerCase().split(/[^a-z0-9]+/).filter(w => w && !LINT_STOPWORDS.has(w)).slice(0, 2).join(' ');
+            const collect = (re) => {
+                const out = [];
+                let mm;
+                while ((mm = re.exec(text)) !== null) {
+                    if (inBlock(mm.index)) continue;
+                    const key = phraseKey(mm[2]);
+                    if (key.includes(' ')) out.push({ s: mm.index, e: mm.index + mm[0].length, key, word: mm[1] });
+                }
+                return out;
+            };
+            const pos2 = collect(/\b(must(?!\s+not\b)|always|shall(?!\s+not\b)|ensure)\s+((?:[\w'-]+\s+){0,4}[\w'-]+)/gi);
+            const neg = collect(/\b(must\s+not|never|do\s+not|don't|shall\s+not|avoid)\s+((?:[\w'-]+\s+){0,4}[\w'-]+)/gi);
+            const negByKey = new Map();
+            neg.forEach(n => { if (!negByKey.has(n.key)) negByKey.set(n.key, n); });
+            pos2.forEach(p => {
+                const n = negByKey.get(p.key);
+                if (!n) return;
+                issues.push({ s: p.s, e: p.e, reason: `Possible contradiction with "${n.word.toUpperCase()} ${p.key}" on line ${lineOf(n.s)}` });
+                issues.push({ s: n.s, e: n.e, reason: `Possible contradiction with "${p.word.toUpperCase()} ${p.key}" on line ${lineOf(p.s)}` });
+            });
+
+            issues.sort((x, y) => x.s - y.s);
+            return issues;
+        }
+
+        /* #3 Section stripes: top-level sections (the highest heading level used,
+           or ALL-CAPS "TITLE:" lines) each get a colour in the gutter. */
+        function computeSectionColors(text) {
+            const lines = text.split('\n');
+            const theme = TINT_THEMES[tintThemeKey] || TINT_THEMES.vivid;
+            // A lone "# Title" above "##" sections must not swallow them all, so
+            // levels down to 2 always start a section.
+            let minLevel = 7;
+            lines.forEach(l => { const m = l.match(/^[ \t]*(#{1,6})[ \t]/); if (m) minLevel = Math.min(minLevel, m[1].length); });
+            const startLevel = Math.max(minLevel, 2);
+            const isStart = (l) => {
+                const m = l.match(/^[ \t]*(#{1,6})[ \t]/);
+                if (m) return m[1].length <= startLevel;
+                return /^[ \t]*[A-Z][A-Z0-9 &\/()'-]{2,60}:[ \t]*$/.test(l);
+            };
+            let section = -1, inFence = false;
+            return lines.map(l => {
+                if (/^[ \t]*```/.test(l)) inFence = !inFence;
+                else if (!inFence && isStart(l)) section++;
+                return section < 0 ? '' : theme.stripes[section % theme.stripes.length];
+            });
+        }
+
+        function paintSectionStripes() {
+            for (let i = 0; i < gutter.children.length; i++) {
+                const color = sectionColorByLine[i] || '';
+                const row = gutter.children[i];
+                if (row.dataset.sec !== color) {
+                    row.dataset.sec = color;
+                    if (color) row.style.setProperty('--sec', color);
+                    else row.style.removeProperty('--sec');
+                }
+            }
+        }
+
+        function applyEditorTint() {
+            tintTimer = null;
+            if (!window.CSS || !CSS.highlights || typeof Highlight === 'undefined') return;
+            TINT_NAMES.forEach(n => CSS.highlights.delete(n));
+            lintIssues = [];
+            sectionColorByLine = [];
+            const text = getEditorText();
+            const active = tintEnabled && view.style.display === 'flex' && text && text.length <= TINT_MAX_CHARS;
+            if (!active) { paintSectionStripes(); updateLintButton(); return; }
+
+            const make = makeOffsetRangeFactory();
+            const buckets = {};
+            let total = 0;
+            const add = (key, s, e) => {
+                if (total >= TINT_MAX_RANGES || e <= s) return;
+                const r = make(s, e);
+                if (r) { (buckets[key] || (buckets[key] = [])).push(r); total++; }
+            };
+
+            // Fenced code blocks first: everything inside them is code, nothing else.
+            const blocks = [];
+            const fence = /```[^\n]*(?:\n[\s\S]*?(?:```|$)|$)/g;
+            let m;
+            while ((m = fence.exec(text)) !== null) {
+                blocks.push([m.index, m.index + m[0].length]);
+                add('codeblock', m.index, m.index + m[0].length);
+                if (!m[0].length) fence.lastIndex++;
+            }
+            const inBlock = (i) => blocks.some(([s, e]) => i >= s && i < e);
+
+            for (const [key, re] of TINT_RULES) {
+                re.lastIndex = 0;
+                while (total < TINT_MAX_RANGES && (m = re.exec(text)) !== null) {
+                    if (!m[0].length) { re.lastIndex++; continue; }
+                    if (blocks.length && inBlock(m.index)) continue;
+                    add(key, m.index, m.index + m[0].length);
+                }
+            }
+
+            lintIssues = findPromptIssues(text, inBlock);
+            lintIssues.forEach(issue => add('lint', issue.s, issue.e));
+
+            TINT_NAMES.forEach((name, idx) => {
+                const key = name.slice(5);
+                if (!buckets[key]) return;
+                const hl = new Highlight();
+                buckets[key].forEach(r => hl.add(r));
+                hl.priority = idx;
+                CSS.highlights.set(name, hl);
+            });
+
+            sectionColorByLine = computeSectionColors(text);
+            paintSectionStripes();
+            updateLintButton();
+        }
+
+        function updateLintButton() {
+            const btn = document.getElementById('psb-lint');
+            if (!btn) return;
+            const n = lintIssues.length;
+            btn.hidden = n === 0;
+            btn.textContent = `⚠ ${n}`;
+            btn.title = n ? `${n} possible ${n === 1 ? 'problem' : 'problems'} - click to jump to the next one` : '';
+            if (lintCursor >= n) lintCursor = -1;
+        }
+
+        // Jumps to the next issue: selects it, scrolls to it, explains it.
+        function jumpToNextLintIssue() {
+            if (!lintIssues.length) return;
+            lintCursor = (lintCursor + 1) % lintIssues.length;
+            const issue = lintIssues[lintCursor];
+            if (box.classList.contains('editing')) box.focus({ preventScroll: true });
+            setEditorSelectionOffsets(issue.s, issue.e);
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount) {
+                const rect = sel.getRangeAt(0).getBoundingClientRect();
+                const wrapRect = promptBoxWrap.getBoundingClientRect();
+                promptBoxWrap.scrollTop += rect.top - wrapRect.top - wrapRect.height / 3;
+            }
+            showToast(`${lintCursor + 1}/${lintIssues.length}: ${issue.reason}`, 'warning');
+        }
+
+        function toggleEditorTint() {
+            tintEnabled = !tintEnabled;
+            try { localStorage.setItem('editorTint', tintEnabled ? '1' : '0'); } catch (e) {}
+            updateViewSettingButtons();
+            applyEditorTint();
+            if (!tintEnabled && window.CSS && CSS.highlights) CSS.highlights.delete('tag-match');
+        }
+
+        /* #15 Colour key + themes */
+        function renderTintLegend() {
+            const theme = TINT_THEMES[tintThemeKey] || TINT_THEMES.vivid;
+            const themesEl = document.getElementById('tint-legend-themes');
+            themesEl.textContent = '';
+            Object.entries(TINT_THEMES).forEach(([key, t]) => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'tint-theme-btn' + (key === tintThemeKey ? ' active' : '');
+                b.setAttribute('aria-pressed', key === tintThemeKey ? 'true' : 'false');
+                b.textContent = t.label;
+                b.onclick = () => setTintTheme(key);
+                themesEl.appendChild(b);
+            });
+            const list = document.getElementById('tint-legend-list');
+            list.textContent = '';
+            const row = (label, sample, style) => {
+                const r = document.createElement('div');
+                r.className = 'tint-legend-row';
+                const name = document.createElement('span');
+                name.className = 'tint-legend-name';
+                name.textContent = label;
+                const ex = document.createElement('span');
+                ex.className = 'tint-legend-sample';
+                ex.textContent = sample;
+                Object.assign(ex.style, style);
+                r.append(name, ex);
+                list.appendChild(r);
+            };
+            TINT_GROUPS.forEach(g => {
+                const s = theme.colors[g.key] || {};
+                row(g.label, g.sample, {
+                    color: s.c || '',
+                    background: s.bg || '',
+                    textDecoration: s.u ? `underline ${s.u}` : '',
+                    fontWeight: s.b ? '700' : ''
+                });
+            });
+            row('Possible problem', 'TODO  <tag> unclosed', { textDecoration: `underline wavy ${theme.lint}` });
+            row('Matching tag', 'cursor on <rules>', { background: theme.match });
+            row('Section stripe', 'gutter colour per top-level section', { borderLeft: `3px solid ${theme.stripes[0]}`, paddingLeft: '6px' });
+        }
+
+        function setTintTheme(key) {
+            if (!TINT_THEMES[key]) return;
+            tintThemeKey = key;
+            try { localStorage.setItem('editorTintTheme', key); } catch (e) {}
+            applyTintTheme();
+            renderTintLegend();
+            applyEditorTint();
+        }
+
+        function toggleTintLegend(force) {
+            const el = document.getElementById('tint-legend');
+            const open = typeof force === 'boolean' ? force : el.hidden;
+            el.hidden = !open;
+            document.getElementById('psb-legend-btn').setAttribute('aria-expanded', open ? 'true' : 'false');
+            if (open) { renderTintLegend(); el.querySelector('.tint-theme-btn.active')?.focus(); }
+        }
+
+        document.addEventListener('pointerdown', (e) => {
+            const el = document.getElementById('tint-legend');
+            if (el && !el.hidden && !e.target.closest('#tint-legend, #psb-legend-btn')) toggleTintLegend(false);
+        });
+
+        applyTintTheme();
+
+        /* ---------- #11 text size and word wrap ---------- */
+
+        const EDITOR_FONT_MIN = 10, EDITOR_FONT_MAX = 26, EDITOR_FONT_DEFAULT = 14;
+        let editorFontSize = EDITOR_FONT_DEFAULT;
+        let editorWrap = true;
+        try {
+            const savedSize = parseInt(localStorage.getItem('editorFontSize'), 10);
+            if (savedSize >= EDITOR_FONT_MIN && savedSize <= EDITOR_FONT_MAX) editorFontSize = savedSize;
+            editorWrap = localStorage.getItem('editorWrap') !== '0';
+        } catch (e) {}
+
+        function applyEditorViewSettings(relayout = true) {
+            promptBoxWrap.style.setProperty('--editor-font-size', editorFontSize + 'px');
+            // 14px text on a 24px line is the original rhythm; keep that ratio.
+            promptBoxWrap.style.setProperty('--prompt-line-height', Math.round(editorFontSize * 12 / 7) + 'px');
+            promptBoxWrap.classList.toggle('nowrap', !editorWrap);
+            updateViewSettingButtons();
+            if (!relayout) return;
+            // A font change does not change the box width, so the cached character
+            // width must be dropped explicitly or the gutter keeps the old metrics.
+            editorCharWidth = 0;
+            invalidateGutterCache();
+            updateLineNumbers();
+            scheduleCaretInfo();
+        }
+
+        function updateViewSettingButtons() {
+            const fontEl = document.getElementById('psb-font');
+            if (fontEl) fontEl.textContent = editorFontSize + 'px';
+            const wrapBtn = document.getElementById('psb-wrap-btn');
+            if (wrapBtn) wrapBtn.setAttribute('aria-pressed', editorWrap ? 'true' : 'false');
+            const tintBtn = document.getElementById('psb-tint-btn');
+            if (tintBtn) tintBtn.setAttribute('aria-pressed', tintEnabled ? 'true' : 'false');
+            const zenBtn = document.getElementById('psb-zen-btn');
+            if (zenBtn) zenBtn.setAttribute('aria-pressed', view.classList.contains('zen') ? 'true' : 'false');
+        }
+
+        function changeEditorFontSize(delta) {
+            const next = delta === 0 ? EDITOR_FONT_DEFAULT
+                : Math.max(EDITOR_FONT_MIN, Math.min(EDITOR_FONT_MAX, editorFontSize + delta));
+            if (next === editorFontSize) return;
+            editorFontSize = next;
+            try { localStorage.setItem('editorFontSize', String(next)); } catch (e) {}
+            applyEditorViewSettings();
+            a11yAnnounce(`Editor text size ${next} pixels`);
+        }
+
+        function toggleEditorWrap() {
+            editorWrap = !editorWrap;
+            try { localStorage.setItem('editorWrap', editorWrap ? '1' : '0'); } catch (e) {}
+            applyEditorViewSettings();
+            showToast(editorWrap ? 'WORD WRAP ON' : 'WORD WRAP OFF', 'info');
+        }
+
+        applyEditorViewSettings(false);
+
+        /* ---------- #13 focus mode ---------- */
+
+        function toggleZenMode(force) {
+            const on = typeof force === 'boolean' ? force : !view.classList.contains('zen');
+            if (on === view.classList.contains('zen')) return;
+            view.classList.toggle('zen', on);
+            updateViewSettingButtons();
+            if (on) showToast('FOCUS MODE - ESC OR CTRL+SHIFT+F TO EXIT', 'info');
+            if (box.classList.contains('editing')) box.focus({ preventScroll: true });
+        }
+
+        /* ---------- #14 diff ---------- */
+
+        // Myers O(ND) line diff on the part between the common head and tail.
+        // Falls back to "all removed, all added" if the edit distance is too large
+        // to trace cheaply, which only happens for near-total rewrites anyway.
+        const DIFF_MAX_D = 2500;
+
+        function diffLines(a, b) {
+            let head = 0;
+            while (head < a.length && head < b.length && a[head] === b[head]) head++;
+            let endA = a.length, endB = b.length;
+            while (endA > head && endB > head && a[endA - 1] === b[endB - 1]) { endA--; endB--; }
+            const ops = [];
+            for (let i = 0; i < head; i++) ops.push({ t: '=', a: i, b: i });
+            ops.push(...diffMiddle(a, b, head, endA, head, endB));
+            for (let k = 0; k < a.length - endA; k++) ops.push({ t: '=', a: endA + k, b: endB + k });
+            return ops;
+        }
+
+        function diffMiddle(a, b, a0, a1, b0, b1) {
+            const n = a1 - a0, m = b1 - b0;
+            const blockReplace = () => {
+                const r = [];
+                for (let i = a0; i < a1; i++) r.push({ t: '-', a: i });
+                for (let j = b0; j < b1; j++) r.push({ t: '+', b: j });
+                return r;
+            };
+            if (n === 0 || m === 0) return blockReplace();
+            const max = n + m, off = max + 1;
+            const v = new Int32Array(2 * max + 3);
+            const trace = [];
+            let done = false;
+            for (let d = 0; d <= max && !done; d++) {
+                if (d > DIFF_MAX_D) return blockReplace();
+                // Snapshot of the previous round, radius d+1 is all backtracking reads.
+                trace.push(v.slice(off - d - 1, off + d + 2));
+                for (let k = -d; k <= d; k += 2) {
+                    let x = (k === -d || (k !== d && v[off + k - 1] < v[off + k + 1])) ? v[off + k + 1] : v[off + k - 1] + 1;
+                    let y = x - k;
+                    while (x < n && y < m && a[a0 + x] === b[b0 + y]) { x++; y++; }
+                    v[off + k] = x;
+                    if (x >= n && y >= m) { done = true; break; }
+                }
+            }
+            const out = [];
+            let x = n, y = m;
+            for (let d = trace.length - 1; d >= 0; d--) {
+                const snap = trace[d];
+                const at = (k) => snap[k + d + 1];
+                const k = x - y;
+                const prevK = (k === -d || (k !== d && at(k - 1) < at(k + 1))) ? k + 1 : k - 1;
+                const prevX = at(prevK), prevY = prevX - prevK;
+                while (x > prevX && y > prevY) { out.push({ t: '=', a: a0 + x - 1, b: b0 + y - 1 }); x--; y--; }
+                if (d > 0) {
+                    if (x === prevX) out.push({ t: '+', b: b0 + prevY });
+                    else out.push({ t: '-', a: a0 + prevX });
+                }
+                x = prevX; y = prevY;
+            }
+            return out.reverse();
+        }
+
+        // Renders a unified diff. Unchanged runs longer than the context are
+        // folded into a clickable "N unchanged lines" bar.
+        function renderDiffView(container, oldText, newText, opts = {}) {
+            container.textContent = '';
+            const frag = document.createDocumentFragment();
+            if (opts.rename) {
+                const r = document.createElement('div');
+                r.className = 'diff-gap';
+                r.style.cursor = 'default';
+                r.style.fontStyle = 'normal';
+                r.textContent = `Name: "${opts.rename.from}" → "${opts.rename.to}"`;
+                frag.appendChild(r);
+            }
+            if (oldText === newText) {
+                if (!opts.rename) {
+                    const empty = document.createElement('div');
+                    empty.className = 'diff-empty';
+                    empty.textContent = opts.emptyText || 'No differences.';
+                    frag.appendChild(empty);
+                }
+                container.appendChild(frag);
+                return { add: 0, del: 0 };
+            }
+            const a = oldText.split('\n'), b = newText.split('\n');
+            const ops = diffLines(a, b);
+            let add = 0, del = 0;
+            const CONTEXT = 3;
+            const keep = new Uint8Array(ops.length);
+            ops.forEach((op, i) => {
+                if (op.t === '=') return;
+                if (op.t === '+') add++; else del++;
+                for (let j = Math.max(0, i - CONTEXT); j <= Math.min(ops.length - 1, i + CONTEXT); j++) keep[j] = 1;
+            });
+            const makeRow = (op) => {
+                const row = document.createElement('div');
+                row.className = 'diff-line' + (op.t === '+' ? ' add' : op.t === '-' ? ' del' : '');
+                const lnA = document.createElement('span'); lnA.className = 'ln';
+                const lnB = document.createElement('span'); lnB.className = 'ln';
+                const sign = document.createElement('span'); sign.className = 'sign';
+                const txt = document.createElement('span'); txt.className = 'txt';
+                lnA.textContent = op.a !== undefined && op.t !== '+' ? String(op.a + 1) : '';
+                lnB.textContent = op.b !== undefined && op.t !== '-' ? String(op.b + 1) : '';
+                sign.textContent = op.t === '=' ? '' : op.t === '+' ? '+' : '−';
+                txt.textContent = (op.t === '+' ? b[op.b] : a[op.a]) || '​';
+                row.append(lnA, lnB, sign, txt);
+                return row;
+            };
+            let i = 0;
+            while (i < ops.length) {
+                if (keep[i]) { frag.appendChild(makeRow(ops[i])); i++; continue; }
+                let j = i;
+                while (j < ops.length && !keep[j]) j++;
+                const hidden = ops.slice(i, j);
+                const gap = document.createElement('div');
+                gap.className = 'diff-gap';
+                gap.tabIndex = 0;
+                gap.setAttribute('role', 'button');
+                gap.textContent = `⋯ ${hidden.length.toLocaleString()} unchanged ${hidden.length === 1 ? 'line' : 'lines'} (click to show)`;
+                const expand = () => {
+                    const f = document.createDocumentFragment();
+                    hidden.forEach(op => f.appendChild(makeRow(op)));
+                    gap.replaceWith(f);
+                };
+                gap.onclick = expand;
+                gap.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expand(); } };
+                frag.appendChild(gap);
+                i = j;
+            }
+            container.appendChild(frag);
+            return { add, del };
+        }
+
+        function formatDiffStats(stats) {
+            return `<span class="add">+${stats.add.toLocaleString()}</span> <span class="del">&minus;${stats.del.toLocaleString()}</span> lines`;
+        }
+
+        let diffModalResolve = null;
+
+        function openDiffModal(mode = 'review') {
+            if (view.style.display !== 'flex' || !box.classList.contains('editing')) return Promise.resolve('keep');
+            if (diffModalResolve) closeDiffModal('keep');
+            const overlay = document.getElementById('diff-overlay');
+            const body = document.getElementById('diff-modal-body');
+            const titleDirty = hasUnsavedTitleChanges();
+            const stats = renderDiffView(body, editBaseContent, getEditorText(), {
+                rename: titleDirty ? { from: currentAgent, to: sanitizeTitle(title.innerText) } : null,
+                emptyText: 'No text changes since the last save.'
+            });
+            document.getElementById('diff-modal-stats').innerHTML = formatDiffStats(stats);
+            const heading = document.getElementById('diff-modal-title');
+            const text = document.getElementById('diff-modal-text');
+            const primary = document.getElementById('diff-modal-primary');
+            const secondary = document.getElementById('diff-modal-secondary');
+            if (mode === 'discard') {
+                heading.textContent = 'Discard Unsaved Changes?';
+                text.textContent = 'These edits will be lost. Red lines are text you removed, green lines are text you added.';
+                secondary.textContent = 'KEEP EDITING';
+                primary.textContent = 'DISCARD CHANGES';
+                primary.className = 'wiz-danger';
+                primary.disabled = false;
+            } else {
+                heading.textContent = 'Review Changes';
+                text.textContent = 'Last saved version compared with your edits. Red: removed. Green: added.';
+                secondary.textContent = 'CLOSE';
+                primary.textContent = 'SAVE CHANGES';
+                primary.className = 'wiz-save';
+                primary.disabled = !hasUnsavedWork();
+            }
+            primary.onclick = () => closeDiffModal(mode === 'discard' ? 'discard' : 'save');
+            secondary.onclick = () => closeDiffModal('keep');
+            overlay.style.display = 'flex';
+            setTimeout(() => overlay.classList.add('visible'), 10);
+            trapFocusIn(overlay, () => closeDiffModal('keep'));
+            // The safe choice gets the focus, not the scrollable diff.
+            setTimeout(() => secondary.focus(), 60);
+            return new Promise(resolve => { diffModalResolve = resolve; });
+        }
+
+        function closeDiffModal(result) {
+            const overlay = document.getElementById('diff-overlay');
+            overlay.classList.remove('visible');
+            setTimeout(() => { if (!overlay.classList.contains('visible')) overlay.style.display = 'none'; }, 200);
+            releaseFocusTrap(overlay);
+            const resolve = diffModalResolve;
+            diffModalResolve = null;
+            if (resolve) resolve(result);
+            if (result === 'save') saveEdit(false, { exit: true });
+        }
+
+        /* ---------- #15 version history ---------- */
+
+        let historyVersions = [];
+        let historySelected = -1;
+        let historyPreviewMode = 'diff';
+
+        function formatHistoryTime(ms) {
+            const d = new Date(ms);
+            if (isNaN(d.getTime())) return '';
+            const p = (n) => String(n).padStart(2, '0');
+            const stamp = `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+            const mins = Math.round((Date.now() - d.getTime()) / 60000);
+            let rel;
+            if (mins < 1) rel = 'just now';
+            else if (mins < 60) rel = `${mins} min ago`;
+            else if (mins < 1440) rel = `${Math.round(mins / 60)} h ago`;
+            else rel = `${Math.round(mins / 1440)} d ago`;
+            return `${stamp} (${rel})`;
+        }
+
+        function setHistoryMessage(msg) {
+            const list = document.getElementById('history-list');
+            list.textContent = '';
+            const el = document.createElement('div');
+            el.className = 'diff-empty';
+            el.textContent = msg;
+            list.appendChild(el);
+            document.getElementById('history-preview').textContent = '';
+            document.getElementById('history-load-btn').disabled = true;
+            document.getElementById('history-copy-btn').disabled = true;
+        }
+
+        async function openHistoryModal() {
+            if (view.style.display !== 'flex' || !currentGroup || !currentAgent) return;
+            const overlay = document.getElementById('history-overlay');
+            historyVersions = [];
+            historySelected = -1;
+            document.getElementById('history-modal-sub').textContent = '';
+            setHistoryMessage('Loading versions…');
+            overlay.style.display = 'flex';
+            setTimeout(() => overlay.classList.add('visible'), 10);
+            trapFocusIn(overlay, closeHistoryModal);
+            const g = currentGroup, a = currentAgent;
+            const res = await api(`prompt-history?group=${encodeURIComponent(g)}&name=${encodeURIComponent(a)}`);
+            if (overlay.style.display === 'none' || g !== currentGroup || a !== currentAgent) return;
+            if (!res || res.status !== 'success') {
+                setHistoryMessage(res && res.http_status === 404
+                    ? 'Version history needs the updated bridge. Run Restart-Bridge.bat once, then open this again.'
+                    : apiErrorMessage(res, 'Could not load version history.'));
+                return;
+            }
+            historyVersions = Array.isArray(res.versions) ? res.versions : [];
+            const n = historyVersions.length;
+            document.getElementById('history-modal-sub').textContent = n ? `${n} saved ${n === 1 ? 'version' : 'versions'}` : '';
+            if (!n) {
+                setHistoryMessage('No earlier versions yet. Every save that changes the text keeps the previous version here for 30 days.');
+                return;
+            }
+            const list = document.getElementById('history-list');
+            list.textContent = '';
+            const current = getEditorText();
+            historyVersions.forEach((v, i) => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'history-item';
+                item.setAttribute('role', 'option');
+                item.setAttribute('aria-selected', 'false');
+                const when = document.createElement('span');
+                when.className = 'hi-when';
+                when.textContent = formatHistoryTime((v.saved_at || 0) * 1000);
+                const meta = document.createElement('span');
+                meta.className = 'hi-meta';
+                const content = String(v.content || '');
+                meta.textContent = `${content.split('\n').length.toLocaleString()} lines · ${content.length.toLocaleString()} chars` +
+                    (content === current ? ' · same as current' : '');
+                item.append(when, meta);
+                item.onclick = () => selectHistoryVersion(i);
+                list.appendChild(item);
+            });
+            list.onkeydown = (e) => {
+                if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+                e.preventDefault();
+                const next = Math.max(0, Math.min(historyVersions.length - 1, historySelected + (e.key === 'ArrowDown' ? 1 : -1)));
+                selectHistoryVersion(next);
+                list.children[next]?.focus();
+            };
+            selectHistoryVersion(0);
+        }
+
+        function selectHistoryVersion(i) {
+            if (!historyVersions[i]) return;
+            historySelected = i;
+            Array.from(document.getElementById('history-list').children).forEach((el, idx) => {
+                el.classList.toggle('active', idx === i);
+                el.setAttribute('aria-selected', idx === i ? 'true' : 'false');
+            });
+            document.getElementById('history-load-btn').disabled = false;
+            document.getElementById('history-copy-btn').disabled = false;
+            renderHistoryPreview();
+        }
+
+        function setHistoryPreviewMode(mode) {
+            historyPreviewMode = mode;
+            ['diff', 'text'].forEach(m => {
+                const tab = document.getElementById('history-tab-' + m);
+                tab.classList.toggle('active', m === mode);
+                tab.setAttribute('aria-selected', m === mode ? 'true' : 'false');
+            });
+            renderHistoryPreview();
+        }
+
+        function renderHistoryPreview() {
+            const preview = document.getElementById('history-preview');
+            const v = historyVersions[historySelected];
+            if (!v) { preview.textContent = ''; return; }
+            if (historyPreviewMode === 'text') {
+                preview.textContent = '';
+                const pre = document.createElement('div');
+                pre.className = 'diff-plain';
+                pre.textContent = String(v.content || '');
+                preview.appendChild(pre);
+                return;
+            }
+            // Current text -> this version: exactly what LOAD INTO EDITOR would change.
+            renderDiffView(preview, getEditorText(), String(v.content || ''), { emptyText: 'This version is identical to the current text.' });
+        }
+
+        async function loadHistoryVersion() {
+            const v = historyVersions[historySelected];
+            if (!v) return;
+            if (box.classList.contains('editing') && hasUnsavedPromptChanges()) {
+                const ok = await showConfirm('Replace your unsaved edits with this version? Ctrl+Z brings them back.', 'Load Version');
+                if (!ok) return;
+            }
+            closeHistoryModal();
+            if (!box.classList.contains('editing')) startEdit();
+            box.focus({ preventScroll: true });
+            replaceEditorRange(0, getEditorText().length, String(v.content || ''), 0);
+            promptBoxWrap.scrollTop = 0;
+            showToast('VERSION LOADED - SAVE TO KEEP IT', 'warning');
+        }
+
+        async function copyHistoryVersion() {
+            const v = historyVersions[historySelected];
+            if (!v) return;
+            const ok = await writeClipboardPlain(String(v.content || ''));
+            showToast(ok ? 'VERSION COPIED' : 'COPY FAILED', ok ? 'success' : 'error');
+        }
+
+        function closeHistoryModal() {
+            const overlay = document.getElementById('history-overlay');
+            overlay.classList.remove('visible');
+            setTimeout(() => { if (!overlay.classList.contains('visible')) overlay.style.display = 'none'; }, 200);
+            releaseFocusTrap(overlay);
+        }
+
+        /* ---------- #16 overflow menu ---------- */
+
+        function getPromptMenuItems() {
+            return Array.from(document.querySelectorAll('#prompt-more-menu .pmm-item')).filter(el => el.offsetParent !== null);
+        }
+
+        function togglePromptMoreMenu(force) {
+            const menuEl = document.getElementById('prompt-more-menu');
+            const open = typeof force === 'boolean' ? force : menuEl.hidden;
+            menuEl.hidden = !open;
+            document.getElementById('prompt-more-btn').setAttribute('aria-expanded', open ? 'true' : 'false');
+            if (open) { const first = getPromptMenuItems()[0]; if (first) first.focus(); }
+        }
+
+        function closePromptMoreMenu(returnFocus = true) {
+            const menuEl = document.getElementById('prompt-more-menu');
+            if (!menuEl || menuEl.hidden) return;
+            menuEl.hidden = true;
+            const btn = document.getElementById('prompt-more-btn');
+            btn.setAttribute('aria-expanded', 'false');
+            if (returnFocus) btn.focus();
+        }
+
+        // Focus goes back to the ⋯ button first, so a dialog opened by the
+        // action returns focus somewhere visible when it closes.
+        function runPromptMenuAction(fn) {
+            closePromptMoreMenu(true);
+            fn();
+        }
+
+        document.getElementById('prompt-more-menu').addEventListener('keydown', (e) => {
+            const items = getPromptMenuItems();
+            const idx = items.indexOf(document.activeElement);
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                const next = (idx + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+                items[next]?.focus();
+            } else if (e.key === 'Home' || e.key === 'End') {
+                e.preventDefault();
+                items[e.key === 'Home' ? 0 : items.length - 1]?.focus();
+            } else if (e.key === 'Escape') {
+                e.preventDefault(); e.stopPropagation();
+                closePromptMoreMenu(true);
+            } else if (e.key === 'Tab') {
+                closePromptMoreMenu(false);
+            }
+        });
+
+        document.addEventListener('pointerdown', (e) => {
+            const wrap = document.querySelector('.prompt-more-wrap');
+            if (wrap && !wrap.contains(e.target)) closePromptMoreMenu(false);
+        });
+
+        /* ---------- #17 shortcut sheet ---------- */
+
+        function openShortcutsModal() {
+            const overlay = document.getElementById('shortcuts-overlay');
+            if (overlay.classList.contains('visible')) { closeShortcutsModal(); return; }
+            overlay.style.display = 'flex';
+            setTimeout(() => overlay.classList.add('visible'), 10);
+            trapFocusIn(overlay, closeShortcutsModal);
+        }
+
+        function closeShortcutsModal() {
+            const overlay = document.getElementById('shortcuts-overlay');
+            overlay.classList.remove('visible');
+            setTimeout(() => { if (!overlay.classList.contains('visible')) overlay.style.display = 'none'; }, 200);
+            releaseFocusTrap(overlay);
         }
 
         function openWizard(pre) {
@@ -6753,8 +8712,16 @@
             }, 60);
         }
 
+        // Only the search highlights: structure colouring lives in the same
+        // registry and must survive opening and closing the find bar.
+        function clearSearchHighlightRegistry() {
+            if (!window.CSS || !CSS.highlights) return;
+            CSS.highlights.delete('search-match');
+            CSS.highlights.delete('search-current');
+        }
+
         function clearPromptSearchHighlights(options = {}) {
-            if (window.CSS && CSS.highlights) CSS.highlights.clear();
+            clearSearchHighlightRegistry();
             currentRangeRect = null;
             if (options.clearSelection && searchSelectionActive) {
                 window.getSelection().removeAllRanges();
@@ -6858,7 +8825,7 @@
         function applyHighlights() {
             if (!window.CSS || !CSS.highlights) return false;
 
-            CSS.highlights.clear();
+            clearSearchHighlightRegistry();
             currentRangeRect = null;
             if (searchSelectionActive) {
                 window.getSelection().removeAllRanges();
@@ -6883,8 +8850,17 @@
                 }
             }
 
-            if (allRanges.length > 0) CSS.highlights.set("search-match", new Highlight(...allRanges));
-            if (currentRange) CSS.highlights.set("search-current", new Highlight(currentRange));
+            // Priority above the structure colouring, so a match is always readable.
+            if (allRanges.length > 0) {
+                const matchHl = new Highlight(...allRanges);
+                matchHl.priority = 10;
+                CSS.highlights.set("search-match", matchHl);
+            }
+            if (currentRange) {
+                const currentHl = new Highlight(currentRange);
+                currentHl.priority = 11;
+                CSS.highlights.set("search-current", currentHl);
+            }
 
             return true;
         }
@@ -7039,13 +9015,19 @@
                    isVisibleOverlay('#alert-modal-overlay') ||
                    isVisibleOverlay('#select-modal-overlay') ||
                    isVisibleOverlay('#input-modal-overlay') ||
-                   isVisibleOverlay('#recycle-bin-overlay');
+                   isVisibleOverlay('#recycle-bin-overlay') ||
+                   isVisibleOverlay('#diff-overlay') ||
+                   isVisibleOverlay('#history-overlay') ||
+                   isVisibleOverlay('#shortcuts-overlay');
         }
 
         // The browser will not let a page suppress a tab close, but it will ask the
         // user first if the page reports unsaved work.
         window.addEventListener('beforeunload', (e) => {
             if (!hasUnsavedWork()) return;
+            // Last chance to back the edits up locally; the draft is offered
+            // again the next time this prompt is opened.
+            writePromptDraftNow();
             e.preventDefault();
             e.returnValue = '';
             return '';
@@ -7486,9 +9468,48 @@
                 && view.style.display === 'flex' && !isBlockingOverlayOpen()) {
                 // Without this the browser opens its "Save page as..." download box.
                 e.preventDefault(); e.stopPropagation();
-                if (box.classList.contains('editing')) saveEdit();
+                if (box.classList.contains('editing')) saveEdit(false, { exit: false });
                 else showToast('CLICK EDIT PROMPT FIRST', 'warning');
                 return;
+            }
+
+            // Prompt-view shortcuts. e.code keeps them working on non-Latin
+            // keyboard layouts (Hebrew etc.).
+            if (view.style.display === 'flex' && !isBlockingOverlayOpen()) {
+                const ctrl = e.ctrlKey || e.metaKey;
+                if (ctrl && !e.altKey && (e.code === 'Slash' || (!e.code && e.key === '/'))) {
+                    e.preventDefault(); e.stopPropagation();
+                    openShortcutsModal();
+                    return;
+                }
+                if (ctrl && e.shiftKey && !e.altKey && e.code === 'KeyF') {
+                    e.preventDefault(); e.stopPropagation();
+                    toggleZenMode();
+                    return;
+                }
+                if (ctrl && e.shiftKey && !e.altKey && e.code === 'KeyD') {
+                    e.preventDefault(); e.stopPropagation();
+                    if (box.classList.contains('editing')) openDiffModal('review');
+                    else showToast('NOTHING TO COMPARE - NOT EDITING', 'info');
+                    return;
+                }
+                // Overrides browser zoom while a prompt is open; the editor text is
+                // what the user wants bigger, not the toolbar. Physical code first,
+                // e.key as a fallback for keyboards/drivers that report no code.
+                const zoomDir = ['Equal', 'NumpadAdd'].includes(e.code) || (!e.code && (e.key === '=' || e.key === '+')) ? 1
+                    : ['Minus', 'NumpadSubtract'].includes(e.code) || (!e.code && e.key === '-') ? -1
+                    : ['Digit0', 'Numpad0'].includes(e.code) || (!e.code && e.key === '0') ? 0
+                    : null;
+                if (ctrl && !e.altKey && zoomDir !== null && (!e.shiftKey || e.key === '+')) {
+                    e.preventDefault(); e.stopPropagation();
+                    changeEditorFontSize(zoomDir);
+                    return;
+                }
+                if (e.altKey && !ctrl && !e.shiftKey && e.code === 'KeyZ') {
+                    e.preventDefault(); e.stopPropagation();
+                    toggleEditorWrap();
+                    return;
+                }
             }
 
             if ((e.ctrlKey || e.metaKey) && !e.altKey) {
@@ -7531,6 +9552,10 @@
                 }
             }
             if (e.key === 'Escape') {
+                // Already handled by a dialog's focus trap or an inner handler.
+                // Without this, closing a dialog with Esc fell through to
+                // "cancel edit" / "leave prompt" on the very same keypress.
+                if (e.defaultPrevented) return;
                 const gitPullConfirm = document.getElementById('git-pull-confirm-overlay');
                 if (gitPullConfirm && gitPullConfirm.classList.contains('visible')) {
                     closeGitPullConfirm();
@@ -7560,6 +9585,9 @@
                 else if (selectOverlay && selectOverlay.classList.contains('visible')) { document.getElementById('select-modal-cancel').click(); }
                 else if (inputOverlay && inputOverlay.classList.contains('visible')) { document.getElementById('input-modal-cancel').click(); }
                 else if (document.getElementById('recycle-bin-overlay').classList.contains('visible')) closeRecycleBin();
+                else if (!document.getElementById('tint-legend').hidden) toggleTintLegend(false);
+                else if (!document.getElementById('prompt-more-menu').hidden) closePromptMoreMenu(true);
+                else if (view.classList.contains('zen') && view.style.display === 'flex') toggleZenMode(false);
                 else if (box.classList.contains('editing')) { cancelEdit(); }
                 else if (view.style.display === 'flex') showMenu();
                 else if (isDeleteMode) cancelDeleteMode();

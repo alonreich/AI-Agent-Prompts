@@ -1,12 +1,12 @@
 # AI Agent Prompt Controller - Architectural Manual
-# Version: 2.0.0 (Self-Organizing Edition)
-# Date: May 6, 2026
+# Version: 2.1.0 (bridge.py VERSION)
+# Last verified against the code: October 24, 2026
 
 ===============================================================================
-1. CORE ARCHITECTURE (3-FILE ROOT STRATEGY)
+1. CORE ARCHITECTURE (ROOT LAYOUT)
 ===============================================================================
 The project is designed for maximum portability and zero-clutter. The root
-directory contains only 8 permanent files.
+directory holds 7 project files plus Git metadata.
 
 ROOT/
 ├── AI Agent Prompts.html   # Monolithic Frontend (Vanilla JS/CSS)
@@ -15,8 +15,9 @@ ROOT/
 ├── Restart-Bridge.bat      # Bounces the bridge process (persistence untouched)
 ├── README.md               # Public-facing project overview
 ├── project_structure.txt   # This Manual (Architectural Source of Truth)
-├── CLAUDE.md               # Rules auto-loaded by AI agents before any work
-└── bridge.py               # Sequence-Aware Flask Backend
+├── bridge.py               # Sequence-Aware Flask Backend
+├── .gitignore              # Ignores bytecode, logs, copy_time.txt, [RECYCLE BIN]
+└── .gitattributes          # Git line-ending / attribute rules
 
 All data is isolated within two root-level directories:
 ├── AI Agent Prompts/       # Physical Persistence Layer
@@ -25,7 +26,7 @@ All data is isolated within two root-level directories:
 ===============================================================================
 2. PHYSICAL DATA PERSISTENCE (SEQUENTIAL SCHEMA)
 ===============================================================================
-Groups are stored as physical directories using a strict sequential pattern. 
+Groups are stored as physical directories using a strict sequential pattern.
 This sequence is the "Source of Truth" for the UI order.
 
 Schema: "GroupX - [Title]"
@@ -36,9 +37,13 @@ Example:
 
 RULES:
 - [GENERAL] Priority: The "GENERAL" title is hard-locked to always be Group 1.
-- Gapless Sequence: The backend automatically re-indexes all folders (1, 2, 3...) 
-  whenever a group is created, moved, or deleted. There are never gaps.
-- Character Safety: Forbidden Windows characters (< > : " / \ | ? *) are 
+- Gapless Sequence: The backend automatically re-indexes all folders (1, 2, 3...)
+  whenever a group is created, reordered or deleted. There are never gaps.
+  Reordering means Ctrl+Left / Ctrl+Right on a group's drag handle
+  (/api/save-order). Dragging a group on the board only changes where it is
+  DRAWN (section 10.D) and never renames folders.
+- GENERAL cannot be renamed or deleted (403 from the backend).
+- Character Safety: Forbidden Windows characters (< > : " / \ | ? *) are
   automatically replaced with underscores (_) to prevent Error 123.
 
 ===============================================================================
@@ -47,17 +52,19 @@ RULES:
 The system operates autonomously with zero manual maintenance required.
 
 A. Persistent Scaffolding:
-   - Group folders are preserved even when empty to maintain organizational 
+   - Group folders are preserved even when empty to maintain organizational
      structure and user metadata.
-   - Deletion of groups is an explicit, user-initiated action via the UI.
-   - Triggered by: Moving the last agent out, or direct file deletion.
+   - Deletion of groups is an explicit, user-initiated action via the UI
+     (always to the Recycle Bin). Moving the last agent out never deletes a
+     group.
 
 B. Atomic "Mirror Sync":
-   - Uses a high-speed Watchdog observer to monitor the disk.
-   - Any change made directly to folders/files is reflected in the UI within 
-     0.5 seconds (bidirectional sync).
+   - A Watchdog observer monitors the disk (0.5s debounce) and pushes a "sync"
+     message over Server-Sent Events (GET /events). The page then re-reads
+     GET /api/data. Changes made directly to folders/files show up in the UI
+     within about half a second.
 
-C. Reorder Safety (/api/save-order)
+C. Reorder Safety (/api/save-order, used by Ctrl+Left / Ctrl+Right only)
    Renaming folders into a new sequence is inherently destructive. Four rules,
    all of them written after a reorder made three groups disappear:
    1. The request must list EVERY group. The old code renamed only the folders
@@ -65,7 +72,7 @@ C. Reorder Safety (/api/save-order)
       order - which the UI produced whenever a search filter was active - could
       permanently destroy a group it was merely hiding. Partial orders are now
       rejected with 400 and the frontend refuses to send one at all
-      (group drag is blocked while the board is filtered).
+      (the reorder list is always built from Object.keys(groups)).
    2. Temp folder names embed the ORIGINAL folder name
       (.tmp_re_<ts>_<i>__Group3 - [FORTNITE]), so a crash between the two
       rename passes is always recoverable. The old name (.tmp_re_<i>_<ts>)
@@ -93,8 +100,9 @@ D. Orphan Recovery (adopt_orphan_group_folders)
    recovery is logged at WARNING level.
 
 E. Atomic Move Operations:
-   - Drag-and-drop actions use a dedicated backend `/api/move` endpoint.
-   - Relocations are performed as a single disk move (`shutil.move`), 
+   - Moving an AGENT to another group (card drag, or the bulk Move dialog) uses
+     the dedicated `/api/move` endpoint.
+   - Relocations are performed as a single disk move (`shutil.move`),
      eliminating duplicates and ensuring data integrity.
 
 F. Atomic Persistence & Safe Archival:
@@ -147,23 +155,32 @@ F. Atomic Persistence & Safe Archival:
   polls /api/ping for up to 20s and reports the new PID and version.
   Falls back to the Startup-folder VBS launcher when no task exists.
   Use Install.bat only for a full (re)install.
-- Security: The API only accepts browser requests originating from its own
-  pages (http://127.0.0.1:5589, http://localhost:5589, or the HTML file opened
-  from disk). Cross-site requests from foreign websites are rejected (403),
-  protecting local data from drive-by CSRF attacks.
+- Security: origin_guard() rejects (403) any POST/PUT/DELETE/PATCH whose
+  Origin header is not one of the app's own pages (http://127.0.0.1:5589,
+  http://localhost:5589, or the HTML file opened from disk). This blocks
+  drive-by CSRF from foreign websites. Requests WITHOUT an Origin header
+  (curl, local tools) and all GET requests are allowed. Request bodies are
+  capped at 2 MB; prompts at 500 KB (MAX_PROMPT_SIZE). Every file path from a
+  request is resolved through safe_path(), which refuses anything outside
+  the data folder.
 
 ===============================================================================
 5. FRONTEND DESIGN LANGUAGE
 ===============================================================================
 - Visuals: 3D "Forward Indentation" effect with CSS gradients and deep shadows.
-- Layout: Responsive Grid with dynamic card sizing (175px - 400px).
-- Interaction: Inline group renaming, real-time toast notifications, 
-  and multi-agent bulk deletion.
+- Layout: a packed "masonry" board (section 10). Groups are at least 220px
+  wide with no maximum (a resize handle sets a custom width); agent cards
+  stack in a single column inside each group, each at least 150px wide.
+- Interaction: Inline group renaming, real-time toast notifications,
+  multi-agent bulk deletion, and the prompt editor described in section 9.
 ===============================================================================
 
 ===============================================================================
 6. FEATURE REQUESTS
 ===============================================================================
+The request log, in the wording each feature was asked for. It is history,
+not a spec: where current behaviour differs, sections 7, 9 and 10 are correct.
+
 1. UI/UX & Accessibility Hardening: Resolve UI/UX defects, WCAG accessibility contrast failures, and missing interaction states. Improve contrast ratios for success/warning elements, add visual focus rings to inputs, apply correct cursors to disabled elements, fix missing active states on drag handles, and ensure modal buttons have correct cursor/padding states.
 
 2. Duplicate Python Process Prevention: Prevent the backend from spawning duplicate `pythonw.exe` processes on system startup by cleaning up legacy startup shortcuts and redundant scheduled tasks during installation.
@@ -186,6 +203,12 @@ F. Atomic Persistence & Safe Archival:
 
 11. Dev Automated Git Sync (Push & Force Pull Overlay): Provide discreet developer-only 'PUSH' and 'PULL' action buttons positioned directly above the bridge status pill. 'PULL' displays a prominent reddish warning glow on hover and triggers a clear, easy-to-understand warning confirmation dialog before force-overwriting local files with cloud commits (git fetch, git reset --hard, git clean -fd). Both actions stream real-time CMD console diagnostics in a dedicated terminal overlay with clear error breakdowns on failure and green fading toasts upon success.
 
+12. Prompt Editor UX (17 items): unsaved indicator, crash-safe local drafts, save-and-keep-editing, rename committed by the same save, Tab indent, list continuation, line move/duplicate/delete, caret and selection readout, structure colouring, text size and word wrap, stronger edit cue, focus mode, diff review, per-prompt version history, an overflow menu for external/destructive actions, and a shortcut sheet.
+
+13. Prompt-Aware Colouring: a code-editor-style highlighter for plain-text prompts with 15 groups, section stripes, tag matching, problem underlines, a colour key and three themes, in view and edit mode.
+
+14. Editor click fixes: double-click enters edit mode with the caret at the click point; clicking any empty line places the caret; the section stripe must not cover the line numbers.
+
 ===============================================================================
 7. PRODUCT SPECIFICATIONS
 ===============================================================================
@@ -200,9 +223,9 @@ F. Atomic Persistence & Safe Archival:
   - Disabled buttons show a `not-allowed` cursor on hover.
   - Drag handles show `cursor: grabbing` when active.
   - Modal buttons (`.wiz-save`, `.wiz-cancel`) have standard padding, transitions, and `cursor: pointer`.
-- Logic Details: CSS variables updated `--success` changed to `#238636`, `--warning` changed to `#9e6a03`. `pointer-events: none` was removed from disabled buttons in favor of `cursor: not-allowed` and `opacity: 0.5`. `:active` pseudo-classes added to drag handles. Modal buttons were explicitly given `padding: 10px 24px`, `cursor: pointer`, and `transition: 0.2s`.
+- Logic Details: CSS variables `--success` is `#238636`, `--warning` is `#9e6a03`. Disabled buttons use `cursor: not-allowed` and reduced opacity instead of `pointer-events: none`. `:active` pseudo-classes on drag handles. Modal buttons use `padding: 8px 18px`, `cursor: pointer`, and `transition: 0.2s`.
 - Edge Cases: Focus rings must not clip outside modal boundaries. If other CSS rules override modal buttons, `.wiz-save` explicitly enforces padding and cursor.
-- Acceptance Criteria: 
+- Acceptance Criteria:
   1. System shows `not-allowed` cursor when hovering over disabled buttons.
   2. System renders a visible focus ring when form inputs are focused.
   3. System passes WCAG AA contrast ratio checks for success and warning elements.
@@ -211,7 +234,7 @@ F. Atomic Persistence & Safe Archival:
 - Purpose: Prevent background zombie processes and port collision issues caused by duplicate bridge instances.
 - Main behavior: The installation script aggressively hunts and deletes outdated startup methods before creating the new scheduled task.
 - System behavior: Deletes old `.lnk` files and old scheduled tasks before registering the new task.
-- Permission rules: Script must be run as Administrator to modify Scheduled Tasks.
+- Permission rules: Changing Scheduled Tasks needs Administrator rights; the installer requests elevation (UAC).
 - Failure handling: If a shortcut doesn't exist, the deletion command fails silently without stopping the script (`>nul 2>&1`).
 - Logic Details: Execute deletion commands targeting `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\AIAgentBridge.lnk` and `AIAgentPromptBridge.lnk`. Execute `schtasks /delete` for legacy task names before setting up the correct task.
 - Edge Cases: If the files are already deleted, the script ignores the error and proceeds. If only some legacy files exist, only those are deleted.
@@ -222,22 +245,19 @@ F. Atomic Persistence & Safe Archival:
 
 ### 3. Strict Unsaved Changes Detection
 - Purpose: Remove friction and annoyance when navigating away from unmodified prompts.
-- Main behavior: Verifies string equality between the live text box and the stored dictionary data before firing the modal.
-- System behavior: Silently calls `stopEdit()` and navigates if the strings match perfectly.
-- Data rules: Live `innerText` is compared against `groups[currentGroup].agents[currentAgent]`.
-- Failure handling: If the dictionary key is somehow missing, the comparison evaluates as changed to safely prevent data loss.
-- Logic Details: Calculates a `hasRealChanges` boolean. It evaluates to `true` ONLY IF `box.classList.contains('editing')` AND `box.innerText !== groups[currentGroup].agents[currentAgent]`. If false, executes `stopEdit()` and routes immediately.
-- Edge Cases: Invisible DOM formatting (like `contenteditable` injecting `<br>`) must not trigger false positives. The use of `innerText` against raw text string mitigates this.
+- Main behavior: The "Discard unsaved changes?" question appears only when something really changed.
+- Logic Details: `hasUnsavedWork()` = `hasUnsavedPromptChanges()` (editor text via `getEditorText()` / `box.textContent` differs from `editBaseContent`, the text as of entering edit mode or the last save) OR `hasUnsavedTitleChanges()` (a pending rename differs from the current name). Leaving the prompt (RETURN, Next/Previous, browser Back) asks only if it is true; otherwise `stopEdit()` runs silently.
+- Edge Cases: `textContent` is used everywhere (save, copy, dirty check, undo, gutter), so hidden DOM formatting can never produce a false "changed". Cancel/Escape show the changes as a diff before discarding (section 9.A).
 - Acceptance Criteria:
-  1. Feature shows a warning modal when the user modifies text and attempts to navigate away.
-  2. Feature does not show a warning modal when the user enters edit mode but makes zero string changes.
+  1. Feature shows a warning when the user modifies text or the name and attempts to navigate away.
+  2. Feature does not show a warning when the user enters edit mode but changes nothing.
 
 ### 4. Group-Locked Prompt Navigation
 - Purpose: Keep the user focused on the contextual grouping they are currently reviewing.
 - Main behavior: The navigation list array is restricted strictly to the bounds of the `currentGroup`.
 - System behavior: Compiles an active list of agents only belonging to the currently active folder.
 - UI/UX behavior: Arrows disable natively when `idx <= 0` or `idx >= list.length - 1`. Cross-group text hints are deprecated and hidden.
-- Logic Details: Replaced `buildAllAgentsList()` with `buildGroupAgentsList()`, which iterates only over `Object.keys(groups[currentGroup].agents)`. Removed DOM manipulation associated with cross-hints.
+- Logic Details: `buildGroupAgentsList()` iterates only over `Object.keys(groups[currentGroup].agents)`, sorted alphabetically. Unsaved work triggers the same confirmation as leaving the prompt.
 - Edge Cases: Rapid clicking of the arrow prevents array out-of-bounds exceptions via a strict length check constraint.
 - Acceptance Criteria:
   1. System disables the "Next" arrow when viewing the last prompt in the current group.
@@ -245,50 +265,40 @@ F. Atomic Persistence & Safe Archival:
   3. Feature never loads a prompt belonging to a different group.
 
 ### 5. External AI Prompt Reviewer
-- Purpose: Provide immediate, free, and robust AI feedback on prompt engineering quality without requiring API keys.
-- Main behavior: Packages raw text into a strict template and opens ChatGPT with the payload pre-filled via URI parameters.
-- System behavior: Executes `window.open` targeting `https://chatgpt.com/?q=...`.
-- Data rules: Text payload is `encodeURIComponent()` sanitized.
-- UI/UX behavior: An elliptical, purple button (`.ai-review-btn`) sits in the top right of the header, featuring a tooltip and star SVG. Hides natively when the user enters editing state.
-- Failure handling: If the browser blocks popups, the user must manually allow it.
-- Logic Details: The `reviewPromptWithAI()` function wraps `box.innerText` inside a strict prompt requesting bulleted summaries, hallucination guard checks, and simplified reprints.
-- Edge Cases: Formatting/line breaks are safely preserved via URI encoding. Handled natively by ChatGPT's rate limits.
+- Purpose: Provide immediate, free AI feedback on prompt quality without API keys.
+- Main behavior: `reviewPromptWithAI()` wraps the current editor text (`getEditorText()`) in a fixed review instruction (what the prompt achieves, what to keep, weak/risky parts, missing hallucination guards, grammar fixes, and a full corrected version), COPIES it to the clipboard and opens https://chatgpt.com/ in a new tab. The user pastes it. Nothing is put in the URL.
+- UI/UX behavior: "AI Review" lives in the prompt view's ⋯ menu (section 9.J), in view and edit mode. The first use asks for confirmation that text will be copied for ChatGPT; the answer is remembered in localStorage `aiReviewPrivacyAck`.
+- Failure handling: An empty prompt shows a warning. A failed clipboard write shows an alert. A blocked popup shows a toast.
 - Acceptance Criteria:
-  1. Feature opens a new tab directed to ChatGPT when clicked.
-  2. System securely passes the exact text of the active prompt inside the URL parameter.
-  3. Button disappears correctly when the user enters edit mode.
+  1. Feature copies the review text including the exact prompt to the clipboard.
+  2. Feature opens ChatGPT in a new tab.
 
-### 6. Smart Flex-Wrap Dashboard Layout
-- Purpose: Maximize horizontal screen real estate by allowing narrow groups to pack tightly next to wide groups.
-- Main behavior: Groups dynamically scale to `fit-content` but remain bound by hard max/min constraints.
-- System behavior: Groups wrap naturally using CSS Flexbox flowing left-to-right.
-- UI/UX behavior: 
-  - `#main-menu` uses `display: flex; flex-wrap: wrap;`.
-  - `.group-container` uses `width: fit-content; min-width: 220px; max-width: 350px;`.
-  - Group padding is strictly locked to `12px 30px 15px 30px`.
-  - `.agent-card` uses `max-width: 100%` to fill their parent container and force text wrapping when parent caps at 350px.
-  - `.group-grid` uses `flex-direction: column` to strictly stack internal cards downwards.
-- Logic Details: CSS Grid `auto-fill` was completely removed in favor of `flex-wrap`. Internal card flow issue (cards sitting side-by-side) was mitigated by removing `flex-wrap: wrap` from the internal `.group-grid` and replacing it with `flex-direction: column; align-items: center`.
-- Edge Cases: If a single uninterrupted word exceeds 350px, standard `overflow-wrap: anywhere` CSS kicks in. On mobile screens (`max-width: 768px`), flexbox naturally wraps to 1 item per row.
+### 6. Dashboard Layout (Groups and Cards)
+- Purpose: Use the screen densely while keeping each group readable.
+- Main behavior: The board is packed by the fit engine (section 10): groups are positioned absolutely by `packMasonry()` so a short group rises into gaps above it.
+- UI/UX behavior:
+  - `.group-container` uses `width: fit-content; min-width: 220px; max-width: none;` with padding `12px 30px 15px 30px`. A custom width can be set with the resize handle.
+  - Agent cards stack in ONE vertical column inside each group (`flex-direction: column`), never side by side. Cards are `fit-content`, at least 150px, at most the group width, and wrap long text.
+- Edge Cases: A single unbroken word wraps via `overflow-wrap: anywhere`. On screens up to 768px wide each group takes the full width.
 - Acceptance Criteria:
-  1. System aligns groups left-to-right, wrapping to the next line when screen space runs out.
-  2. System forces group containers to shrink horizontally to fit short text tightly.
-  3. System prevents any group from growing wider than 350px.
-  4. System stacks all agent cards in a strict vertical line, never rendering them side-by-side inside the same group.
+  1. Groups pack densely and never overlap.
+  2. Groups shrink to fit short content but never below 220px.
+  3. Agent cards inside a group are always in a single vertical column.
 
 ### 7. Native Recycle Bin & Soft Deletion
 - Purpose: Prevent catastrophic data loss when users delete prompts or entire groups, providing a 30-day recovery window.
 - Main behavior: Items deleted via the UI or Drag-and-Drop are moved to a hidden `[RECYCLE BIN]` directory on the filesystem rather than being permanently destroyed.
-- System behavior: 
+- System behavior:
   - Every deletion creates a timestamped folder inside `[RECYCLE BIN]` and writes a `.bin_meta.json` file containing the original group name, item name, type ('group' or 'agent'), and deletion timestamp.
   - A background cleanup function (`cleanup_recycle_bin()`) runs automatically when the Flask server starts, permanently purging items older than 30 days (`RECYCLE_RETENTION_DAYS = 30`).
 - UI/UX behavior:
-  - Users delete items by dragging them into the "Global Trash Zone" (bottom right, appears only during drag) or using inline trash icons.
+  - Users delete items by dragging them into the "Global Trash Zone" (bottom right, appears only during drag), with bulk Delete Mode, or from the prompt view's ⋯ menu > Delete prompt.
   - A persistent "Recycle Bin" button with a dynamic notification badge tracks the count of deleted items.
   - Clicking the bin opens a modal to view, individually restore (`/api/recycle-restore`), individually purge (`/api/recycle-purge`), or "Empty Recycle Bin" (`/api/recycle-purge-all`).
 - Data rules: Restoring an agent attempts to put it back in its original group. If the group no longer exists, it is placed in the `[GENERAL]` group.
 - Failure handling: Safe cleanup utilizing `robust_rmtree()` to prevent permission locks on Windows.
-- Edge Cases: Duplicate filenames in the recycle bin are handled by appending a numeric counter `ts_counter_safeName`.
+- Edge Cases: Duplicate names in the recycle bin get a numeric counter: `<ts>_<counter>_<safeName>`.
+- Every save that changes a prompt also archives its previous text here (type 'agent'); the editor's Version history panel reads these (section 9.I).
 - Acceptance Criteria:
   1. Deleted files are physically moved to `[RECYCLE BIN]` and not destroyed.
   2. Items older than 30 days are automatically deleted upon bridge startup.
@@ -296,12 +306,11 @@ F. Atomic Persistence & Safe Archival:
 
 ### 8. Drag and Drop Architecture (Groups & Agents)
 - Purpose: Fluid, top-tier reorganization of agents across groups and reordering of groups without layout thrashing.
-- Main behavior: Pointer-event powered drag-and-drop combined with atomic backend folder manipulation (`/api/move`) and top-tier physics.
-- Group Dragging Architecture (Midpoint & Hysteresis Slot Swapping):
-  - 50% Midpoint Intersection: Groups maintain their stable grid positions until the midpoint of the dragged ghost crosses 50% into a neighboring group's bounding box.
-  - Hysteresis Deadband: A 20px spatial buffer prevents oscillation or flickering when hovering near borders.
-  - Spring Slot Evacuation: Surrounding groups glide smoothly with Apple-style spring easing (`cubic-bezier(0.16, 1, 0.3, 1)`) to open a dedicated slot for the dragged group.
-  - Raw-pixel continuous masonry repacking is eliminated during flight.
+- Main behavior: Pointer-event drag-and-drop. Agent moves between groups call `/api/move`; group drags are layout-only (no backend call).
+- Group Dragging (handleManualDragMove / handleManualDragUp):
+  - The dragged group is hidden (.group-dragging) and a .group-placeholder takes its place in the packed board.
+  - Slot swapping: when the ghost's CENTER enters another group, the placeholder moves before/after it once the centre passes that group's midpoint. A 20px hysteresis (GROUP_SWAP_HYSTERESIS) stops flicker near borders. After every swap the board repacks and the order badges renumber.
+  - On drop, the placeholder's packed rectangle is stored as the group's hand placement (section 10.D), with one UNDO toast. Dropping on the Global Trash Zone asks to move the group to the Recycle Bin instead.
 - Card Dragging Architecture (Elastic Slot Void Mechanics):
   - Elastic Placeholder Void: An exact-dimension `.agent-card.card-placeholder` reserves space in the grid while the dragged card floats in an elevated plane.
   - Vertical Midpoint Displacement: Sibling cards slide smoothly via FLIP animations (`cubic-bezier(0.16, 1, 0.3, 1)`) only when the pointer crosses their vertical midpoint.
@@ -316,30 +325,30 @@ F. Atomic Persistence & Safe Archival:
   2. The UI reflects the new hierarchy with fluid spring transitions and zero jitter.
 
 ### 9. Real-Time Disk Mirroring (Watchdog Observer)
-- Purpose: Ensure the UI perfectly mirrors the physical file system in real-time without requiring manual browser refreshes.
-- Main behavior: A Python `watchdog` process monitors the root `AI Agent Prompts` directory.
+- Purpose: Ensure the UI mirrors the physical file system in real time without manual refreshes.
+- Main behavior: A Python `watchdog` observer monitors the `AI Agent Prompts` directory (0.5s debounce).
 - System behavior:
-  - Fires `/api/poll` long-polling endpoints.
-  - Detected changes (file creation, modification, deletion by third-party apps like VSCode or File Explorer) trigger an atomic `migrate_folders_locked()` re-indexing.
-  - The UI polls `/api/get-tree` and injects the updated JSON state into the DOM layer automatically.
+  - Detected changes (folders, prompt.txt, copy_time.txt - including edits by VS Code or File Explorer) trigger `migrate_folders_locked()` re-indexing and a "sync" message to every page over Server-Sent Events (`GET /events`, EventSource in the page).
+  - On "sync" the page calls `syncFromBridge()`, which re-reads `GET /api/data` and updates the board (and the open prompt, or the editor's external-change banner while editing).
 - Acceptance Criteria:
-  1. Creating a folder directly in Windows Explorer instantly spawns a new Group in the browser.
+  1. Creating a folder directly in Windows Explorer spawns a new Group in the browser without a refresh.
 
 ### 10. Agent Bulk Deletion Mode
 - Purpose: Allow users to rapidly clean up deprecated prompts.
 - Main behavior: Toggling "Delete Mode" transforms all agent cards into selectable checkboxes.
 - UI/UX behavior: The dashboard turns red. Users click cards to queue them for deletion. A floating action bar tracks the selection count and provides a final "Delete Selected" confirmation.
-- System behavior: Submits an array of `{group, agent}` objects to `/api/recycle-delete-agents` for batch processing.
+- System behavior: Selected agents are sent as `{agents: [{g: <folder>, a: <agent>}, ...]}` to `/api/recycle-delete-agents`; selected groups go one by one to `/api/recycle-delete-group`. Everything lands in the Recycle Bin.
 
 ### 11. Prompt Version History & Safe Restoration
 - Purpose: Provide a seamless roll-back plan for edited prompts and handle restore collisions safely.
-- Main behavior: 
+- Main behavior:
   - Editing an existing prompt sends the original version to the `[RECYCLE BIN]` with a timestamp before saving the new version.
   - Restoring a file that shares a name with an existing active prompt triggers a "Collision Modal" offering Overwrite or Rename actions.
   - Overwriting an active prompt will automatically recycle the active prompt before completing the restore.
-- System behavior: 
+- System behavior:
   - `bridge.py` utilizes the `move_to_recycle_bin` helper during edit operations.
-  - The `/api/recycle-restore` endpoint returns a `409 Conflict` if the destination path already exists, passing `collision=True`.
+  - The `/api/recycle-restore` endpoint answers `409` with `{"status": "collision"}` if the destination already exists; the request is repeated with `collision_action: "overwrite"` or `"rename"` (rename appends `_Restored<N>`).
+  - The prompt editor's Version history panel (`GET /api/prompt-history`, section 9.I) lists these archived versions for one prompt.
 - Acceptance Criteria:
   1. Old versions of edited prompts are safely retained in the Recycle Bin for 30 days.
   2. The system never blindly overwrites during a restore without explicit user confirmation.
@@ -348,7 +357,7 @@ F. Atomic Persistence & Safe Archival:
 - Purpose: Eliminate confusing freezes or silent UI states during asynchronous file operations.
 - Main behavior: Replaces the generic "Working..." text with a dynamic, multi-phase loading spinner that explicitly details the background process in simplified English.
 - UI/UX behavior:
-  - Phases include: "Sending command...", "Verifying file system changes...", and "Refreshing workspace data...".
+  - Phases per action: Restore - "Sending restore command...", "Verifying file system changes...", "Refreshing workspace data..."; Delete - "Sending delete command...", "Verifying permanent deletion...", "Updating interface..."; Empty - "Sending empty command...", "Verifying deletion...", "Updating interface...".
   - Each step dynamically transitions from an hourglass icon (`⏳`) to a success checkmark (`✓`) as the API and Watchdog resolve.
   - The overlay naturally lingers for an additional 600ms upon completion to ensure readability before dismissing.
 - Acceptance Criteria:
@@ -357,12 +366,12 @@ F. Atomic Persistence & Safe Archival:
 
 ### 13. Native Drag & Drop Fidelity & Keyboard Agnosticism
 - Purpose: Ensure flawless interaction fidelity during drag operations and keyboard shortcuts across all user environments.
-- Main behavior: 
+- Main behavior:
   - The `drag-ghost` element dynamically tracks the mouse cursor without animation lag or layout-induced offset errors.
   - Keyboard event listeners rely on hardware-level physical keys rather than logical mapped characters.
-- Logic Details: 
+- Logic Details:
   - CSS `position: fixed !important;` and `transition: none !important;` are strictly enforced on `.drag-ghost` to override conflicting `.agent-card` transition cascades.
-  - JavaScript event listeners use `e.code` (e.g., `KeyF`, `KeyH`) rather than `e.key` to ensure shortcuts trigger consistently regardless of the OS keyboard language layout (e.g., English vs. Hebrew).
+  - JavaScript event listeners use `e.code` (e.g., `KeyF`, `KeyH`) rather than `e.key` to ensure shortcuts trigger consistently regardless of the OS keyboard language layout (e.g., English vs. Hebrew). `e.key` is used only as a fallback when the browser reports no code.
 - Acceptance Criteria:
   1. The drag ghost strictly adheres to the cursor without delay or offset.
   2. `Ctrl+F` and `Ctrl+H` operate flawlessly regardless of active keyboard language.
@@ -396,6 +405,7 @@ F. Atomic Persistence & Safe Archival:
   - **Git Push**: Calls `POST /api/git-push`. Verifies/inits Git, checks user config, derives branch and remote, automatically synthesizes a concise commit summary comparing local files to `origin/<branch>`, stages (`git add .`), commits, runs `git pull --rebase` to incorporate remote changes, and pushes to remote (`git push origin <branch>`).
   - **Git Force Pull**: Clicking `PULL` first triggers a high-visibility warning confirmation dialog detailing that all local changes will be replaced. Upon confirmation, calls `POST /api/git-pull`. Runs `git fetch <remote> <branch>`, `git reset --hard <remote>/<branch>`, and `git clean -fd`, then triggers backend folder re-indexing (`migrate_folders_locked()`) and client-side UI sync (`syncFromBridge()`).
   - Both operations stream command execution and stdout/stderr output in real time over Server-Sent Events (SSE) into `#git-push-terminal`.
+  - Before the PULL confirmation, `/api/git-preview-pull` fetches the remote (read-only) and lists the incoming commits.
 - UI/UX behavior:
   - Both buttons render at low resting opacity (0.28) to avoid cluttering normal usage.
   - `PUSH` glows white/blue on hover.
@@ -405,10 +415,10 @@ F. Atomic Persistence & Safe Archival:
   - On failure, a structured error card explains what happened and why it failed with a `RETRY` button.
   - On success, the modal displays green status indicators and triggers a fading green toast notification (`showToast(..., 'success')`).
 - Logic Details:
-  - Dynamic Commit Synthesis: Evaluates `git diff --cached --name-status` against `origin/<branch>` (or HEAD) and synthesizes human-readable category summaries: core infrastructure (`bridge.py`, installers), frontend layout/styling (`AI Agent Prompts.html`), architectural documentation (`project_structure.txt`, `README.md`, `CLAUDE.md`), and prompt data additions/modifications.
+  - Dynamic Commit Synthesis: Evaluates `git diff --cached --name-status` against `origin/<branch>` (or HEAD) and synthesizes a short commit subject: the changed prompts (named when 3 or fewer) and their groups, plus categories for the other files - frontend UI (`AI Agent Prompts.html`), bridge backend (`bridge.py`), documentation (`project_structure.txt`, `README.md`), scripts (`*.bat`) and other project files. `copy_time.txt` changes are ignored.
   - Pre-Push Auto-Rebase: To prevent `[rejected] (fetch first)` non-fast-forward push failures when remote commits exist upstream, the backend runs `git pull --rebase <remote> <branch>`. If conflicts arise, it automatically executes `git rebase --abort` to protect local files and surfaces actionable conflict diagnostics.
   - Safe Force-Pull Protocol: Runs `git fetch <remote> <branch>`, `git reset --hard <remote>/<branch>`, and `git clean -fd`, then invokes `migrate_folders_locked()` to update backend folder state and triggers frontend `syncFromBridge()` to refresh the dashboard DOM.
-  - SSE Protocol: Subprocess output lines are streamed in real time using `text/event-stream` with payload format `{"type": "cmd"|"out"|"err"|"info"|"success"|"error"|"done", "text": "..."}`.
+  - SSE Protocol: `text/event-stream`, one JSON object per event: `{"type": "cmd"|"out"|"info"|"warning"|"error"|"success"|"summary", "line": "..."}`, ending with `{"type": "complete", "success": true|false, "stage", "message", "why"}`.
 - Failure handling:
   - Subprocess errors halt execution and stream detailed diagnostic reasons (stage, what happened, why it failed).
   - Concurrency is protected by a unified `git_op_lock` on the backend and client-side button disablement.
@@ -458,31 +468,83 @@ A. Unsaved-Work Protection
      app can never disagree with itself about whether something changed.
    - hasUnsavedPromptChanges() / hasUnsavedTitleChanges() / hasUnsavedWork()
      compare against editBaseContent (the text as of entering edit mode).
-   - Escape and the CANCEL button both route through cancelEdit(), which asks for
-     confirmation before discarding. Escape also stops propagation so a single
-     keypress cannot both exit edit mode and leave the prompt view.
-   - A beforeunload handler makes the browser warn before a tab close or refresh
-     that would drop unsaved edits.
+   - Escape and the CANCEL button both route through cancelEdit(). With unsaved
+     work it opens the diff modal in "discard" mode (KEEP EDITING / DISCARD
+     CHANGES) so the user sees exactly what would be lost. Escape also stops
+     propagation so a single keypress cannot both exit edit mode and leave the
+     prompt view.
+   - The window Escape handler returns early when e.defaultPrevented: a dialog's
+     focus trap already handled that keypress, and falling through used to close
+     the dialog AND cancel the edit / leave the prompt on the same press.
+   - A beforeunload handler writes a local draft, then makes the browser warn
+     before a tab close or refresh that would drop unsaved edits.
+   - Unsaved indicator (updateDirtyState): "UNSAVED" chip beside the title, a
+     leading "● " in the tab title, SAVE disabled while nothing changed, DIFF
+     disabled likewise. A MutationObserver on the editor (scheduleEditorUxRefresh)
+     re-runs it for every kind of change - typing, paste, undo, replace, reload.
+   - Crash-safe drafts: while dirty, the text + pending name + base text are
+     written to localStorage('promptDraft:<folder>||<agent>') at most every 1.5s
+     (throttled, not debounced, so continuous typing still backs up). Opening a
+     prompt with a draft shows #draft-banner (RESTORE DRAFT / DISCARD) and says
+     whether the saved file has changed since. Drafts are cleared on save and on
+     a confirmed discard, kept when a prompt is deleted externally mid-edit
+     (stopEdit({keepDraft:true})), and pruned after 30 days.
+     showPrompt() calls stopEdit() BEFORE switching currentGroup/currentAgent, so
+     leaving a prompt clears the draft of the prompt being left, never the one
+     being opened.
 
-B. Keyboard Shortcuts (prompt view)
-   - Ctrl+S ............ Save changes (suppresses the browser "Save page as" box)
-   - Ctrl+Enter ........ Save changes
+B. Saving and Renaming
+   - saveEdit(force, {exit}). exit:false (Ctrl+S) saves and stays in edit mode
+     with undo history intact; exit:true (SAVE button, Ctrl+Enter, diff modal)
+     saves and closes the editor. With nothing changed, Ctrl+S toasts "no
+     changes" and Ctrl+Enter just closes.
+   - The name is part of the edit session: a rename typed while editing is sent in
+     the SAME /api/save request (name + old_name) as the text, so one SAVE commits
+     both. currentAgent and the route are switched BEFORE syncFromBridge(), or
+     the sync would see the old name gone and report the prompt deleted.
+     A duplicate name in the group is refused client-side (the backend would move
+     the folder INTO the existing one).
+   - Outside edit mode the pencil starts a quick standalone rename that saves on
+     Enter or blur (it used to throw the new name away on blur). Escape cancels it
+     and stops propagation so it no longer also leaves the prompt.
+
+C. Keyboard Shortcuts (prompt view; listed in-app by Ctrl+/ or the ? button)
+   - Ctrl+S ............ Save and keep editing (suppresses "Save page as")
+   - Ctrl+Enter ........ Save and close the editor
+   - Ctrl+Shift+D ...... Review changes (diff)
    - Ctrl+Z / Ctrl+Y ... Undo / Redo (caret preserving)
+   - Tab / Shift+Tab ... Indent / outdent line(s) (4 spaces). Ctrl+M toggles
+                         "Tab moves focus" so keyboard users can leave the editor.
+   - Enter ............. New line keeping indentation; continues "-", "*", "+",
+                         "•", "1." / "1)" and "- [ ]" lists (numbers increment);
+                         Enter on an empty item ends the list.
+   - Alt+Up / Alt+Down . Move line(s)        Ctrl+D - Duplicate line(s)
+   - Ctrl+Shift+K ...... Delete line(s)
    - Ctrl+F / Ctrl+H ... Find / Replace       F3 - Find next
    - Ctrl+G ............ Go To Line (styled modal, never window.prompt)
                          NOTE: Ctrl+W is deliberately NOT bound. Browsers reserve
                          it to close the tab and ignore preventDefault().
-   - Escape ............ Close search, else cancel edit (with confirmation)
+   - Ctrl+= / - / 0 .... Editor text size (overrides browser zoom in prompt view)
+   - Alt+Z ............. Word wrap on/off
+   - Ctrl+Shift+F ...... Focus mode
+   - Ctrl+/ ............ Shortcut sheet
+   - Escape ............ Close menu / dialog / search / focus mode, else cancel
+                         edit (via the discard diff)
+   Shortcuts match e.code first (layout-agnostic, e.g. Hebrew), with an e.key
+   fallback only when the browser reports no code.
 
-C. Undo / Redo
+D. Undo / Redo
    - History is a stack of { text } snapshots, capped by BOTH step count
      (EDITOR_HISTORY_LIMIT) and total characters (EDITOR_HISTORY_CHAR_BUDGET),
      so large prompts cannot pin unbounded memory.
    - caretForTextSwap() derives the caret from the first differing character plus
      any re-inserted length, so undo/redo returns the cursor to the edit site
      instead of the end of the document.
+   - Every text operation (indent, list Enter, line moves, history/draft load)
+     goes through replaceEditorRange(), which records history before and after,
+     so each one is a single Ctrl+Z step.
 
-D. Line Number Gutter
+E. Line Number Gutter
    - The gutter is sized by its own rows (align-self: flex-start + min-height:100%),
      never stretched. A stretched flex item inside a scrolling container only
      receives the VISIBLE height, which made the divider stop mid-page on long
@@ -494,6 +556,111 @@ D. Line Number Gutter
      therefore measures one line, not the whole document.
    - gutterCache is invalidated on stopEdit(); a ResizeObserver on
      #prompt-box-wrap re-syncs numbers after resize, zoom or density changes.
+     A text-size change does not resize the box, so applyEditorViewSettings()
+     drops editorCharWidth and the cache explicitly.
+   - Current line: the gutter row gets .active-line and #active-line-band (a child
+     of the scroll container, so it scrolls with the text) copies that row's
+     offsetTop/offsetHeight - correct for wrapped lines too. Re-synced at the end
+     of every updateLineNumbers().
+   - #prompt-box is align-self:flex-start + min-height:100%, i.e. as tall as its
+     text. Stretched to the visible frame, long prompts overflowed it, and a
+     click on an EMPTY line past the first screen hit the frame instead: no
+     caret in edit mode, no double-click-to-edit in view mode.
+   - #prompt-box::after adds a zero-width character so a trailing newline still
+     draws a line (the caret used to vanish after Enter at the very end). Pseudo
+     content is not part of textContent.
+   - Click handling lives on #prompt-box-wrap: dblclick (view mode) enters edit
+     mode with the caret at the click point (caretOffsetFromPoint), ready to
+     type; a mousedown on the frame itself (gutter, padding) in edit mode places
+     the caret at that line. x is clamped into the text column.
+   - Section stripes are on the LEFT edge of gutter rows; on the right edge they
+     covered the last digit of the right-aligned numbers.
+   - showPrompt() resets #prompt-box-wrap scrollTop/scrollLeft to 0 (now and
+     again on the next frame). The frame is reused for every prompt, so it used
+     to keep the previous prompt's scroll offset and could open a long prompt
+     at the bottom.
+
+F. Status Bar (#prompt-status-bar)
+   - Mode (VIEW / EDITING), "Ln X, Col Y", selection stats (lines, words, chars,
+     ~tokens) when text is selected, the problem counter (⚠ N, section 9.H),
+     document totals (amber from ~6,000 tokens, red from ~24,000), then the
+     view tools: A- / size / A+, WRAP, COLOR, KEY, FOCUS, ?.
+   - margin-right reserves room for the fixed BRIDGE pill, which used to cover
+     the token count.
+
+G. View Settings (localStorage, per browser)
+   - editorFontSize 10-26px (default 14). Line height keeps the 14:24 ratio. Both
+     are CSS variables (--editor-font-size, --prompt-line-height) on
+     #prompt-box-wrap, used by the box, its children and the gutter.
+   - editorWrap: off sets .nowrap (white-space: pre, horizontal scroll).
+   - editorTint: structure colouring on/off. editorTintTheme: vivid/calm/cb.
+   - Drafts (promptDraft:*) and aiReviewPrivacyAck also live in localStorage.
+   - Focus mode (.zen on #prompt-view) hides the nav and status bars; a faint
+     EXIT FOCUS button (with an unsaved dot) stays. Cleared on return to board.
+
+H. Prompt-Aware Colouring (a "syntax highlighter" for plain-text prompts)
+   - CSS Custom Highlight API only - the DOM is never changed, so textContent stays
+     the single source of truth. Applies in view AND edit mode.
+   - 15 groups (TINT_GROUPS), each one highlight; group order is paint priority,
+     so a MUST inside a heading or role line still reads as a rule:
+       code block (``` fences; text inside gets NO other colour), quote/example,
+       note/optional, heading/section, role line ("You are...", "Act as"),
+       separator (---, ===, box-drawing runs), list marker, condition
+       (if/when/unless/otherwise/else/except/until), limit/number ("max 10",
+       "<= 500 words", "30%"), do-rule (must/always/required/ensure, ONLY),
+       don't-rule (never/do not/must not/avoid/forbidden, NO/NOT), emphasis
+       (IMPORTANT/CRITICAL/...), XML tag (lowercase <tag>), placeholder
+       ({{x}} {x} [UPPER] $VAR <Upper>), code/path/URL/command.
+     "must" is matched with a negative lookahead so "MUST NOT" is a don't-rule.
+   - Themes (TINT_THEMES): Vivid, Calm, Colour-blind safe (Okabe-Ito; do vs
+     don't is blue vs orange plus a bold cue, never red vs green).
+     applyTintTheme() generates the ::highlight rules into
+     <style id="tint-theme-style">. Persisted as localStorage editorTintTheme.
+   - Section stripes: each top-level section (headings of level <= max(lowest
+     used, 2), or ALL-CAPS "TITLE:" lines; fences ignored) colours the LEFT edge
+     of its gutter rows via --sec. Repainted after every gutter rebuild.
+   - Tag matching: with the caret inside <tag> or </tag>, scanPromptTags() (stack
+     walk) finds the partner and both get the tag-match highlight.
+   - Problem finder (findPromptIssues), wavy underline + status-bar "⚠ N" button
+     that jumps to the next issue and explains it in a toast:
+       * placeholders: [TODO...], [insert ...], {TODO}, TBD, line-start TODO:
+         (a prompt merely talking about TODO comments is not flagged)
+       * unclosed / stray tags, but only structural ones: tag alone on its line,
+         or that name is closed elsewhere; HTML void tags ignored
+       * repeated lines (>= 25 chars, must contain a letter/digit, so ════
+         frames are not duplicates); every copy after the first
+       * contradictions: MUST/ALWAYS/ENSURE vs NEVER/DO NOT/AVOID followed by the
+         same two content words (stop-words removed)
+   - KEY button: colour key popover (theme switch + a live sample per group).
+   - Skipped above 400k chars; capped at 12000 ranges; rebuilt 120ms after a
+     change (a typical prompt takes about 2ms).
+   - Search highlights use priority 10/11 so a match is always readable, and the
+     search code deletes only its own highlight names (it used to clear all).
+
+I. Diff and Version History
+   - diffLines(): Myers O(ND) line diff after trimming the common head and tail;
+     beyond DIFF_MAX_D (2500) it falls back to "all removed / all added".
+     renderDiffView() shows a unified diff with 3 lines of context; longer
+     unchanged runs fold into a clickable "N unchanged lines" bar.
+   - DIFF / Ctrl+Shift+D: saved text vs current edits (plus a rename line), with
+     SAVE CHANGES. Cancel uses the same modal in discard mode.
+   - Version history (overflow menu) lists earlier versions of THIS prompt from
+     GET /api/prompt-history. Preview "CHANGES IF LOADED" (current -> version) or
+     FULL TEXT; LOAD INTO EDITOR puts it in the editor as one undoable step and
+     nothing is written until SAVE; COPY VERSION copies it.
+     If the running bridge predates this endpoint it answers 404 and the panel
+     says to run Restart-Bridge.bat.
+
+J. Action Strip and Overflow Menu
+   - View mode: COPY PROMPT, EDIT PROMPT, ⋯. Edit mode: DIFF, CANCEL, SAVE, ⋯.
+   - ⋯ (#prompt-more-menu, role=menu, arrow/Home/End/Esc keys): AI Review,
+     Version history, Review changes (edit mode only), Keyboard shortcuts,
+     Delete prompt (red, below a separator). External and destructive actions
+     are kept away from the primary buttons.
+   - Edit-mode cue: blue EDITING chip by the title, blue rule under the nav bar,
+     blue inset band on top of the editor, EDITING in the status bar.
+   - .agent-title-wrap uses min-width:min-content so the strip wraps to its own
+     row (right-aligned) instead of crushing the title to one letter per line.
 
 ===============================================================================
 10. GROUP FIT ENGINE (BOARD LAYOUT)
@@ -502,7 +669,7 @@ The board (#main-menu) is a wrapping flex row. The fit engine reproduces the
 browser's greedy wrap in JavaScript so the UI can answer layout questions
 BEFORE the user releases the mouse.
 
-A. Core (pure, unit-tested)
+A. Core (pure functions)
    - simulateRows(widths, W, gap) -> rows of indices. Mirrors flex-wrap exactly.
    - predictLayout(...) -> {rows, rects}: where every group would sit, in board
      coordinates. Group height does not depend on width (agent cards are a
@@ -523,8 +690,8 @@ B. Resize Interaction (.custom-resize-handle)
      Colour is driven by --grip-color so hover and .is-resizing can recolour it.
      The cursor stays ew-resize because only width is adjustable.
    - Two kinds of snap target, merged into one list; the NEAREST target wins:
-       * fit targets   (green)  - a width where a neighbour joins the row, or in
-                                  SNUG a width that makes the whole board shorter
+       * fit targets   (green)  - a width where a neighbour joins the row, or a
+                                  width that makes the whole board shorter
        * align targets (violet) - a width identical to another group's width;
                                   the matched group is outlined and #snap-vguide
                                   drops a dashed column line at the shared edge
@@ -532,9 +699,6 @@ B. Resize Interaction (.custom-resize-handle)
      Hold ALT while dragging to bypass snapping for a pixel-exact width.
    - #snap-rail renders a tick per snap target under the group, labelled with
      the group that would join the row. Colliding labels are hidden.
-   - #fit-ghost renders a dashed outline at the predicted landing position:
-     the incoming group, or (class .self) the dragged group when it is the one
-     jumping up a row.
    - DOUBLE-CLICK the handle to shrink-wrap: clears custom_width, restores
      automatic sizing, and POSTs width: null. This is the only way back to auto
      sizing once a width has been set.
@@ -567,54 +731,39 @@ C. TIDY Button (#tidy-btn) - reversible
      restarted, it falls back to one /api/save-group-width call per group, so
      TIDY works either way.
 
-E. Board Packing and Per-Group Pinning
-   There is NO layout mode switch. The board ALWAYS packs upward; a group that
-   should sit on a plain straight row is pinned individually instead, because
-   that is a property of the group and not of the whole board.
+D. Board Packing and Hand Placement
+   There is NO layout mode switch. The board ALWAYS packs upward; a group can
+   additionally be held in place by hand (a "placement").
    - packMasonry() positions every group absolutely so a short group can rise
      into a gap left anywhere above it - maximum density, chosen deliberately
      over order-preserving packing.
        * CONSEQUENCE: screen position never tracks the running order. Order
          badges (.group-order-badge) therefore appear on every group while a
          reorder drag is in progress.
-   - THE ARROW (.group-pin-btn), bottom-left of each group:
+       * Hand-placed groups are passed in as `fixed` rects and placed FIRST as
+         obstacles; everything else flows around them.
+       * It runs THREE strategies (bottom-left fill, bottom-left fill with
+         left-edge alignment, and plain rows via packAsRows()) and keeps the
+         shortest board. Greedy bottom-left alone is myopic - it wedges a wide
+         flat group into a low pocket and blocks the shelf a later group
+         needed, occasionally producing a TALLER board than rows. packAsRows()
+         returns null when the fixed rects do not match the row layout, so that
+         strategy is skipped rather than overlapping a placed group. (A
+         2000-board fuzz test was used to check for overlaps and regressions;
+         it is not kept in the repository.)
+   - THE ARROW (.group-pin-btn), bottom-left of each group (onPinButton):
        * UP arrow, shown whenever there is room directly above: moves that ONE
-         group straight up in its OWN COLUMN until it touches something, and
-         stores the result as a hand placement. Its `left` never changes and
-         nothing else on the board moves. highestFreeTop() does the work.
-       * WHY IT WORKS THIS WAY: the arrow used to hand the group back to the
-         automatic packer, which picks the lowest-then-leftmost free slot on the
-         WHOLE board. For a group on the second row that was usually the gap at
-         the top right, so pressing "up" flung it sideways across the screen
-         instead of snugging it up where it stood.
-       * DOWN arrow, shown when there is no room above but the group is being
-         held: releases it, clearing both the hand placement and any row pin so
-         it packs automatically again.
-       * The button is hidden entirely when neither action would do anything.
-   - LEGACY ROW PIN (groups[folder].pin_row):
-       * A pinned group is parked at the rect plain row-wrapping would give it.
-         That line is computed by predictLayout() over EVERY group, pinned or
-         not, so it does not drift as neighbours grow or shrink.
-       * Pinned rects are handed to packMasonry() as `fixed` and placed FIRST as
-         obstacles; everything else flows around them. packAsRows() returns null
-         when the fixed rects do not match the row layout, so that strategy is
-         skipped rather than silently violating a pin.
-       * The arrow points DOWN (push onto the row line) when free and UP
-         (release) when pinned. .can-pin only shows the button when pinning
-         would actually move the group, so it is never a control that visibly
-         does nothing. .is-pinned draws a gold underline so the state is
-         readable without hovering.
-       * Persisted as "pin_row" in <group>/group_meta.json via
-         POST /api/save-group-pin. If that endpoint is missing because the
-         bridge has not been restarted, the frontend keeps the choice in
-         localStorage('pinRow:<folder>') so the feature still works.
-       * packMasonry runs THREE strategies (bottom-left fill, bottom-left fill
-         with left-edge alignment, and plain rows) and keeps the shortest board.
-         Greedy bottom-left alone is myopic - it wedges a wide flat group into a
-         low pocket and blocks the shelf a later group needed, occasionally
-         producing a TALLER board than rows. The three-way search makes SNUG
-         mathematically incapable of losing to ROWS; a 2000-board fuzz test
-         verifies zero overlaps, zero off-board boxes and zero regressions.
+         group straight up in its OWN COLUMN until it touches something
+         (floatGroupUp / highestFreeTop) and stores the result as a hand
+         placement. Its `left` never changes and nothing else moves.
+       * WHY IT WORKS THIS WAY: handing the group back to the automatic packer
+         (which picks the lowest-then-leftmost free slot on the WHOLE board)
+         flung it sideways across the screen instead of snugging it up.
+       * DOWN arrow, shown when there is no room above but the group is held:
+         releaseGroup() clears the placement so it packs automatically again
+         (with an UNDO toast).
+       * .can-pin shows the button only when it would do something; .is-pinned
+         (gold underline) marks a held group.
    - applyBoardLayout() measures with the board temporarily back in ROWS layout.
      An absolutely positioned box with width:fit-content shrinks to the space
      left of its containing-block edge, so a group parked at x=600 would measure
@@ -630,14 +779,14 @@ E. Board Packing and Per-Group Pinning
      and removed inside the same synchronous block as the snug-mode toggle,
      so nothing is ever painted with it.
    - The board is re-packed after a render, after shrink-wrap, after
-     TIDY/RESET/UNDO/pin, at the end of a group drag, and whenever the board's
+     TIDY/RESET/UNDO/arrow, at the end of a group drag, and whenever the board's
      own width changes (ResizeObserver, guarded against feedback).
-   - FREE PLACEMENT. A group can be dropped anywhere there is room, including a
-     half-empty bottom row or a slot that is not the next one along. The board
-     is no longer a single left-to-right sequence.
-       * A dropped group becomes an ANCHOR: it keeps exactly the spot it was
-         given (fed to packMasonry as a `fixed` rect) and every group that has
-         NOT been placed by hand flows around it.
+   - HAND PLACEMENT. A dropped group lands exactly where its placeholder was
+     packed at drop time (the slot-swap preview decides that spot) and is then
+     held there. The board is no longer a single left-to-right sequence.
+       * A dropped group becomes an ANCHOR: it keeps the spot the placeholder
+         had at drop time (fed to packMasonry as a `fixed` rect) and every group
+         that has NOT been placed by hand flows around it.
        * DRAGGING NO LONGER RENAMES FOLDERS. A drop records a position and
          nothing else - no backend call at all. The folder-renaming path, which
          once made three groups vanish and which Windows regularly denies, is
@@ -649,9 +798,12 @@ E. Board Packing and Per-Group Pinning
          arrangement comes back; change size and it is ignored, because an
          arrangement built for 1900px says nothing about 1200px. Nothing is ever
          written to the prompt folders, so rearranging cannot touch user data.
-       * A drop snaps to neighbouring edges within PLACEMENT_SNAP (12px) and is
-         clamped inside the board and to one gap below the lowest box, so a
-         group cannot be lost off-screen or stretch the board into the distance.
+       * NOT CURRENTLY ACTIVE: snapping (snapPlacement, PLACEMENT_SNAP 12px),
+         clamping (clampPlacement) and the smart guides (#place-vguide /
+         #place-hguide, updatePlacementGuides) are only reached through
+         computeDropRect(), which nothing calls. The drop uses the
+         placeholder's packed rect instead, which is always inside the board.
+         captureSnapRefs() still runs at drag start but its result is unused.
        * Dropping onto an already-placed group PUSHES it aside
          (pushOverlappingPlacements): it slides straight down to the nearest
          free spot and STAYS hand-placed, keeping its column. Releasing it used
@@ -664,28 +816,16 @@ E. Board Packing and Per-Group Pinning
          the other - fixed rects were never compared with each other at all.
          The `fixedOrder` argument gives the group under the cursor priority, so
          the one being dragged is never the one shoved aside.
-       * snapPlacement() measures every candidate from the ORIGINAL drop point.
-         It used to compare each candidate against a value it had already
-         modified, so the reference drifted and the same drop gave different
-         answers depending on the order the groups happened to be in. The board's
-         own left, right and top edges are candidates too, so a group can be sat
-         flush in a corner.
-       * Snap references are FROZEN when the drag starts (captureSnapRefs). The
-         board re-packs every frame, so snapping against live positions meant
-         aiming at a target that moved as you approached it.
-       * #place-vguide / #place-hguide draw smart guides whenever the drop rect
-         snaps, so "line this up with that" is visible rather than guessed.
        * Every drop offers a single UNDO (showUndoToast) restoring both the
          dropped group and everything it pushed aside. Previously the only way
          back was RESET LAYOUT, which wipes the entire board.
        * Storage is pruned: readPlacements() drops folders that no longer exist,
          and writePlacements() keeps only the PLACEMENT_MAX_BUCKETS most recent
          window widths. Both used to grow for ever.
-       * The old row-pin concept is GONE. migrateLegacyPins() converts any
-         surviving pin into an ordinary placement once, then the flag is deleted
-         from state, from localStorage and from group_meta.json. /api/save-group-pin
-         has been removed. Two competing notions of "held in place" was one too
-         many.
+       * Row pins are GONE. migrateLegacyPins() converts any surviving
+         `pin_row` (group_meta.json) or localStorage 'pinRow:<folder>' into an
+         ordinary placement once, then deletes the flag. /api/save-group-pin
+         no longer exists.
        * applyBoardLayout() caches the measured sizes for the duration of a drag
          (beginDragSizeCache / endDragSizeCache) and re-measures only the element
          under the cursor, whose width really can change. A drag used to force
@@ -709,10 +849,12 @@ E. Board Packing and Per-Group Pinning
          rendered as one giant dashed box across the whole board, and moving it
          previewed nothing at all, because the other groups take their positions
          from the packer rather than from the flow.
-       * A move re-packs with the placeholder pinned at the cursor
-         (computeDropRect), the same rect the drop will store, so preview and
-         result cannot disagree. It no longer shuffles the list or renumbers,
-         because dragging cannot change the order any more.
+       * During the drag the placeholder changes position by slot swapping
+         (section 7.8: centre past a group's midpoint, 20px hysteresis) and the
+         board repacks after each swap. The rect it ends up in is exactly what
+         the drop stores, so preview and result cannot disagree. This moves the
+         placeholder among the board's elements only; folder order on disk is
+         untouched.
        * flip() is not used for group dragging. It animates transforms while the
          board drives left/top, so the two fought each other. flip() is still
          correct for agent cards inside a group, which are genuinely
@@ -740,20 +882,25 @@ E. Board Packing and Per-Group Pinning
      whole board reflowing live, a single predicted rectangle contradicted what
      was already on screen.
 
-F. RESET LAYOUT (#reset-layout-btn)
+E. RESET LAYOUT (#reset-layout-btn)
    - Confirms first, then clears custom_width on every group so each returns to
-     sizing itself. Group ORDER is never touched - width and order are
+     sizing itself, and clears every hand placement for the current width. Group ORDER is never touched - width and order are
      independent and the backend owns ordering.
    - Refuses to run while a search filter is active (the board is partial).
    - Reuses tidySnapshot, so the shared UNDO button restores it; the button
      reads UNDO RESET rather than UNDO TIDY (tidySnapshot.source).
 
-G. Backend
+F. Backend (layout and related endpoints)
    - POST /api/save-group-width   {group, width|null}   - single group
    - POST /api/save-group-widths  {widths: {folder: width|null}} - batch
      Both write custom_width into <group>/group_meta.json. A null width pops
      the key. The batch route validates each folder through safe_path(), caps
      the request at 500 groups and clamps widths to 1..20000.
+   - GET  /api/prompt-history?group=<folder>&name=<agent>
+     Read-only. Previous versions of one prompt from [RECYCLE BIN], newest
+     first, max 100, each {bin_path, saved_at, content}. Matches by GROUP TITLE,
+     because saves archive with the folder name, deletes with the title, and
+     folders are renumbered on reorder. Files over MAX_PROMPT_SIZE are skipped.
    - POST /api/git-push           {}
      Automated developer sync pipeline. Stages all changes (git add .),
      synthesizes a concise commit summary comparing against online remote,
@@ -767,3 +914,35 @@ G. Backend
      to match the cloud repository, triggers backend folder re-indexing
      (migrate_folders_locked()), and signals client sync (syncFromBridge())
      while streaming real-time stdout/stderr output over SSE.
+
+===============================================================================
+11. API ENDPOINT INDEX (bridge.py, all on http://127.0.0.1:5589)
+===============================================================================
+   GET  /                        Serves AI Agent Prompts.html
+   GET  /events                  SSE stream; "sync" after any disk change
+   GET  /api/ping                {status, version} - health check
+   GET  /api/version             {version}
+   GET  /api/data                Full state: groups, prompts, widths, copy times
+   POST /api/save                Save prompt text, optional rename (old_name);
+                                 archives the previous text to the Recycle Bin
+   POST /api/move                Move an agent to another group
+   POST /api/save-order          Reorder groups (full list only; section 3.C)
+   POST /api/create-group        Create a group
+   POST /api/rename-group        Rename a group (not GENERAL; 409 on duplicate)
+   POST /api/save-group-width    One group's custom width (null = auto)
+   POST /api/save-group-widths   Batch widths (TIDY / RESET / UNDO)
+   POST /api/record-copy         Write copy_time.txt for one prompt
+   POST /api/reset-copy-times    Remove every copy_time.txt
+   GET  /api/recycle-list        Recycle Bin contents
+   GET  /api/prompt-history      Archived versions of one prompt (section 9.I)
+   POST /api/recycle-delete-agents  Agents to the Recycle Bin
+   POST /api/recycle-delete-group   Group to the Recycle Bin (not GENERAL)
+   POST /api/recycle-restore     Restore; 409 "collision" -> overwrite/rename
+   POST /api/recycle-purge       Permanently delete one bin item
+   POST /api/recycle-purge-all   Empty the Recycle Bin
+   POST /api/git-push            Dev sync, SSE stream (section 7.15)
+   POST /api/git-pull            Dev force pull, SSE stream (section 7.15)
+   GET/POST /api/git-preview-pull  Incoming commits, read-only
+   LEGACY - not called by the UI, and they delete PERMANENTLY (no Recycle Bin):
+   POST /api/delete              {agents:[{g,a}]} -> robust_rmtree
+   POST /api/delete-group        {folder} -> robust_rmtree (not GENERAL)

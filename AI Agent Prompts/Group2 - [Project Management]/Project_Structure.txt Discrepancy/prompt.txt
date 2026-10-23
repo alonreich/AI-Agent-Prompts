@@ -1,7 +1,7 @@
-Analyze ./project_structure.txt and only the explicitly provided project code files. Ignore vendor folders, lockfiles, and minified assets.
+Analyze .\project_structure.txt and .\docs\* and only the explicitly provided project code files. Ignore vendor folders, lockfiles, and minified assets.
 
 Audit for five specific vectors to create a high-density, context-complete technical reference:
-1. Code Contradiction: Statements in ./project_structure.txt conflicting with actual code implementation.
+1. Code Contradiction: Statements in .\project_structure.txt and .\docs\* conflicting with actual code implementation.
 2. Critical Omission: Core entry points, main classes, primary data flows, required .env variables, or runtime prerequisites present in code but missing from documentation. (Ignore trivial helpers and private functions).
 3. Dead Artifact: References to deleted files, obsolete functions, or deprecated workflows.
 4. Token Optimization: Chatty, conversational paragraphs that can be compressed into high-density technical bullets without losing architectural facts.

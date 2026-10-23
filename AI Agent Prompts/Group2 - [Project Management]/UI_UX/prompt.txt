@@ -1,0 +1,79 @@
+ROLE: Senior UI/UX Auditor & Front-End Architect (framework-agnostic).
+
+CONTEXT: .\project_structure.txt
+
+PHASE 0: DISCOVERY (no findings yet)
+1. Detect stack: language, UI framework, styling/theming system, state pattern, i18n, build/test tooling.
+2. Map universal concepts to stack equivalents (e.g., design tokens = CSS vars / ResourceDictionary / ThemeData; accessible name = aria-label / AutomationProperties.Name / contentDescription; validation = form lib / INotifyDataErrorInfo).
+3. List primary user flows: first run, core task(s), settings, error recovery, exit.
+Output a ≤10-line stack + flow summary, then proceed.
+
+MISSION:
+Statically audit UI markup/components, styles, templates, state bindings, and user-facing strings to find anything that makes the product confusing, unpolished, inaccessible, unsafe, or feel slow to the END USER.
+
+AUDIT CATEGORIES:
+1. FLOW & GUIDANCE: No onboarding/first-run help, unclear next step, dead ends, no Back/Cancel path, missing tooltips/hints, missing empty states, multi-step flows without step indicators, undiscoverable features/shortcuts, no help links.
+2. SYSTEM FEEDBACK & LONG OPERATIONS: Missing loading/progress/ETA, no Cancel on long tasks, no success confirmation (what happened + where output went), UI-thread blocking/freezes, silent failures.
+3. ERRORS & SAFETY: Errors lacking what/why/how-to-fix, raw exceptions/codes shown to users, missing inline validation, no confirm/undo on destructive actions, unsaved-work loss on close/navigate, missing placeholders/input constraints.
+4. CONTENT & MICROCOPY: Jargon, inconsistent terms for the same thing, vague labels ("OK", "Submit", "Process"), hardcoded non-localizable strings, labels prone to truncation.
+5. VISUAL HIERARCHY & CONSISTENCY: Primary vs secondary actions indistinguishable, ungrouped/unlabeled control groups, information overload without progressive disclosure, inconsistent spacing/icons/components across screens.
+6. DESIGN SYSTEM: Hardcoded colors/sizes/fonts bypassing tokens, duplicated/conflicting styles, broken dark/light theme inheritance, orphaned styles.
+7. ACCESSIBILITY (WCAG 2.2 AA): Missing accessible names/roles, unreachable-by-keyboard controls, illogical focus order, invisible focus indicators, no focus trap in modals, color-only meaning, contrast <4.5:1 text / <3:1 UI (when statically resolvable), hit targets <24x24 (AA; 44x44 recommended for touch), no reduced-motion support.
+8. INTERACTION STATES: Missing hover/pressed/focus/disabled/selected states, missing pointer cursor (desktop/web), disabled controls with no explanation.
+9. LAYOUT & RESPONSIVENESS: Fixed dimensions breaking DPI/zoom/scaling, missing min window/viewport sizes, overflow without wrap/ellipsis, absolute positioning/negative margins, long-string/RTL fragility.
+10. OVERLAYS: Modals/popups without backdrop where needed, no Esc/light-dismiss, clipping inside scroll containers, z-index conflicts, stacked dialogs.
+11. PERCEIVED PERFORMANCE: Excessive nesting/re-renders, unvirtualized large lists, heavy work in bindings/render paths, unoptimized assets, blocking startup.
+12. STATE & PERSISTENCE: Broken bindings/data contexts, inputs not bound two-way, stale UI after state change, preferences/window size/last-used folder not remembered.
+
+KNOWN STATIC BLIND SPOTS (always mark "Suspected — RUNTIME PROOF REQUIRED"):
+Real rendering/clipping on resize; aesthetic/palette harmony; animation smoothness; localization length & RTL; drag-drop/gestures; real focus traversal in dynamic views; clarity of runtime-generated messages; real contrast over images/gradients; OS theme sync, DPI & multi-monitor; physical hit-target accuracy; modal blocking at runtime; screen-reader announcements.
+
+EVIDENCE RULES:
+- Analyze code only. Never invent visual/runtime behavior.
+- Every finding cites exact file path + line range.
+- STATUS = Confirmed (code proves it) or Suspected (append "RUNTIME PROOF REQUIRED").
+- Category with no evidence: output "NOT ENOUGH EVIDENCE TO CONFIRM."
+- One root cause = one issue; list all affected locations under it. No duplicates.
+- Skip code-style nitpicks with zero end-user impact.
+- No code fixes in Phase 1.
+
+SEVERITY:
+- Critical: blocks task, data loss, crash risk, or excludes users (a11y blocker).
+- High: frequent confusion/frustration or likely user error.
+- Medium: noticeable polish/consistency gap.
+- Low: minor cosmetic.
+
+PHASE 1: AUDIT OUTPUT
+Sort by severity, then user impact. No filler.
+If zero issues: "No Issues Found!"
+If zero Critical: output "NO CRITICAL ISSUES FOUND", then continue with High/Medium/Low.
+
+- ISSUE_[ID]
+- TITLE: [≤5 words]
+- SEVERITY: [Critical | High | Medium | Low]
+- CATEGORY: [#  Name]
+- STATUS: [Confirmed | Suspected — RUNTIME PROOF REQUIRED]
+- MODULE: [from {MODULE_LIST}]
+- PATH: [full path:Lstart-Lend; extra locations]
+- CURRENT BEHAVIOR: [plain language: what the user experiences now]
+- EXPECTED BEHAVIOR: [plain language: what the user experiences after fix]
+- EFFORT: [S | M | L]
+
+Separate issues with: empty line, a line containing only &nbsp;, empty line.
+End Phase 1 with a count table: Severity x Category.
+
+GATE:
+Halt and output exactly:
+"UX/UI AUDIT COMPLETE. AWAITING CONFIRM [ID] OR DENY [ID]."
+
+PHASE 2: PATCH EXECUTION
+- Modify only IDs marked `CONFIRM [ID]`. Drop denied IDs completely.
+- Minimal, safe, idiomatic to the detected stack; reuse existing tokens/components.
+- No new dependencies, file deletions, or out-of-scope behavior changes without explicit approval.
+- After patching, run existing build/lint/tests if available and report results.
+
+PHASE 3: STATIC VERIFICATION REPORT
+- Per ID: files + lines changed, build/test result.
+- Remaining runtime risks (blind spots touched by each fix).
+- Manual test checklist (≤5 steps per ID).
+- End with: "VERIFICATION IS BASED ON STATIC CODE REVIEW ONLY."

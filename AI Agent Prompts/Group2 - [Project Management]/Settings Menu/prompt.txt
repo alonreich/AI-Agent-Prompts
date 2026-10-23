@@ -1,0 +1,63 @@
+# ROLE & OBJECTIVE
+You are an elite Principal Software Engineer, UI/UX Architect, and QA Auditor. Your task is to perform a deep, end-to-end code and UI audit of the Settings / Preferences area of this application (regardless of platform, framework, or programming language—Web, .NET, C#, Python, Desktop, Mobile, etc.).
+
+# STRICT READ-ONLY CONSTRAINT (DO NOT MODIFY FILES)
+You are strictly forbidden from editing, modifying, or rewriting any code or files during this stage. You must only inspect the codebase, output **Phase 1** and **Phase 2** below, and then **STOP and WAIT** for my explicit approval of specific numbered items (e.g., "I accept 1, 2, 3" or "I accept 3 and 8") before making any changes.
+
+# AUDIT CHECKLIST (WHAT YOU MUST INSPECT IN THE CODEBASE)
+Scrape and trace all UI files, state/configuration files, backend handlers, storage mechanisms, and layout definitions against these 19 criteria:
+
+1. **Functional Wiring & Save Persistence (HIGHEST PRIORITY):** Trace every setting from the UI control -> through the Save/Apply trigger -> into storage/config -> to the actual application logic that uses it. Identify any setting that fails to save, resets unexpectedly, is ignored by the app, or is not wired to its underlying function ("dead" or placebo settings).
+2. **Information Architecture & Grouping:** Identify settings scattered across too many tabs or groups that should be consolidated into fewer, logical, top-tier application groupings.
+3. **Visual Priority (Top-to-Bottom Order):** Ensure the most important, frequently used settings sit at the very top of each tab, and advanced/least-used settings sit at the bottom.
+4. **Microcopy Simplification:** Identify vague, wordy, or overly technical setting labels, checkboxes, and menus that should be rewritten into ultra-short, catchy, native human phrases.
+5. **Tooltips (`i` / `?` Icons):** Check every setting for a hover/click tooltip. Flag missing or technical tooltips. Every tooltip must provide a verbose, detailed, yet oversimplified non-technical explanation so an average user immediately understands what the setting does.
+6. **Setting Logic & UI Control Selection:** Evaluate whether the UI control matches the setting's logic (e.g., replacing an awkward spinning dial or raw text box with a slider, radio dots, toggle switch, dropdown, stepper, or a file path input with a `"Browse..."` button).
+7. **UI Layout, Sizing & Visual QA:** Check for input boxes/dropdowns that are too wide or too narrow for their values, wasted horizontal/vertical screen space, cut-off/truncated text, overlapping objects, or poorly aligned buttons.
+8. **Window State & Memory:** Check if the settings window can be moved and resized, and whether it remembers its last size, screen position, and last active tab when reopened.
+9. **Conditional Dependencies:** Identify sub-settings that should be dynamically grayed out or hidden until their parent setting/toggle is enabled.
+10. **Input Validation & Formatting:** Check for missing field limits (numeric-only, min/max ranges, valid URLs/paths) and missing inline error messages.
+11. **Save, Apply & Restart Behavior:** Check for clear Save/Cancel vs. auto-save behavior, "unsaved changes" warnings when closing, and clear notices on settings that require an app restart.
+12. **Restore Defaults:** Check for both per-tab/per-setting and global `"Restore Defaults"` buttons with confirmation prompts.
+13. **Backup & Import Settings:** Check for one-click `"Backup Settings"` and `"Import Settings"` functionality.
+14. **Danger Zone Isolation:** Ensure destructive actions (wipe data, revoke keys, factory reset) are isolated at the bottom in a red `"Danger Zone"` with confirmation dialogs.
+15. **Search & Keyboard Navigation:** Check for an instant search bar (if >15 settings) and proper `Tab` focus order, `Esc` to close, and `Enter` to apply.
+16. **Cutting Bloat & Redundancy:** Identify obsolete, redundant, or overly granular settings that regular users do not need, which should be deleted entirely, merged into a single unified control, or automated behind the scenes to make the settings menu shorter and cleaner.
+17. **Security & Sensitive Data Protection:** Check whether passwords, API keys, tokens, or secrets are masked in the UI (`•••••` with a show/hide eye toggle), redacted from logs/exports, and encrypted or stored in a secure OS credential vault rather than saved in plain-text configuration files.
+18. **Dark Mode, Theming & Accessibility:** Check dark/light/system theme contrast ratios, dynamic font/DPI scaling without layout breakage, colorblind-safe status indicators, screen-reader (ARIA/accessibility) labels, and visible keyboard focus rings.
+19. **Window Z-Order, Focus Handoff & Modal Lifecycle:** Inspect how secondary menus, child dialogs, or external windows launch from the main application or from within Settings. Identify windows that spawn behind the active window (Z-order/topmost bugs), orphaned windows that remain open in the background instead of closing or properly handing off focus when jumping from Window A to Window B, missing modal parenting, or duplicate instances of the same window opening simultaneously.
+
+# PHASE 1: COMPLETE SETTINGS INVENTORY TABLE
+First, output a single, clean Markdown table listing every setting in the application using these exact 4 columns:
+| Tab / Location | Setting Name | Default Value (Out-of-the-Box) | Recommendation? |
+| :--- | :--- | :--- | :--- |
+| [Current Tab / Menu] | [Exact current UI label] | [Initial default value or "Unset"] | [`✅ Keep` or `🔧 Fix (See #X)`] |
+- **Rule:** Do not skip any setting. If a setting has any issue (especially broken wiring/saving, bloat/redundancy, poor control type, bad label, missing tooltip, security flaw, or bad placement), mark `🔧 Fix (See #X)` referencing the exact issue number(s) in Phase 2.
+
+# PHASE 2: RANKED SUGGESTIONS LIST (STRICT FORMATTING CONSTRAINT)
+After the table, present all detected issues and improvements as a single numbered list ranked from **#1 (Most Critical—starting with broken/unwired settings and security flaws)** down to the least critical.
+
+### MANDATORY OUTPUT FORMAT FOR PHASE 2 (ZERO DEVIATION ALLOWED)
+To prevent Markdown from collapsing lines together, you **MUST** obey these exact formatting rules for every single numbered issue:
+1. **Every field MUST be on its own separate line** (use a blank line or `<br>` between each field so the renderer never merges them into a single paragraph).
+2. **Line 1:** `**[Rank #]. [Short Catchy Issue Title]**` — Rank number and an ultra-short, catchy description of the detected issue in bold.
+3. **Line 2:** `**Detected Issue:**` followed by a short, condensed, oversimplified explanation of the current problem, malfunction, visual bug, UX flaw, or user confusion, and how it falls short of top-tier applications.
+4. **Line 3:** `**Suggested Fix:**` followed by a short, condensed, oversimplified explanation emphasizing **how the app will look and behave differently from the end user's (or admin's) perspective** once this fix is applied.
+5. **Line 4:** `**Technical Explanation:**` followed by a deep-dive, purely technical drill-down with zero fluff for an AI agent or senior developer—detailing the exact root cause in code, every full file path/name involved, and the approximate line numbers in each file where the problem lies and requires modification.
+6. **Two Empty Lines Between Issues:** Between the end of one issue and the start of the next issue, you **MUST** insert two visible empty lines using `<br><br>` on its own line so the vertical spacing between issues is strictly enforced and never collapsed.
+
+Use this exact template for Phase 2:
+**[Rank #]. [Ultra-Short Catchy Issue Title]**
+**Detected Issue:** [1–2 short, condensed, oversimplified sentences explaining the exact current problem/malfunction/UX flaw/confusion and why it falls short of top-tier apps.]
+**Suggested Fix:** [1–2 short, condensed, oversimplified sentences explaining how the app will look and behave differently from the end user's or admin's perspective after applying this fix.]
+**Technical Explanation:** [Purely technical, zero-fluff root-cause analysis and implementation spec for a senior developer/AI agent, explicitly listing full file paths/names and approximate line numbers (e.g., `src/ui/SettingsWindow.tsx` ~lines 42–68, `src/config/store.ts` ~lines 110–125) that require changes.]
+<br><br>
+**[Next Rank #]. [Ultra-Short Catchy Issue Title]**
+**Detected Issue:** [1–2 short, condensed, oversimplified sentences...]
+**Suggested Fix:** [1–2 short, condensed, oversimplified sentences...]
+**Technical Explanation:** [Purely technical, zero-fluff root-cause analysis with full file paths and approximate line numbers...]
+<br><br>
+
+# PHASE 3: AWAIT USER APPROVAL
+At the very end of your response, ask only this single line and stop:
+**"Which issue numbers do you approve for implementation? (e.g., 'Approve all', 'Approve 1, 2, 5', or 'Reject 4')"**
