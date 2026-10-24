@@ -171,9 +171,11 @@ clients_lock = threading.Lock()
 
 if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR, exist_ok=True)
-general_group = os.path.join(DATA_DIR, 'Group1 - [GENERAL]')
-if not os.path.exists(general_group):
-    os.makedirs(general_group, exist_ok=True)
+folders = [d for d in os.listdir(DATA_DIR) if os.path.isdir(os.path.join(DATA_DIR, d)) and not d.startswith('.')]
+if not folders:
+    general_group = os.path.join(DATA_DIR, 'Group1 - [GENERAL]')
+    if not os.path.exists(general_group):
+        os.makedirs(general_group, exist_ok=True)
 
 
 
@@ -424,7 +426,6 @@ def migrate_folders_locked():
     for d in folders:
         full_p = os.path.join(DATA_DIR, d)
         _, title = get_group_info(d)
-        if title == "GENERAL": continue
         try:
             subs = os.listdir(full_p)
             real_subs = [s for s in subs if s != MARKER]
@@ -450,7 +451,7 @@ def migrate_folders_locked():
         items.append({'idx': idx or 999, 'title': title, 'old': d})
     
     if not items: return
-    items.sort(key=lambda x: (0 if x['title'] == "GENERAL" else 1, x['idx'], x['title']))
+    items.sort(key=lambda x: (x['idx'], x['title']))
     
     needed = []
     for i, item in enumerate(items):
@@ -673,7 +674,7 @@ def get_data():
                 group_list.append((idx or 999, d, title))
             group_list.sort()
             for _, folder_name, title in group_list:
-                data[folder_name] = {"title": title, "agents": {}, "copy_times": {},
+                data[folder_name] = {"title": title, "display_name": None, "agents": {}, "agent_display_names": {}, "copy_times": {},
                                      "custom_width": None}
                 full_path = os.path.join(DATA_DIR, folder_name)
 
@@ -685,6 +686,8 @@ def get_data():
                         with open(meta_path, "r", encoding="utf-8") as mf:
                             meta = json.load(mf)
                             data[folder_name]["custom_width"] = meta.get("custom_width")
+                            if meta.get("display_name"):
+                                data[folder_name]["display_name"] = meta.get("display_name")
                     except Exception:
                         pass
                 group_prompt = os.path.join(full_path, "prompt.txt")
@@ -718,6 +721,17 @@ def get_data():
                                 data[folder_name]["agents"][entry] = content
                             except (OSError, UnicodeDecodeError) as e:
                                 logger.warning(f"Could not read {prompt_file}: {e}")
+
+                            meta_agent = os.path.join(agent_path, "agent_meta.json")
+                            if os.path.exists(meta_agent):
+                                try:
+                                    with open(meta_agent, "r", encoding="utf-8") as af:
+                                        ameta = json.load(af)
+                                        if ameta.get("display_name"):
+                                            data[folder_name]["agent_display_names"][entry] = ameta.get("display_name")
+                                except Exception:
+                                    pass
+
                             copy_f = os.path.join(agent_path, "copy_time.txt")
                             if os.path.exists(copy_f):
                                 try:
@@ -794,8 +808,33 @@ def move_agent():
             return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
-
-
+@app.route('/api/bulk-move', methods=['POST'])
+def bulk_move():
+    with migration_lock:
+        try:
+            req = request.get_json(silent=True) or {}
+            agents = req.get('agents', [])
+            to_group = req.get('to')
+            if not to_group or not agents:
+                return jsonify({'status': 'error', 'message': 'Missing parameters'}), 400
+            for item in agents:
+                from_group, name = item.get('g'), item.get('a')
+                if not from_group or not name:
+                    continue
+                src_dir = safe_path(DATA_DIR, from_group, clean_filename(name))
+                dest_dir = safe_path(DATA_DIR, to_group, clean_filename(name))
+                if not src_dir or not dest_dir:
+                    continue
+                if os.path.isdir(src_dir):
+                    if os.path.exists(dest_dir):
+                        robust_rmtree(dest_dir)
+                    shutil.move(src_dir, dest_dir)
+            time.sleep(0.1)
+            migrate_folders_locked()
+            return jsonify({'status': 'success'})
+        except Exception as e:
+            logger.error(f"bulk_move error: {e}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 @app.route('/api/save-order', methods=['POST'])
@@ -1045,7 +1084,12 @@ def save_agent():
         try:
             req = request.get_json(silent=True) or {}
             group_folder = req.get('group')
-            name, content, old_name = clean_filename(req.get('name', '')), req.get('content', ''), req.get('old_name')
+            raw_name = req.get('name', '').strip()
+            display_name = req.get('display_name', raw_name) or raw_name
+            name = clean_filename(raw_name)
+            content = req.get('content', '')
+            raw_old = req.get('old_name')
+            old_name = clean_filename(raw_old) if raw_old else None
             if not name: return jsonify({'status': 'error', 'message': 'Name is required'}), 400
             if not group_folder: return jsonify({'status': 'error', 'message': 'Group is required'}), 400
 
@@ -1119,6 +1163,18 @@ def save_agent():
             agent_dir = os.path.join(base, name)
             os.makedirs(agent_dir, exist_ok=True)
             atomic_write_text(os.path.join(agent_dir, 'prompt.txt'), content)
+            
+            meta_path = os.path.join(agent_dir, 'agent_meta.json')
+            meta = {}
+            if os.path.exists(meta_path):
+                try:
+                    with open(meta_path, "r", encoding="utf-8") as mf:
+                        meta = json.load(mf) or {}
+                except Exception:
+                    pass
+            meta['display_name'] = display_name
+            atomic_write_text(meta_path, json.dumps(meta, indent=2))
+
             if not target_to_backup or do_backup or (old_name and old_name != name):
                 ct = os.path.join(agent_dir, "copy_time.txt")
                 if os.path.exists(ct):
@@ -1250,8 +1306,6 @@ def delete_group():
             if not os.path.exists(path):
                 return jsonify({'status': 'error', 'message': 'Folder not found'}), 404
             _, group_title = get_group_info(folder)
-            if group_title == "GENERAL":
-                return jsonify({'status': 'error', 'message': 'Cannot delete GENERAL group'}), 403
             if robust_rmtree(path):
                 time.sleep(0.1)
                 migrate_folders_locked()
@@ -1272,12 +1326,10 @@ def rename_group():
     with migration_lock:
         try:
             req = request.get_json(silent=True) or {}
-            old_folder, new_title = req.get('old'), clean_filename(req.get('new', ''))
+            old_folder, raw_new = req.get('old'), req.get('new', '').strip()
+            new_title = clean_filename(raw_new)
             if not new_title:
                 return jsonify({'status': 'error', 'message': 'New title is required'}), 400
-            _, old_title = get_group_info(old_folder)
-            if old_title == "GENERAL":
-                return jsonify({'status': 'error', 'message': 'Cannot rename GENERAL group'}), 403
             idx, _ = get_group_info(old_folder)
             if idx is None:
                 return jsonify({'status': 'error', 'message': 'Invalid folder name format'}), 400
@@ -1302,6 +1354,18 @@ def rename_group():
                 return jsonify({'status': 'error', 'message': 'Invalid target path'}), 403
 
             os.rename(old_path, new_path)
+
+            meta_path = os.path.join(new_path, "group_meta.json")
+            meta = {}
+            if os.path.exists(meta_path):
+                try:
+                    with open(meta_path, "r", encoding="utf-8") as mf:
+                        meta = json.load(mf) or {}
+                except Exception:
+                    pass
+            meta['display_name'] = raw_new
+            atomic_write_text(meta_path, json.dumps(meta, indent=2))
+
             return jsonify({'status': 'success'})
         except Exception as e:
             logger.error(f"rename_group error: {e}")
@@ -1316,7 +1380,10 @@ def create_group():
     with migration_lock:
         try:
             req = request.get_json(silent=True) or {}
-            title = clean_filename(req.get('name', 'New Group'))
+            raw_title = req.get('name', 'New Group').strip()
+            title = clean_filename(raw_title)
+            if not title:
+                title = "New Group"
             folders = [d for d in os.listdir(DATA_DIR) if os.path.isdir(os.path.join(DATA_DIR, d)) and not d.startswith('.')]
             max_idx = 0
             for d in folders:
@@ -1329,6 +1396,9 @@ def create_group():
                 return jsonify({'status': 'error', 'message': 'Invalid group name'}), 403
             os.makedirs(path, exist_ok=True)
             with open(os.path.join(path, MARKER), "w") as f: f.write("new")
+
+            meta_path = os.path.join(path, "group_meta.json")
+            atomic_write_text(meta_path, json.dumps({'display_name': raw_title}, indent=2))
             return jsonify({'status': 'success'})
         except Exception as e:
             logger.error(f"create_group error: {e}")
@@ -1403,9 +1473,6 @@ def recycle_delete_group():
             if not os.path.exists(path):
                 return jsonify({'status': 'error', 'message': 'Folder not found'}), 404
             _, group_title = get_group_info(folder)
-            if group_title == "GENERAL":
-                return jsonify({'status': 'error', 'message': 'Cannot delete GENERAL group'}), 403
-
             move_to_recycle_bin(path, group_title, 'group', group_title)
             time.sleep(0.1)
             migrate_folders_locked()
@@ -1504,6 +1571,12 @@ def recycle_restore():
                         if t == "GENERAL":
                             target_group = d
                             break
+                    if not target_group and folders:
+                        folders.sort(key=lambda d: get_group_info(d)[0] or 999)
+                        target_group = folders[0]
+                    if not target_group:
+                        target_group = "Group1 - [General]"
+                        os.makedirs(os.path.join(DATA_DIR, target_group), exist_ok=True)
                 if not target_group:
                     return jsonify({'status': 'error', 'message': 'No target group found for restore'}), 400
 

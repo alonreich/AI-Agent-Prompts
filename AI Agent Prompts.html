@@ -140,7 +140,7 @@
         }
         #selection-bar.active { display: flex; transform: translateY(0); }
         .selection-info { color: var(--error); font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 12px; }
-        .selection-info .count-badge { background: var(--error); color: #fff; padding: 2px 8px; border-radius: var(--radius-pill); font-size: 12px; }
+        .selection-info .count-badge { background: var(--danger); color: #fff; font-weight: 700; padding: 2px 8px; border-radius: var(--radius-pill); font-size: 12px; }
 
         /* Existing Overrides */
         .search-wrapper { position: relative; width: 100%; }
@@ -333,7 +333,7 @@
             position: fixed !important;
             pointer-events: none !important;
             z-index: 10000 !important;
-            opacity: 0.68 !important;
+            opacity: 0.82 !important;
             box-shadow: 0 28px 56px rgba(0,0,0,0.6), 0 0 24px rgba(88, 166, 255, 0.3) !important;
             backdrop-filter: blur(8px) !important;
             -webkit-backdrop-filter: blur(8px) !important;
@@ -341,7 +341,7 @@
             border-radius: var(--radius-md) !important;
             transform-origin: center center;
             will-change: transform, left, top;
-            transition: transform 0.08s ease-out !important;
+            transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.4, 1) !important;
         }
         .drag-ghost .quick-copy-btn,
         .drag-ghost .agent-checkbox,
@@ -397,8 +397,8 @@
             display: flex;
             align-items: flex-start;
             justify-content: flex-start;
-            transition: left 0.28s cubic-bezier(0.2, 0, 0, 1),
-                        top 0.28s cubic-bezier(0.2, 0, 0, 1);
+            transition: left 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+                        top 0.38s cubic-bezier(0.22, 1, 0.36, 1);
         }
         #main-menu.snug-mode.no-anim > .group-placeholder { transition: none; }
         /* The placeholder carries the number the group is about to take, so the
@@ -653,6 +653,7 @@
         }
 
         .agent-card:hover { border-color: var(--gold-glow); background: var(--agent-card-hover-bg); box-shadow: 0 0 10px var(--gold-glow); transform: translateY(-1px); }
+        .agent-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-color: var(--gold); background: var(--agent-card-hover-bg); box-shadow: 0 0 12px var(--gold-glow); }
         .agent-card:active { transform: scale(0.97); }
         .agent-card.dragging { opacity: 0.4; border: 1px dashed var(--blue); }
 
@@ -1062,6 +1063,12 @@
             letter-spacing: 0.8px;
             text-transform: uppercase;
             padding: 2px 8px;
+            min-height: 24px;
+            min-width: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
             border-radius: var(--radius-pill);
             user-select: none;
             line-height: 1.5;
@@ -1070,17 +1077,24 @@
             opacity: 0.28;
             transition: opacity 0.25s ease, background 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease, color 0.2s ease;
         }
+        .dev-git-btn:focus-visible {
+            opacity: 1;
+            outline: 2px solid var(--blue);
+            outline-offset: 2px;
+        }
         .dev-push-btn {
             color: var(--text-dim);
             background: rgba(13, 17, 23, 0.4);
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
-        .dev-push-btn:hover {
+        .dev-push-btn:hover,
+        .dev-push-btn:focus-visible {
             opacity: 1;
             color: #fff;
             background: var(--bg-light);
             border-color: var(--blue);
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+            outline-color: var(--blue);
         }
         .dev-push-btn:active {
             transform: translateY(1px);
@@ -1091,13 +1105,15 @@
             background: rgba(13, 17, 23, 0.4);
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
-        .dev-pull-btn:hover {
+        .dev-pull-btn:hover,
+        .dev-pull-btn:focus-visible {
             opacity: 1;
             color: #ff7b72;
             background: rgba(248, 81, 73, 0.16);
             border-color: rgba(248, 81, 73, 0.6);
             box-shadow: 0 2px 12px rgba(248, 81, 73, 0.35);
             text-shadow: 0 0 6px rgba(248, 81, 73, 0.4);
+            outline-color: #ff7b72;
         }
         .dev-pull-btn:active {
             transform: translateY(1px);
@@ -1526,11 +1542,14 @@
         #main-menu.snug-mode > .group-container {
             position: absolute;
             margin: 0;
-            transition: left 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-                        top 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-                        width 0.2s, transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+            transition: left 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+                        top 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+                        width 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+                        transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
         }
-        #main-menu.snug-mode > .group-container.is-resizing,
+        #main-menu.snug-mode > .group-container.is-resizing {
+            transition: none !important;
+        }
         #main-menu.snug-mode.no-anim > .group-container {
             transition: none;
         }
@@ -2664,7 +2683,7 @@
         </div>
     </div>
 
-    <div id="recycle-bin-overlay" role="dialog" aria-label="Recycle Bin">
+    <div id="recycle-bin-overlay" role="dialog" aria-modal="true" aria-label="Recycle Bin">
         <div class="recycle-card">
             <h3><svg aria-hidden="true"><use href="#icon-trash"/></svg> Recycle Bin</h3>
             <div class="recycle-subtitle">Deleted agents and groups are stored here for 30 days</div>
@@ -2677,8 +2696,8 @@
                 </div>
             </div>
 
-            <div class="recycle-loading-overlay" id="recycle-loader">
-                <div class="spinner"></div>
+            <div class="recycle-loading-overlay" id="recycle-loader" aria-live="polite" aria-atomic="true">
+                <div class="spinner" aria-hidden="true"></div>
                 <div id="recycle-loader-text" class="recycle-loader-text">Working...</div>
             </div>
         </div>
@@ -2799,12 +2818,15 @@
         }, true);
 
         const FOCUSABLE_SELECTOR = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-        let focusTrapPrevious = null;
 
         function trapFocusIn(overlayEl, onEscape = null) {
-            focusTrapPrevious = document.activeElement;
+            if (!overlayEl) return;
+            overlayEl._previousFocused = document.activeElement;
             const focusable = overlayEl.querySelectorAll(FOCUSABLE_SELECTOR);
             if (focusable.length) setTimeout(() => focusable[0].focus(), 50);
+            if (overlayEl._focusTrapHandler) {
+                overlayEl.removeEventListener('keydown', overlayEl._focusTrapHandler);
+            }
             overlayEl._focusTrapHandler = (e) => {
                 if (e.key === 'Escape' || e.key === 'Esc') {
                     e.preventDefault();
@@ -2827,8 +2849,16 @@
         }
 
         function releaseFocusTrap(overlayEl) {
-            if (overlayEl._focusTrapHandler) { overlayEl.removeEventListener('keydown', overlayEl._focusTrapHandler); overlayEl._focusTrapHandler = null; }
-            if (focusTrapPrevious) { focusTrapPrevious.focus(); focusTrapPrevious = null; }
+            if (!overlayEl) return;
+            if (overlayEl._focusTrapHandler) {
+                overlayEl.removeEventListener('keydown', overlayEl._focusTrapHandler);
+                overlayEl._focusTrapHandler = null;
+            }
+            const prev = overlayEl._previousFocused;
+            overlayEl._previousFocused = null;
+            if (prev && typeof prev.focus === 'function') {
+                prev.focus();
+            }
         }
 
 
@@ -2856,11 +2886,13 @@
             Object.keys(groups).forEach(folderName => {
                 const groupData = groups[folderName];
                 const groupAgents = groupData?.agents || {};
+                const groupDisplay = getGroupDisplayName(folderName);
                 Object.keys(groupAgents).forEach(agentName => {
                     const promptText = String(groupAgents[agentName] || '');
+                    const agentDisplay = getAgentDisplayName(folderName, agentName);
                     if (!query) {
                         allTitleMatches.push({ folderName, agentName, matchType: 'all' });
-                    } else if (agentName.toLocaleLowerCase().includes(query)) {
+                    } else if (agentDisplay.toLocaleLowerCase().includes(query) || agentName.toLocaleLowerCase().includes(query) || groupDisplay.toLocaleLowerCase().includes(query)) {
                         allTitleMatches.push({ folderName, agentName, matchType: 'title' });
                     } else if (promptText.toLocaleLowerCase().includes(query)) {
                         allContentMatches.push({ folderName, agentName, matchType: 'content', content: promptText });
@@ -3021,6 +3053,29 @@
 
 
         let groups = {};
+
+        function getGroupDisplayName(folderName) {
+            return (groups[folderName] && groups[folderName].display_name) || (groups[folderName] && groups[folderName].title) || folderName || '';
+        }
+
+        function getAgentDisplayName(folderName, agentKey) {
+            return (groups[folderName] && groups[folderName].agent_display_names && groups[folderName].agent_display_names[agentKey]) || agentKey || '';
+        }
+
+        (function migrateStaleBoardPlacements() {
+            try {
+                if (!localStorage.getItem('boardPlacementV2Cleaned')) {
+                    const keys = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const k = localStorage.key(i);
+                        if (k && k.startsWith('boardPlacement:')) keys.push(k);
+                    }
+                    keys.forEach(k => localStorage.removeItem(k));
+                    localStorage.removeItem('boardPlacementOrder');
+                    localStorage.setItem('boardPlacementV2Cleaned', '1');
+                }
+            } catch (e) {}
+        })();
         let isDeleteMode = false;
         let draggedAgent = null;
         let draggedFromGroup = null;
@@ -3306,7 +3361,8 @@
 
         function hasUnsavedTitleChanges() {
             if (title.contentEditable !== 'true') return false;
-            return sanitizeTitle(title.innerText) !== currentAgent;
+            const currentDisplay = getAgentDisplayName(currentGroup, currentAgent);
+            return title.innerText.trim() !== currentDisplay;
         }
 
         function hasUnsavedWork() {
@@ -3756,16 +3812,16 @@
             if (!ghost || !targetEl) { cleanupDragState(); return; }
             isAnimating = true;
             const rect = targetEl.getBoundingClientRect();
-            ghost.style.transition = 'left 0.26s cubic-bezier(0.16, 1, 0.3, 1), top 0.26s cubic-bezier(0.16, 1, 0.3, 1), transform 0.26s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease';
+            ghost.style.transition = 'left 0.34s cubic-bezier(0.22, 1, 0.36, 1), top 0.34s cubic-bezier(0.22, 1, 0.36, 1), transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease';
             ghost.style.left = rect.left + 'px';
             ghost.style.top = rect.top + 'px';
             ghost.style.transform = 'scale(1)';
-            ghost.style.opacity = '0.5';
+            ghost.style.opacity = '0.7';
             setTimeout(() => {
                 cleanupDragState();
                 isAnimating = false;
                 syncFromBridge();
-            }, 300);
+            }, 360);
         }
 
         function cleanupDragState() {
@@ -3974,45 +4030,60 @@
                     const ghostCenterX = ghostRect.left + ghostRect.width / 2;
                     const ghostCenterY = ghostRect.top + ghostRect.height / 2;
 
-                    const dxSwap = Math.abs(lastClientX - lastGroupSwapX);
-                    const dySwap = Math.abs(lastClientY - lastGroupSwapY);
+                    const others = Array.from(menu.querySelectorAll('.group-container:not(.group-dragging):not(.drag-ghost)'));
+                    if (others.length > 0) {
+                        const firstGroup = others[0];
+                        const firstRect = firstGroup.getBoundingClientRect();
 
-                    if (dxSwap > GROUP_SWAP_HYSTERESIS || dySwap > GROUP_SWAP_HYSTERESIS) {
-                        const others = Array.from(menu.querySelectorAll('.group-container:not(.group-dragging):not(.drag-ghost)'));
-                        let targetGroup = null;
-                        for (const g of others) {
-                            const gr = g.getBoundingClientRect();
-                            if (ghostCenterX >= gr.left && ghostCenterX <= gr.right &&
-                                ghostCenterY >= gr.top && ghostCenterY <= gr.bottom) {
-                                targetGroup = g;
-                                break;
-                            }
-                        }
-
-                        if (targetGroup) {
-                            const tr = targetGroup.getBoundingClientRect();
-                            const targetCenterX = tr.left + tr.width / 2;
-                            const targetCenterY = tr.top + tr.height / 2;
-                            const isBefore = (groupPlaceholder.compareDocumentPosition(targetGroup) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
-
-                            let shouldSwap = false;
-                            if (isBefore) {
-                                if (ghostCenterX > targetCenterX || ghostCenterY > targetCenterY) {
-                                    targetGroup.parentNode.insertBefore(groupPlaceholder, targetGroup.nextSibling);
-                                    shouldSwap = true;
-                                }
-                            } else {
-                                if (ghostCenterX < targetCenterX || ghostCenterY < targetCenterY) {
-                                    targetGroup.parentNode.insertBefore(groupPlaceholder, targetGroup);
-                                    shouldSwap = true;
-                                }
-                            }
-
-                            if (shouldSwap) {
+                        if (ghostCenterY < firstRect.top + 10 || (ghostCenterY < firstRect.bottom && ghostCenterX < firstRect.left + 20)) {
+                            if (groupPlaceholder.nextSibling !== firstGroup) {
+                                firstGroup.parentNode.insertBefore(groupPlaceholder, firstGroup);
                                 lastGroupSwapX = lastClientX;
                                 lastGroupSwapY = lastClientY;
                                 applyBoardLayout();
                                 refreshOrderBadges();
+                            }
+                        } else {
+                            const dxSwap = Math.abs(lastClientX - lastGroupSwapX);
+                            const dySwap = Math.abs(lastClientY - lastGroupSwapY);
+
+                            if (dxSwap > GROUP_SWAP_HYSTERESIS || dySwap > GROUP_SWAP_HYSTERESIS) {
+                                let targetGroup = null;
+                                for (const g of others) {
+                                    const gr = g.getBoundingClientRect();
+                                    if (ghostCenterX >= gr.left && ghostCenterX <= gr.right &&
+                                        ghostCenterY >= gr.top && ghostCenterY <= gr.bottom) {
+                                        targetGroup = g;
+                                        break;
+                                    }
+                                }
+
+                                if (targetGroup) {
+                                    const tr = targetGroup.getBoundingClientRect();
+                                    const targetCenterX = tr.left + tr.width / 2;
+                                    const targetCenterY = tr.top + tr.height / 2;
+                                    const isBefore = (groupPlaceholder.compareDocumentPosition(targetGroup) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+
+                                    let shouldSwap = false;
+                                    if (isBefore) {
+                                        if (ghostCenterX > targetCenterX || ghostCenterY > targetCenterY) {
+                                            targetGroup.parentNode.insertBefore(groupPlaceholder, targetGroup.nextSibling);
+                                            shouldSwap = true;
+                                        }
+                                    } else {
+                                        if (ghostCenterX < targetCenterX || ghostCenterY < targetCenterY) {
+                                            targetGroup.parentNode.insertBefore(groupPlaceholder, targetGroup);
+                                            shouldSwap = true;
+                                        }
+                                    }
+
+                                    if (shouldSwap) {
+                                        lastGroupSwapX = lastClientX;
+                                        lastGroupSwapY = lastClientY;
+                                        applyBoardLayout();
+                                        refreshOrderBadges();
+                                    }
+                                }
                             }
                         }
                     }
@@ -4051,42 +4122,30 @@
                 if (original) {
                     activeGroupDrag = null;
                     if (groupPlaceholder && groupPlaceholder.parentNode) {
-                        const targetLeft = parseFloat(groupPlaceholder.style.left) || 0;
-                        const targetTop = parseFloat(groupPlaceholder.style.top) || 0;
-                        pendingDropRect = { left: targetLeft, top: targetTop, width: original.offsetWidth, height: original.offsetHeight };
                         groupPlaceholder.parentNode.insertBefore(original, groupPlaceholder);
                         groupPlaceholder.remove();
                         groupPlaceholder = null;
                     }
                     original.classList.remove('group-dragging');
 
-                    const drop = pendingDropRect;
-                    if (drop) {
-                        const W = currentBoardWidth();
-                        const gap = getMenuMetrics().gap;
-                        const previous = readPlacements(W)[folder] || null;
-                        const pushed = pushOverlappingPlacements(folder, drop, gap);
-                        setGroupPlacement(folder, drop);
+                    // Extract new complete DOM sequence
+                    const reordered = Array.from(menu.querySelectorAll('.group-container:not(.drag-ghost)'))
+                        .map(c => c.dataset.folder)
+                        .filter(Boolean);
 
-                        const message = pushed.length
-                            ? `PLACED - ${pushed.length} MOVED ASIDE`
-                            : 'GROUP PLACED';
-                        showUndoToast(message, () => {
-                            const map = readPlacements(currentBoardWidth());
-                            for (const m of pushed) map[m.folder] = m.from;
-                            if (previous) map[folder] = previous;
-                            else delete map[folder];
-                            writePlacements(currentBoardWidth(), map);
-                            applyBoardLayout();
-                            showToast('MOVE UNDONE', 'success');
-                        });
-                        a11yAnnounce(`${groups[folder] ? groups[folder].title : folder} placed.`);
+                    // Clear stale pixel placement so masonry packer flows cleanly
+                    clearGroupPlacement(folder);
+
+                    // Reorder on backend
+                    if (reordered.length > 0) {
+                        api('save-order', 'POST', { order: reordered }).catch(console.error);
                     }
+
                     pendingDropRect = null;
                     hidePlacementGuides();
                     dragSnapRefs = [];
 
-                    applyBoardLayout(true);
+                    applyBoardLayout();
                     refreshOrderBadges();
                     animateGhostTo(original);
                 } else { cleanupDragState(); }
@@ -5328,11 +5387,11 @@
                 if (Math.abs(raw - startWidth) > 2) moved = true;
 
                 // Alt bypasses magnetism for pixel-exact widths.
-                // Nearest target wins, whichever kind it is.
+                // Nearest target wins when within 6px subtle snap threshold.
                 let width = raw;
                 let active = null;
                 if (!e.altKey) {
-                    let bestDist = SNAP_TOLERANCE + 1;
+                    let bestDist = 6;
                     for (const t of targets) {
                         const d = Math.abs(t.width - raw);
                         if (d < bestDist) { bestDist = d; active = t; }
@@ -5361,7 +5420,6 @@
                     pointerId = null;
                 }
                 if (livePackFrame) { cancelAnimationFrame(livePackFrame); livePackFrame = null; }
-                menu.classList.remove('no-anim');
 
                 // Read and commit the new width BEFORE re-packing. applyBoardLayout()
                 // restores widths from custom_width, so packing first would hand back
@@ -5395,9 +5453,6 @@
                 startWidth = Math.round(container.getBoundingClientRect().width);
                 lastWidth = startWidth;
                 container.classList.add('is-resizing');
-                // Transitions stay off for the whole drag so neighbours track the
-                // cursor instantly rather than lagging a third of a second behind.
-                menu.classList.add('no-anim');
                 anchorRect = {
                     el: container,
                     left: parseFloat(container.style.left) || container.offsetLeft,
@@ -5723,7 +5778,7 @@
                 const container = document.createElement('div');
                 container.className = 'group-container'; container.dataset.folder = folderName;
                 container.setAttribute('role', 'region');
-                container.setAttribute('aria-label', groupData.title + ' group');
+                container.setAttribute('aria-label', getGroupDisplayName(folderName) + ' group');
 
                 if (groupData.custom_width) {
                     container.style.width = groupData.custom_width + 'px';
@@ -5766,7 +5821,7 @@
                 groupChk.type = 'checkbox';
                 groupChk.className = 'agent-checkbox group-checkbox';
                 groupChk.style.position = 'static'; groupChk.style.transform = 'none';
-                groupChk.setAttribute('aria-label', 'Select all in ' + groupData.title);
+                groupChk.setAttribute('aria-label', 'Select all in ' + getGroupDisplayName(folderName));
                 groupChk.onclick = (e) => e.stopPropagation();
                 groupChk.onpointerdown = (e) => e.stopPropagation();
                 groupChk.onchange = () => toggleGroupSelection(folderName, groupChk.checked);
@@ -5780,7 +5835,7 @@
                 handle.setAttribute('role', 'button');
                 handle.setAttribute('tabindex', '0');
                 handle.setAttribute('aria-roledescription', 'drag handle');
-                handle.setAttribute('aria-label', 'Reorder ' + groupData.title + ' group');
+                handle.setAttribute('aria-label', 'Reorder ' + getGroupDisplayName(folderName) + ' group');
                 handle.innerHTML = '<svg aria-hidden="true"><use href="#icon-drag"/></svg>';
                 handle.onpointerdown = (e) => {
                     if (isDeleteMode) return;
@@ -5812,7 +5867,7 @@
                 };
                 header.appendChild(handle);
 
-                const titleEl = document.createElement('h3'); titleEl.className = 'group-title'; titleEl.innerText = groupData.title;
+                const titleEl = document.createElement('h3'); titleEl.className = 'group-title'; titleEl.innerText = getGroupDisplayName(folderName);
                 titleEl.onpointerdown = (e) => {
                     if (isDeleteMode || titleEl.classList.contains('editing')) return;
                     handleManualDragStart(e, folderName, container);
@@ -5823,41 +5878,42 @@
                 actionsWrap.className = 'group-actions-wrap';
 
                 const editIcon = document.createElement('button'); editIcon.className = 'edit-group-icon';
-                editIcon.setAttribute('aria-label', 'Rename ' + groupData.title + ' group');
+                editIcon.setAttribute('aria-label', 'Rename ' + getGroupDisplayName(folderName) + ' group');
                 editIcon.innerHTML = '<svg aria-hidden="true"><use href="#icon-edit"/></svg>';
-                editIcon.onclick = () => startRenameGroup(folderName, groupData.title, titleEl, header);
+                editIcon.onclick = () => startRenameGroup(folderName, getGroupDisplayName(folderName), titleEl, header);
                 actionsWrap.appendChild(editIcon);
 
                 const resetIcon = document.createElement('button'); resetIcon.className = 'group-reset-icon';
-                resetIcon.setAttribute('aria-label', 'Reset Copy Timestamps for ' + groupData.title + ' group');
+                resetIcon.setAttribute('aria-label', 'Reset Copy Timestamps for ' + getGroupDisplayName(folderName) + ' group');
                 resetIcon.title = 'Reset Copy Timestamps';
                 resetIcon.innerHTML = '<svg aria-hidden="true"><use href="#icon-counter"/></svg>';
                 resetIcon.onclick = () => resetGroupCopyTimestamps(folderName);
                 header.appendChild(resetIcon);
 
-                if (groupData.title !== "GENERAL") {
-                    const delIcon = document.createElement('button'); delIcon.className = 'delete-group-icon';
-                    delIcon.setAttribute('aria-label', 'Delete ' + groupData.title + ' group');
-                    delIcon.innerHTML = '<svg aria-hidden="true"><use href="#icon-trash"/></svg>';
-                    delIcon.onclick = () => confirmDeleteGroup(folderName);
-                    actionsWrap.appendChild(delIcon);
-                }
-                if (groupData.title === "GENERAL") editIcon.style.display = 'none';
+                const delIcon = document.createElement('button'); delIcon.className = 'delete-group-icon';
+                delIcon.setAttribute('aria-label', 'Delete ' + getGroupDisplayName(folderName) + ' group');
+                delIcon.innerHTML = '<svg aria-hidden="true"><use href="#icon-trash"/></svg>';
+                delIcon.onclick = () => confirmDeleteGroup(folderName);
+                actionsWrap.appendChild(delIcon);
+
                 header.appendChild(actionsWrap);
                 container.appendChild(header);
 
                 const grid = document.createElement('div'); grid.className = 'group-grid';
                 filteredAgents.sort((a, b) => {
-                    if (a.agentName.length !== b.agentName.length) return a.agentName.length - b.agentName.length;
-                    return a.agentName.localeCompare(b.agentName);
+                    const nameA = getAgentDisplayName(folderName, a.agentName);
+                    const nameB = getAgentDisplayName(folderName, b.agentName);
+                    if (nameA.length !== nameB.length) return nameA.length - nameB.length;
+                    return nameA.localeCompare(nameB);
                 }).forEach(match => {
                     const agentName = match.agentName;
+                    const agentDisplay = getAgentDisplayName(folderName, agentName);
                     const card = document.createElement('div'); card.className = 'agent-card';
                     if (match.matchType === 'content') card.classList.add('search-content-match');
                     card.dataset.folder = folderName; card.dataset.agent = agentName;
                     card.setAttribute('role', 'button');
                     card.setAttribute('tabindex', '0');
-                    card.setAttribute('aria-label', match.matchType === 'content' ? agentName + ' prompt, content match' : agentName + ' prompt');
+                    card.setAttribute('aria-label', match.matchType === 'content' ? agentDisplay + ' prompt, content match' : agentDisplay + ' prompt');
 
                     card.onkeydown = (e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
@@ -5878,14 +5934,14 @@
                     };
                     const cardLabel = document.createElement('span');
                     cardLabel.className = 'card-label';
-                    if (searchState.mode === 'title') appendHighlightedText(cardLabel, agentName, searchState.rawQuery);
-                    else cardLabel.innerText = agentName;
+                    if (searchState.mode === 'title') appendHighlightedText(cardLabel, agentDisplay, searchState.rawQuery);
+                    else cardLabel.innerText = agentDisplay;
                     card.appendChild(cardLabel);
 
                     if (match.matchType === 'content') appendContentMatchSnippet(card, match.content, searchState.rawQuery);
 
                     const chk = document.createElement('input'); chk.type = 'checkbox'; chk.className = 'agent-checkbox';
-                    chk.setAttribute('aria-label', 'Select ' + agentName);
+                    chk.setAttribute('aria-label', 'Select ' + agentDisplay);
                     chk.onclick = (e) => e.stopPropagation(); chk.onpointerdown = (e) => e.stopPropagation();
                     chk.onchange = () => {
                         const key = selKey(folderName, agentName);
@@ -5895,7 +5951,7 @@
                     if (deleteSelections.has(selKey(folderName, agentName))) chk.checked = true;
                     card.appendChild(chk);
                     const cp = document.createElement('button'); cp.className = 'quick-copy-btn';
-                    cp.setAttribute('aria-label', 'Copy ' + agentName + ' prompt');
+                    cp.setAttribute('aria-label', 'Copy ' + agentDisplay + ' prompt');
                     cp.innerHTML = '<svg aria-hidden="true"><use href="#icon-copy"/></svg>';
                     cp.onpointerdown = (e) => e.stopPropagation();
                     cp.onclick = (e) => { e.stopPropagation(); copyToClipboard(groupAgents[agentName], folderName, agentName, cp); };
@@ -5916,7 +5972,7 @@
                 }
 
                 const addCard = document.createElement('button'); addCard.className = 'add-agent-card';
-                addCard.setAttribute('aria-label', 'Add new prompt to ' + groupData.title);
+                addCard.setAttribute('aria-label', 'Add new prompt to ' + getGroupDisplayName(folderName));
                 addCard.innerHTML = '<svg aria-hidden="true"><use href="#icon-plus"/></svg> Add AI Agent Prompt';
                 addCard.onclick = (e) => { e.stopPropagation(); openWizard(folderName); };
                 grid.appendChild(addCard);
@@ -5967,14 +6023,15 @@
             const allGroups = Object.keys(groups).sort();
             if (allGroups.length <= 1) { showToast('No other groups to move to', 'info'); return; }
             const targets = allGroups.filter(f => f !== fromFolder);
-            const options = targets.map(f => ({ value: f, label: groups[f].title }));
-            const selectedTarget = await showSelectPrompt('Move Agent', `Select destination group for "${agentName}":`, options);
+            const options = targets.map(f => ({ value: f, label: getGroupDisplayName(f) }));
+            const agentDisplay = getAgentDisplayName(fromFolder, agentName);
+            const selectedTarget = await showSelectPrompt('Move Agent', `Select destination group for "${agentDisplay}":`, options);
             if (!selectedTarget) return;
 
             const res = await api('move', 'POST', { from: fromFolder, to: selectedTarget, name: agentName });
             if (res && res.status === 'success') {
-                showToast(`MOVED "${agentName}" TO ${groups[selectedTarget].title}`, 'success');
-                a11yAnnounce(`Agent ${agentName} moved to ${groups[selectedTarget].title}.`);
+                showToast(`MOVED "${agentDisplay}" TO ${getGroupDisplayName(selectedTarget)}`, 'success');
+                a11yAnnounce(`Agent ${agentDisplay} moved to ${getGroupDisplayName(selectedTarget)}.`);
                 await syncFromBridge();
             } else {
                 showApiError(res, 'MOVE FAILED');
@@ -5990,7 +6047,11 @@
         async function confirmDeleteGroup(folder) {
             const group = groups[folder]; if (!group) return;
             const count = Object.keys(group.agents).length;
-            if (count === 0 || await showConfirm(`Move group "${group.title}" with ${count} agents to Recycle Bin?`, "Delete Group")) {
+            const groupName = getGroupDisplayName(folder);
+            const msg = count === 0
+                ? `Move empty group "${groupName}" to Recycle Bin?`
+                : `Move group "${groupName}" with ${count} agent${count === 1 ? '' : 's'} to Recycle Bin?`;
+            if (await showConfirm(msg, "Delete Group")) {
                 await moveToRecycleBin(folder);
             } else { syncFromBridge(); }
         }
@@ -6083,10 +6144,10 @@
                     sel.innerHTML = '';
                     Object.keys(groups).sort().forEach(f => {
                         const o = document.createElement('option');
-                        o.value = f; o.innerText = groups[f].title;
+                        o.value = f; o.innerText = getGroupDisplayName(f);
                         sel.appendChild(o);
                     });
-                    const folder = Object.keys(groups).find(f => groups[f].title === name);
+                    const folder = Object.keys(groups).find(f => getGroupDisplayName(f) === name || groups[f].title === name);
                     if (folder) sel.value = folder;
                 }
             }
@@ -6100,7 +6161,7 @@
             stopEdit(); cancelTitleEdit(); closePromptMoreMenu(false);
             currentGroup = folder; currentAgent = agent;
             document.getElementById('menu-container').style.display = 'none';
-            view.style.display = 'flex'; title.innerText = agent; box.textContent = groups[folder].agents[agent];
+            view.style.display = 'flex'; title.innerText = getAgentDisplayName(folder, agent); box.textContent = groups[folder].agents[agent];
             editBaseContent = groups[folder].agents[agent];
             initializeEditorHistory(editBaseContent);
             updateLineNumbers();
@@ -6223,7 +6284,12 @@
         function buildGroupAgentsList() {
             const list = [];
             if (groups[currentGroup]) {
-                Object.keys(groups[currentGroup].agents).sort().forEach(a => list.push({f: currentGroup, a}));
+                Object.keys(groups[currentGroup].agents).sort((a, b) => {
+                    const nameA = getAgentDisplayName(currentGroup, a);
+                    const nameB = getAgentDisplayName(currentGroup, b);
+                    if (nameA.length !== nameB.length) return nameA.length - nameB.length;
+                    return nameA.localeCompare(nameB);
+                }).forEach(a => list.push({f: currentGroup, a}));
             }
             return list;
         }
@@ -6246,7 +6312,7 @@
             document.getElementById('next-agent-btn').disabled = (idx >= list.length - 1);
         }
 
-        function updateBreadcrumb() { const bc = document.getElementById('agent-breadcrumb'); if (bc && groups[currentGroup]) bc.innerText = groups[currentGroup].title; }
+        function updateBreadcrumb() { const bc = document.getElementById('agent-breadcrumb'); if (bc && groups[currentGroup]) bc.innerText = getGroupDisplayName(currentGroup); }
         function formatCopyTime(ts) {
             if (!ts) return '';
             if (/^\d{2}\/\d{2}\s\d{2}:\d{2}$/.test(ts)) return ts;
@@ -6502,7 +6568,7 @@
         function startEditTitle() {
             if (title.contentEditable === 'true') { title.focus(); return; }
             const inEditSession = box.classList.contains('editing');
-            titleEditBackup = currentAgent; title.contentEditable = true; title.focus();
+            titleEditBackup = getAgentDisplayName(currentGroup, currentAgent); title.contentEditable = true; title.focus();
             const range = document.createRange(); range.selectNodeContents(title);
             const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
             document.getElementById('title-save-btn').style.display = inEditSession ? 'none' : 'flex';
@@ -6536,28 +6602,27 @@
 
         async function saveTitleEdit() {
             if (box.classList.contains('editing')) return;
-            const newName = sanitizeTitle(title.innerText), prev = titleEditBackup;
+            const newName = title.innerText.trim(), prev = titleEditBackup;
             title.contentEditable = false; document.getElementById('title-save-btn').style.display = 'none';
             document.getElementById('title-cancel-btn').style.display = 'none'; document.querySelector('.edit-title-btn').style.display = 'flex';
             title.removeAttribute('role');
             updateDirtyState();
-            if (newName && newName !== prev && groups[currentGroup]?.agents && Object.prototype.hasOwnProperty.call(groups[currentGroup].agents, newName)) {
-                title.innerText = prev;
-                showAlert(`A prompt named "${newName}" already exists in this group.`, 'Name Taken');
-                return;
-            }
             if (newName && newName !== prev) {
-                const res = await api('save', 'POST', { group: currentGroup, name: newName, content: getEditorText(), old_name: prev });
+                const res = await api('save', 'POST', { group: currentGroup, name: newName, display_name: newName, content: getEditorText(), old_name: currentAgent });
                 if (res && res.status === 'success') {
-                    currentAgent = newName; setRoute(promptRoute(currentGroup, newName));
-                    await syncFromBridge(); title.innerText = newName;
+                    await syncFromBridge();
+                    const newKey = Object.keys(groups[currentGroup]?.agents || {}).find(k =>
+                        (groups[currentGroup]?.agent_display_names?.[k] || k) === newName) || currentAgent;
+                    currentAgent = newKey; setRoute(promptRoute(currentGroup, newKey));
+                    title.innerText = newName;
+                    titleEditBackup = newName;
                     showToast("AGENT RENAMED", "success"); updateNavArrows(); updateBreadcrumb(); updateEditorTimestamp();
                 } else { title.innerText = prev; showApiError(res, "RENAME FAILED"); }
             } else title.innerText = prev;
         }
 
         function cancelTitleEdit() {
-            title.contentEditable = false; title.innerText = titleEditBackup || currentAgent;
+            title.contentEditable = false; title.innerText = titleEditBackup || getAgentDisplayName(currentGroup, currentAgent);
             document.getElementById('title-save-btn').style.display = 'none';
             document.getElementById('title-cancel-btn').style.display = 'none';
             document.querySelector('.edit-title-btn').style.display = 'flex';
@@ -6588,7 +6653,7 @@
             document.querySelector('.edit-title-btn').style.display = 'flex';
             promptBoxWrap.classList.remove('editing-state');
             if (currentAgent && groups[currentGroup]?.agents?.[currentAgent]) {
-                title.innerText = currentAgent; box.textContent = groups[currentGroup].agents[currentAgent];
+                title.innerText = getAgentDisplayName(currentGroup, currentAgent); box.textContent = groups[currentGroup].agents[currentAgent];
             }
             initializeEditorHistory(getEditorText());
             // Cancelling restores the stored text, so the gutter has to be rebuilt or
@@ -6608,9 +6673,9 @@
             if (saveInFlight) return;
             if (!box.classList.contains('editing')) return;
             const titleDirty = hasUnsavedTitleChanges();
-            const newName = titleDirty ? sanitizeTitle(title.innerText) : currentAgent;
+            const newName = titleDirty ? title.innerText.trim() : getAgentDisplayName(currentGroup, currentAgent);
             if (!newName) { showToast('PROMPT NAME CANNOT BE EMPTY', 'warning'); title.focus(); return; }
-            if (titleDirty && groups[currentGroup]?.agents && Object.prototype.hasOwnProperty.call(groups[currentGroup].agents, newName)) {
+            if (titleDirty && groups[currentGroup]?.agents && Object.keys(groups[currentGroup].agents).some(k => (groups[currentGroup].agent_display_names?.[k] || k) === newName && k !== currentAgent)) {
                 showAlert(`A prompt named "${newName}" already exists in this group. Choose another name.`, 'Name Taken');
                 return;
             }
@@ -6634,6 +6699,7 @@
             const res = await api('save', 'POST', {
                 group: currentGroup,
                 name: newName,
+                display_name: newName,
                 content: newContent,
                 old_name: oldName,
                 base_content: editBaseContent,
@@ -6657,21 +6723,22 @@
                 hideEditorConflictBanner();
                 setSearchReplaceDirty(false);
                 clearPromptDraft(currentGroup, oldName);
-                if (newName !== oldName) {
-                    // Must happen before the sync, or the sync sees the old name
-                    // gone and reports the prompt as deleted externally.
-                    currentAgent = newName;
+                if (titleDirty) {
+                    await syncFromBridge();
+                    const newKey = Object.keys(groups[currentGroup]?.agents || {}).find(k =>
+                        (groups[currentGroup]?.agent_display_names?.[k] || k) === newName) || currentAgent;
+                    currentAgent = newKey;
                     titleEditBackup = newName;
                     title.contentEditable = false;
                     title.removeAttribute('role');
                     title.oninput = null;
                     title.innerText = newName;
                     document.querySelector('.edit-title-btn').style.display = 'flex';
-                    setRoute(promptRoute(currentGroup, newName));
+                    setRoute(promptRoute(currentGroup, newKey));
                 }
                 showToast(exitAfter ? "PROMPT SAVED" : "SAVED - STILL EDITING", "success");
                 await syncFromBridge();
-                if (newName !== oldName) { updateNavArrows(); updateBreadcrumb(); updateEditorTimestamp(); }
+                if (titleDirty) { updateNavArrows(); updateBreadcrumb(); updateEditorTimestamp(); }
                 if (exitAfter) stopEdit();
                 else { updateDirtyState(); clearPromptDraft(currentGroup, currentAgent); }
             }
@@ -6762,7 +6829,7 @@
             if (pendingDraft) { pendingDraft = null; document.getElementById('draft-banner').hidden = true; }
             const draft = {
                 text: getEditorText(),
-                title: title.contentEditable === 'true' ? sanitizeTitle(title.innerText) : currentAgent,
+                title: title.contentEditable === 'true' ? title.innerText.trim() : getAgentDisplayName(currentGroup, currentAgent),
                 base: editBaseContent,
                 ts: Date.now()
             };
@@ -6811,7 +6878,7 @@
             if (!box.classList.contains('editing')) startEdit();
             box.focus({ preventScroll: true });
             replaceEditorRange(0, getEditorText().length, d.text, 0);
-            if (d.title && d.title !== currentAgent) {
+            if (d.title && d.title !== getAgentDisplayName(currentGroup, currentAgent)) {
                 startEditTitle();
                 title.innerText = d.title;
                 box.focus({ preventScroll: true });
@@ -7844,7 +7911,7 @@
             const body = document.getElementById('diff-modal-body');
             const titleDirty = hasUnsavedTitleChanges();
             const stats = renderDiffView(body, editBaseContent, getEditorText(), {
-                rename: titleDirty ? { from: currentAgent, to: sanitizeTitle(title.innerText) } : null,
+                rename: titleDirty ? { from: getAgentDisplayName(currentGroup, currentAgent), to: title.innerText.trim() } : null,
                 emptyText: 'No text changes since the last save.'
             });
             document.getElementById('diff-modal-stats').innerHTML = formatDiffStats(stats);
@@ -8117,7 +8184,7 @@
         function openWizard(pre) {
             const sel = document.getElementById('wiz-group');
             sel.innerHTML = '<option value="" disabled selected>Select a group...</option>';
-            Object.keys(groups).sort().forEach(f => { const o = document.createElement('option'); o.value = f; o.innerText = groups[f].title; sel.appendChild(o); });
+            Object.keys(groups).sort().forEach(f => { const o = document.createElement('option'); o.value = f; o.innerText = getGroupDisplayName(f); sel.appendChild(o); });
             if (pre) sel.value = pre;
             document.getElementById('wiz-name').value = ''; document.getElementById('wiz-prompt').value = '';
             document.getElementById('wiz-name-field').classList.remove('has-error');
@@ -8135,23 +8202,27 @@
         }
 
         function checkWizardDuplicate() {
-            const f = document.getElementById('wiz-group').value, n = document.getElementById('wiz-name').value.trim().replace(ILLEGAL_CHARS, '_');
+            const f = document.getElementById('wiz-group').value, n = document.getElementById('wiz-name').value.trim();
             const w = document.getElementById('wiz-duplicate-warning');
-            if (f && n && groups[f]?.agents?.hasOwnProperty(n)) w.classList.add('visible'); else w.classList.remove('visible');
+            const exists = f && n && groups[f]?.agents && Object.keys(groups[f].agents).some(k => (groups[f].agent_display_names?.[k] || k) === n);
+            if (exists) w.classList.add('visible'); else w.classList.remove('visible');
         }
 
         async function saveNewAgent() {
-            const f = document.getElementById('wiz-group').value, n = document.getElementById('wiz-name').value.trim().replace(ILLEGAL_CHARS, '_'), c = document.getElementById('wiz-prompt').value;
+            const f = document.getElementById('wiz-group').value;
+            const n = document.getElementById('wiz-name').value.trim();
+            const c = document.getElementById('wiz-prompt').value;
             let err = false;
             if (!f) { err = true; showToast("Please select a group", "warning"); }
             if (!n) { document.getElementById('wiz-name-field').classList.add('has-error'); err = true; }
             if (!c) { document.getElementById('wiz-prompt-field').classList.add('has-error'); err = true; }
             if (err) return;
-            if (groups[f]?.agents?.hasOwnProperty(n) && !(await showConfirm(`Overwrite existing agent "${n}"?`, "Overwrite Agent"))) return;
+            const exists = groups[f]?.agents && Object.keys(groups[f].agents).some(k => (groups[f].agent_display_names?.[k] || k) === n);
+            if (exists && !(await showConfirm(`Overwrite existing agent "${n}"?`, "Overwrite Agent"))) return;
             const btn = document.getElementById('wiz-create-btn');
             const originalText = btn.innerText;
             btn.innerText = "CREATING..."; btn.disabled = true;
-            const res = await api('save', 'POST', { group: f, name: n, content: c });
+            const res = await api('save', 'POST', { group: f, name: n, display_name: n, content: c });
             btn.innerText = originalText; btn.disabled = false;
             if (res && res.status === 'success') { showToast("AGENT CREATED", "success"); closeWizard(); await syncFromBridge(); }
             else showApiError(res, "CREATE FAILED");
@@ -8313,7 +8384,7 @@
             sel.innerHTML = '';
             Object.keys(groups).sort().forEach(f => {
                 const o = document.createElement('option');
-                o.value = f; o.innerText = groups[f].title;
+                o.value = f; o.innerText = getGroupDisplayName(f);
                 sel.appendChild(o);
             });
             overlay.style.display = 'flex';
@@ -9073,7 +9144,10 @@
         function closeGitPushModal() {
             if (isGitPushInProgress) return;
             const modal = document.getElementById('git-push-modal');
-            if (modal) modal.style.display = 'none';
+            if (modal) {
+                modal.style.display = 'none';
+                releaseFocusTrap(modal);
+            }
         }
 
         let pullPreviewAbort = null;
@@ -9171,6 +9245,7 @@
 
             title.innerText = 'GIT FORCE PULL & OVERWRITE CONSOLE';
             modal.style.display = 'flex';
+            trapFocusIn(modal, () => closeGitPushModal());
             term.innerHTML = '';
             errorPanel.style.display = 'none';
             retryBtn.style.display = 'none';
@@ -9264,7 +9339,7 @@
                     showToast(lastResult.message || 'LOCAL FILES OVERWRITTEN WITH CLOUD VERSION', 'success');
 
                     setTimeout(() => {
-                        modal.style.display = 'none';
+                        closeGitPushModal();
                     }, 2200);
                 } else {
                     const errMsg = (lastResult && lastResult.message) || 'Git force-pull encountered an error.';
@@ -9306,6 +9381,10 @@
                 isGitPushInProgress = false;
                 closeBtn.disabled = false;
                 doneBtn.disabled = false;
+                if (modal.style.display === 'flex') {
+                    if (retryBtn.style.display !== 'none') retryBtn.focus();
+                    else doneBtn.focus();
+                }
             }
         }
 
@@ -9328,15 +9407,11 @@
 
             title.innerText = 'GIT PUSH CONSOLE';
             modal.style.display = 'flex';
+            trapFocusIn(modal, () => closeGitPushModal());
             term.innerHTML = '';
             errorPanel.style.display = 'none';
             retryBtn.style.display = 'none';
             retryBtn.onclick = () => startDevGitPush();
-
-            modal.style.display = 'flex';
-            term.innerHTML = '';
-            errorPanel.style.display = 'none';
-            retryBtn.style.display = 'none';
             closeBtn.disabled = true;
             doneBtn.disabled = true;
             summaryEl.innerText = 'Initializing automated Git push workflow...';
@@ -9419,7 +9494,7 @@
 
                     // Auto-close modal after 2.2s so user sees the success state and fading green toast
                     setTimeout(() => {
-                        modal.style.display = 'none';
+                        closeGitPushModal();
                     }, 2200);
                 } else {
                     const errMsg = (lastResult && lastResult.message) || 'Git push encountered an error.';
@@ -9459,6 +9534,10 @@
                 isGitPushInProgress = false;
                 closeBtn.disabled = false;
                 doneBtn.disabled = false;
+                if (modal.style.display === 'flex') {
+                    if (retryBtn.style.display !== 'none') retryBtn.focus();
+                    else doneBtn.focus();
+                }
             }
         }
 
