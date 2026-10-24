@@ -3085,6 +3085,10 @@
         let groupGhost = null;
         let groupPlaceholder = null;
         let pendingDropRect = null;
+        let currentDragSlot = null;
+        let dragOriginalPlacement = null;
+        let dragBaselineColumns = [];
+        let dragBoardMetrics = null;
         let ghostOffsetX = 0, ghostOffsetY = 0;
         let groupOriginalParent = null;
         let groupOriginalNextSibling = null;
@@ -3782,11 +3786,23 @@
                 const folder = activeGroupDrag;
                 activeGroupDrag = null;
                 const original = document.querySelector(`.group-container[data-folder="${folder}"]`);
-                if (original && groupOriginalParent) {
-                    flip(menu, () => {
-                        groupOriginalParent.insertBefore(original, groupOriginalNextSibling);
-                        original.classList.remove('group-dragging');
-                    });
+                if (dragOriginalPlacement) {
+                    setGroupPlacement(folder, dragOriginalPlacement);
+                }
+                if (original) {
+                    original.classList.remove('group-dragging');
+                    if (dragBaselineColumns && dragBoardMetrics) {
+                        for (const col of dragBaselineColumns) {
+                            for (const c of col.cards) {
+                                c.el.style.top = (dragBoardMetrics.padTop + c.top) + 'px';
+                                c.el.style.left = (dragBoardMetrics.padLeft + c.left) + 'px';
+                            }
+                        }
+                    }
+                    if (groupPlaceholder) {
+                        groupPlaceholder.remove();
+                        groupPlaceholder = null;
+                    }
                     animateGhostTo(original);
                 } else { cleanupDragState(); }
             } else if (agentDragStarted) {
@@ -3843,6 +3859,10 @@
             activeGroupDrag = null; agentDragStarted = false; agentSourceCard = null;
             isGroupDragging = false; draggedAgent = null; draggedFromGroup = null;
             pendingDropRect = null;
+            currentDragSlot = null;
+            dragOriginalPlacement = null;
+            dragBaselineColumns = [];
+            dragBoardMetrics = null;
             hidePlacementGuides();
             dragSnapRefs = [];
             endDragSizeCache();
@@ -3850,22 +3870,64 @@
             applyBoardLayout();
         }
 
+        function captureBoardColumns() {
+            const cs = getComputedStyle(menu);
+            const padLeft = parseFloat(cs.paddingLeft) || 0;
+            const padTop = parseFloat(cs.paddingTop) || 0;
+            const gap = parseFloat(cs.columnGap) || parseFloat(cs.gap) || 14;
+            const W = currentBoardWidth();
+
+            const items = Array.from(menu.querySelectorAll('.group-container'))
+                .filter(el => !el.classList.contains('drag-ghost') && !el.classList.contains('group-dragging'));
+
+            const cards = items.map(el => {
+                const r = el.getBoundingClientRect();
+                const left = (parseFloat(el.style.left) || el.offsetLeft) - padLeft;
+                const top = (parseFloat(el.style.top) || el.offsetTop) - padTop;
+                return {
+                    el,
+                    folder: el.dataset.folder,
+                    left: Math.round(left),
+                    top: Math.round(top),
+                    width: Math.round(r.width),
+                    height: Math.round(r.height),
+                    right: Math.round(left + r.width),
+                    bottom: Math.round(top + r.height)
+                };
+            });
+
+            const columns = [];
+            const sorted = cards.slice().sort((a, b) => a.left - b.left);
+            for (const card of sorted) {
+                let col = columns.find(c => Math.abs(c.left - card.left) <= Math.max(gap * 2, 40));
+                if (!col) {
+                    col = { left: card.left, right: card.right, width: card.width, cards: [] };
+                    columns.push(col);
+                } else {
+                    col.right = Math.max(col.right, card.right);
+                    col.width = Math.max(col.width, card.width);
+                }
+                col.cards.push(card);
+            }
+            columns.sort((a, b) => a.left - b.left);
+            for (const col of columns) {
+                col.cards.sort((a, b) => a.top - b.top);
+            }
+            return { columns, padLeft, padTop, gap, W };
+        }
+
         function handleManualDragStart(e, folderName, container) {
             e.preventDefault();
             window.addEventListener('pointermove', handleManualDragMove);
             window.addEventListener('pointerup', handleManualDragUp);
-            // Dragging used to send a list of every group to be renamed on disk,
-            // and a filtered board could only send a partial one - which is what
-            // destroyed groups. A drag now just records a position in this
-            // browser, so no guard is needed and a hidden group cannot be
-            // affected. The keyboard reorder still renames folders, but it builds
-            // its list from Object.keys(groups), so it is complete regardless of
-            // what the board happens to be showing.
             activeGroupDrag = folderName;
             isGroupDragging = true;
             setOrderBadgesVisible(true);
             groupOriginalParent = container.parentNode;
             groupOriginalNextSibling = container.nextSibling;
+
+            const W = currentBoardWidth();
+            dragOriginalPlacement = readPlacements(W)[folderName] || null;
 
             const rect = container.getBoundingClientRect();
             ghostOffsetX = e.clientX - rect.left;
@@ -3886,121 +3948,28 @@
             groupPlaceholder.className = 'group-placeholder';
             groupPlaceholder.style.width = rect.width + 'px';
             groupPlaceholder.style.height = rect.height + 'px';
+            groupPlaceholder.style.left = (parseFloat(container.style.left) || container.offsetLeft) + 'px';
+            groupPlaceholder.style.top = (parseFloat(container.style.top) || container.offsetTop) + 'px';
             const phBadge = document.createElement('div');
             phBadge.className = 'group-order-badge';
             groupPlaceholder.appendChild(phBadge);
 
             container.classList.add('group-dragging');
-            container.parentNode.insertBefore(groupPlaceholder, container);
+            menu.appendChild(groupPlaceholder);
             globalTrash.classList.add('active');
-            // Pack immediately so the hole the group leaves behind closes up at
-            // once, instead of only after the drop.
-            applyBoardLayout();
-            refreshOrderBadges();
-            // Freeze what we snap against, and start reusing measurements.
-            captureSnapRefs();
-            beginDragSizeCache();
-        }
 
-        /* Where the ghost currently sits, in board coordinates, snapped to the
-           neighbours and clamped inside the board. This is both the live preview
-           position and the position that gets saved on release, so the two can
-           never disagree. */
-        /* Snap references are frozen when the drag starts.
-
-           The board re-packs every frame, so the unplaced groups move as the
-           placeholder moves. Snapping against their live positions meant aiming
-           at a target that shifted the moment you got near it, which could
-           oscillate. These are the positions as they were when you picked the
-           group up: stable for the whole drag. */
-        let dragSnapRefs = [];
-
-        function captureSnapRefs() {
-            dragSnapRefs = Array.from(menu.querySelectorAll('.group-container'))
-                .filter(el => !el.classList.contains('drag-ghost')
-                           && !el.classList.contains('group-dragging'))
-                .map(el => ({
-                    left: parseFloat(el.style.left) || 0,
-                    top: parseFloat(el.style.top) || 0,
-                    width: Math.round(el.getBoundingClientRect().width),
-                    height: Math.round(el.getBoundingClientRect().height)
-                }));
-        }
-
-        function computeDropRect() {
-            if (!groupGhost || !menu) return null;
-            const boardRect = menu.getBoundingClientRect();
-            const cs = getComputedStyle(menu);
-            const padLeft = parseFloat(cs.paddingLeft) || 0;
-            const padTop = parseFloat(cs.paddingTop) || 0;
-            const gap = parseFloat(cs.columnGap) || parseFloat(cs.gap) || 14;
-            const W = currentBoardWidth();
-
-            const gRect = groupGhost.getBoundingClientRect();
-            const raw = {
-                left: gRect.left - boardRect.left - padLeft,
-                top: gRect.top - boardRect.top - padTop,
-                width: Math.round(gRect.width),
-                height: Math.round(gRect.height)
+            dragBoardMetrics = captureBoardColumns();
+            dragBaselineColumns = dragBoardMetrics.columns;
+            currentDragSlot = {
+                left: (parseFloat(container.style.left) || container.offsetLeft) - dragBoardMetrics.padLeft,
+                top: (parseFloat(container.style.top) || container.offsetTop) - dragBoardMetrics.padTop,
+                width: rect.width,
+                height: rect.height,
+                shifted: []
             };
 
-            const others = dragSnapRefs;
-            const snapped = snapPlacement(raw, others, gap, W);
-            // Never further than one screen below the lowest box - a drop way off
-            // in empty space should not stretch the board into the distance.
-            const floor = others.reduce((m, o) => Math.max(m, o.top + o.height), 0);
-            const clamped = clampPlacement(
-                { left: snapped.left, top: snapped.top, width: raw.width, height: raw.height },
-                W, floor + gap);
-            return { left: clamped.left, top: clamped.top,
-                     width: raw.width, height: raw.height,
-                     snappedX: snapped.snappedX, snappedY: snapped.snappedY };
-        }
-
-        /* Smart guides while placing, matching the ones the resize drag draws. */
-        function ensurePlacementGuides() {
-            let v = document.getElementById('place-vguide');
-            if (!v) {
-                v = document.createElement('div');
-                v.id = 'place-vguide';
-                v.className = 'placement-guide vertical';
-                v.setAttribute('aria-hidden', 'true');
-                menu.appendChild(v);
-            }
-            let h = document.getElementById('place-hguide');
-            if (!h) {
-                h = document.createElement('div');
-                h.id = 'place-hguide';
-                h.className = 'placement-guide horizontal';
-                h.setAttribute('aria-hidden', 'true');
-                menu.appendChild(h);
-            }
-            return { v, h };
-        }
-
-        function updatePlacementGuides(drop) {
-            const { v, h } = ensurePlacementGuides();
-            if (!drop) { v.classList.remove('visible'); h.classList.remove('visible'); return; }
-            const cs = getComputedStyle(menu);
-            const padLeft = parseFloat(cs.paddingLeft) || 0;
-            const padTop = parseFloat(cs.paddingTop) || 0;
-            if (drop.snappedX) {
-                v.style.left = `${padLeft + drop.left}px`;
-                v.style.height = `${Math.max(menu.scrollHeight, menu.clientHeight)}px`;
-                v.classList.add('visible');
-            } else v.classList.remove('visible');
-            if (drop.snappedY) {
-                h.style.top = `${padTop + drop.top}px`;
-                h.style.width = `${Math.max(0, menu.clientWidth)}px`;
-                h.classList.add('visible');
-            } else h.classList.remove('visible');
-        }
-
-        function hidePlacementGuides() {
-            const v = document.getElementById('place-vguide');
-            const h = document.getElementById('place-hguide');
-            if (v) v.classList.remove('visible');
-            if (h) h.classList.remove('visible');
+            refreshOrderBadges();
+            beginDragSizeCache();
         }
 
         let dragMoveRAF = null;
@@ -4017,6 +3986,8 @@
             if (dragMoveRAF) return;
             dragMoveRAF = requestAnimationFrame(() => {
                 dragMoveRAF = null;
+                if (!groupGhost || !activeGroupDrag || !dragBoardMetrics) return;
+
                 const vx = lastClientX - prevGroupClientX;
                 prevGroupClientX = lastClientX;
                 const tilt = Math.max(-3.5, Math.min(3.5, vx * 0.14));
@@ -4024,76 +3995,125 @@
                 groupGhost.style.top = (lastClientY - ghostOffsetY) + 'px';
                 groupGhost.style.transform = `scale(1.02) rotate(${tilt}deg)`;
 
-                // 50% Midpoint & Hysteresis Slot Detection
-                if (groupPlaceholder && menu) {
-                    const ghostRect = groupGhost.getBoundingClientRect();
-                    const ghostCenterX = ghostRect.left + ghostRect.width / 2;
-                    const ghostCenterY = ghostRect.top + ghostRect.height / 2;
-
-                    const others = Array.from(menu.querySelectorAll('.group-container:not(.group-dragging):not(.drag-ghost)'));
-                    if (others.length > 0) {
-                        const firstGroup = others[0];
-                        const firstRect = firstGroup.getBoundingClientRect();
-
-                        if (ghostCenterY < firstRect.top + 10 || (ghostCenterY < firstRect.bottom && ghostCenterX < firstRect.left + 20)) {
-                            if (groupPlaceholder.nextSibling !== firstGroup) {
-                                firstGroup.parentNode.insertBefore(groupPlaceholder, firstGroup);
-                                lastGroupSwapX = lastClientX;
-                                lastGroupSwapY = lastClientY;
-                                applyBoardLayout();
-                                refreshOrderBadges();
-                            }
-                        } else {
-                            const dxSwap = Math.abs(lastClientX - lastGroupSwapX);
-                            const dySwap = Math.abs(lastClientY - lastGroupSwapY);
-
-                            if (dxSwap > GROUP_SWAP_HYSTERESIS || dySwap > GROUP_SWAP_HYSTERESIS) {
-                                let targetGroup = null;
-                                for (const g of others) {
-                                    const gr = g.getBoundingClientRect();
-                                    if (ghostCenterX >= gr.left && ghostCenterX <= gr.right &&
-                                        ghostCenterY >= gr.top && ghostCenterY <= gr.bottom) {
-                                        targetGroup = g;
-                                        break;
-                                    }
-                                }
-
-                                if (targetGroup) {
-                                    const tr = targetGroup.getBoundingClientRect();
-                                    const targetCenterX = tr.left + tr.width / 2;
-                                    const targetCenterY = tr.top + tr.height / 2;
-                                    const isBefore = (groupPlaceholder.compareDocumentPosition(targetGroup) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
-
-                                    let shouldSwap = false;
-                                    if (isBefore) {
-                                        if (ghostCenterX > targetCenterX || ghostCenterY > targetCenterY) {
-                                            targetGroup.parentNode.insertBefore(groupPlaceholder, targetGroup.nextSibling);
-                                            shouldSwap = true;
-                                        }
-                                    } else {
-                                        if (ghostCenterX < targetCenterX || ghostCenterY < targetCenterY) {
-                                            targetGroup.parentNode.insertBefore(groupPlaceholder, targetGroup);
-                                            shouldSwap = true;
-                                        }
-                                    }
-
-                                    if (shouldSwap) {
-                                        lastGroupSwapX = lastClientX;
-                                        lastGroupSwapY = lastClientY;
-                                        applyBoardLayout();
-                                        refreshOrderBadges();
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
                 const trashRect = globalTrash.getBoundingClientRect();
                 if (lastClientX > trashRect.left && lastClientX < trashRect.right &&
                     lastClientY > trashRect.top && lastClientY < trashRect.bottom) {
                     globalTrash.classList.add('drag-over');
-                } else { globalTrash.classList.remove('drag-over'); }
+                } else {
+                    globalTrash.classList.remove('drag-over');
+                }
+
+                const gRect = groupGhost.getBoundingClientRect();
+                const ghostWidth = gRect.width, ghostHeight = gRect.height;
+                const ghostCenterX = gRect.left + ghostWidth / 2;
+                const ghostCenterY = gRect.top + ghostHeight / 2;
+
+                const boardRect = menu.getBoundingClientRect();
+                const padLeft = dragBoardMetrics.padLeft;
+                const padTop = dragBoardMetrics.padTop;
+                const gap = dragBoardMetrics.gap;
+                const W = dragBoardMetrics.W;
+                const cols = dragBaselineColumns;
+
+                const boardX = ghostCenterX - boardRect.left - padLeft;
+                const boardY = ghostCenterY - boardRect.top - padTop;
+
+                let targetSlot = null;
+                if (!cols || cols.length === 0) {
+                    targetSlot = { left: 0, top: 0, width: ghostWidth, height: ghostHeight, shifted: [] };
+                } else if (boardX < cols[0].left - gap) {
+                    targetSlot = { left: 0, top: 0, width: ghostWidth, height: ghostHeight, shifted: [] };
+                } else if (boardX > cols[cols.length - 1].right + gap) {
+                    const lastCol = cols[cols.length - 1];
+                    targetSlot = {
+                        left: Math.min(Math.max(0, W - ghostWidth), lastCol.right + gap),
+                        top: 0,
+                        width: ghostWidth,
+                        height: ghostHeight,
+                        shifted: []
+                    };
+                } else {
+                    let targetCol = cols[0];
+                    let bestDist = Infinity;
+                    for (const col of cols) {
+                        const colCenter = col.left + col.width / 2;
+                        const dist = Math.abs(boardX - colCenter);
+                        if (dist < bestDist) {
+                            bestDist = dist;
+                            targetCol = col;
+                        }
+                    }
+
+                    const cards = targetCol.cards;
+                    if (!cards || cards.length === 0) {
+                        targetSlot = { left: targetCol.left, top: 0, width: targetCol.width, height: ghostHeight, shifted: [] };
+                    } else {
+                        let placedIndex = -1;
+                        for (let i = 0; i < cards.length; i++) {
+                            const c = cards[i];
+                            if (boardY < c.top + c.height * 0.45) {
+                                placedIndex = i;
+                                break;
+                            }
+                        }
+
+                        if (placedIndex !== -1) {
+                            const targetCard = cards[placedIndex];
+                            const shifted = cards.slice(placedIndex).map(c => ({
+                                card: c,
+                                newTop: c.top + ghostHeight + gap
+                            }));
+                            targetSlot = {
+                                left: targetCol.left,
+                                top: targetCard.top,
+                                width: targetCol.width,
+                                height: ghostHeight,
+                                shifted
+                            };
+                        } else {
+                            const lastCard = cards[cards.length - 1];
+                            targetSlot = {
+                                left: targetCol.left,
+                                top: lastCard.bottom + gap,
+                                width: targetCol.width,
+                                height: ghostHeight,
+                                shifted: []
+                            };
+                        }
+                    }
+                }
+
+                currentDragSlot = targetSlot;
+
+                if (groupPlaceholder) {
+                    groupPlaceholder.style.left = (padLeft + targetSlot.left) + 'px';
+                    groupPlaceholder.style.top = (padTop + targetSlot.top) + 'px';
+                    groupPlaceholder.style.width = targetSlot.width + 'px';
+                    groupPlaceholder.style.height = targetSlot.height + 'px';
+                }
+
+                const shiftedMap = new Map();
+                for (const s of targetSlot.shifted) {
+                    shiftedMap.set(s.card.folder, s.newTop);
+                }
+
+                for (const col of cols) {
+                    for (const c of col.cards) {
+                        const shiftY = shiftedMap.get(c.folder);
+                        const topVal = shiftY !== undefined ? shiftY : c.top;
+                        c.el.style.top = (padTop + topVal) + 'px';
+                        c.el.style.left = (padLeft + c.left) + 'px';
+                    }
+                }
+
+                let maxBottom = targetSlot.top + targetSlot.height;
+                for (const col of cols) {
+                    for (const c of col.cards) {
+                        const topVal = shiftedMap.get(c.folder) !== undefined ? shiftedMap.get(c.folder) : c.top;
+                        maxBottom = Math.max(maxBottom, topVal + c.height);
+                    }
+                }
+                menu.style.height = (padTop + maxBottom + 20) + 'px';
             });
         }
 
@@ -4111,44 +4131,90 @@
                     ? `DELETE GROUP "${group ? group.title : folder}" with ${count} agents? This moves them to the Recycle Bin.`
                     : `DELETE EMPTY GROUP "${group ? group.title : folder}"? This moves it to the Recycle Bin.`;
 
-                cancelDrag();
+                cleanupDragState();
 
                 if (await showConfirm(msg, 'Delete Group')) {
                     await moveToRecycleBin(folder);
                     a11yAnnounce(`Group ${group ? group.title : folder} moved to recycle bin.`);
+                } else {
+                    applyBoardLayout();
                 }
+                return;
             } else {
                 const original = document.querySelector(`.group-container[data-folder="${folder}"]`);
-                if (original) {
+                if (original && currentDragSlot && dragBoardMetrics) {
                     activeGroupDrag = null;
-                    if (groupPlaceholder && groupPlaceholder.parentNode) {
-                        groupPlaceholder.parentNode.insertBefore(original, groupPlaceholder);
-                        groupPlaceholder.remove();
-                        groupPlaceholder = null;
+                    const W = currentBoardWidth();
+                    const placements = readPlacements(W);
+
+                    // 1. Lock in the dropped card position
+                    placements[folder] = {
+                        left: Math.round(currentDragSlot.left),
+                        top: Math.round(currentDragSlot.top)
+                    };
+
+                    // 2. Lock in all shifted cards in that column
+                    if (currentDragSlot.shifted && currentDragSlot.shifted.length > 0) {
+                        for (const s of currentDragSlot.shifted) {
+                            placements[s.card.folder] = {
+                                left: Math.round(s.card.left),
+                                top: Math.round(s.newTop)
+                            };
+                        }
                     }
-                    original.classList.remove('group-dragging');
 
-                    // Extract new complete DOM sequence
-                    const reordered = Array.from(menu.querySelectorAll('.group-container:not(.drag-ghost)'))
-                        .map(c => c.dataset.folder)
-                        .filter(Boolean);
+                    // 3. Ensure all other visible cards have locked coordinates so they never drift
+                    if (dragBaselineColumns) {
+                        for (const col of dragBaselineColumns) {
+                            for (const c of col.cards) {
+                                if (!placements[c.folder]) {
+                                    placements[c.folder] = {
+                                        left: Math.round(c.left),
+                                        top: Math.round(c.top)
+                                    };
+                                }
+                            }
+                        }
+                    }
 
-                    // Clear stale pixel placement so masonry packer flows cleanly
-                    clearGroupPlacement(folder);
+                    writePlacements(W, placements);
 
-                    // Reorder on backend
+                    // 4. Reorder DOM nodes to match visual reading order (left, then top)
+                    const allContainers = Array.from(menu.querySelectorAll('.group-container:not(.drag-ghost)'));
+                    allContainers.sort((a, b) => {
+                        const fa = a.dataset.folder, fb = b.dataset.folder;
+                        const pa = placements[fa] || { left: a.offsetLeft, top: a.offsetTop };
+                        const pb = placements[fb] || { left: b.offsetLeft, top: b.offsetTop };
+                        const dx = (pa.left || 0) - (pb.left || 0);
+                        if (Math.abs(dx) > 40) return dx;
+                        return (pa.top || 0) - (pb.top || 0);
+                    });
+                    for (const c of allContainers) {
+                        menu.appendChild(c);
+                    }
+
+                    // 5. Update backend sequence
+                    const reordered = allContainers.map(c => c.dataset.folder).filter(Boolean);
                     if (reordered.length > 0) {
                         api('save-order', 'POST', { order: reordered }).catch(console.error);
                     }
 
-                    pendingDropRect = null;
-                    hidePlacementGuides();
-                    dragSnapRefs = [];
+                    // 6. Finish animation
+                    original.classList.remove('group-dragging');
+                    original.style.left = (dragBoardMetrics.padLeft + currentDragSlot.left) + 'px';
+                    original.style.top = (dragBoardMetrics.padTop + currentDragSlot.top) + 'px';
 
-                    applyBoardLayout();
+                    if (groupPlaceholder) {
+                        groupPlaceholder.remove();
+                        groupPlaceholder = null;
+                    }
+
+                    applyBoardLayout(false, null);
                     refreshOrderBadges();
                     animateGhostTo(original);
-                } else { cleanupDragState(); }
+                } else {
+                    cleanupDragState();
+                }
             }
         }
 
@@ -4276,14 +4342,21 @@
                               e.clientY > trashRect.top && e.clientY < trashRect.bottom;
 
             if (overTrash) {
-                cancelDrag();
+                cleanupDragState();
                 if (await showConfirm(`MOVE "${agent}" TO RECYCLE BIN?`, "Confirm Delete")) {
+                    if (groups[fromGroup] && groups[fromGroup].agents) {
+                        delete groups[fromGroup].agents[agent];
+                    }
+                    lastRenderSignature = null;
+                    renderMenu(search.value, true);
                     const res = await api('recycle-delete-agents', 'POST', { agents: [{ g: fromGroup, a: agent }] });
                     if (res && res.status === 'success') {
                         showToast(`MOVED TO BIN: ${agent}`, "success");
                         a11yAnnounce(`Agent ${agent} moved to recycle bin.`);
                         await syncFromBridge(); updateBinBadge();
                     } else { showApiError(res, "DELETE FAILED"); syncFromBridge(); }
+                } else {
+                    renderMenu(search.value, true);
                 }
             } else {
                 const elem = document.elementFromPoint(e.clientX, e.clientY);
@@ -4332,6 +4405,7 @@
             }
         }
 
+        let sseDebounceTimer = null;
         function startEventStream() {
             if (activeEventSource) { activeEventSource.close(); activeEventSource = null; }
             const baseUrl = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
@@ -4340,8 +4414,11 @@
             activeEventSource = new EventSource(`${baseUrl}/events?t=${Date.now()}`);
             activeEventSource.onmessage = (e) => {
                 if (e.data === 'sync') {
-                    if (isAnimating || isGroupDragging || agentDragStarted) return;
-                    if (Date.now() - lastSyncTime > 1000) syncFromBridge();
+                    if (isGroupDragging || agentDragStarted) return;
+                    clearTimeout(sseDebounceTimer);
+                    sseDebounceTimer = setTimeout(() => {
+                        syncFromBridge();
+                    }, 50);
                 }
             };
             activeEventSource.onerror = () => {
@@ -4357,8 +4434,8 @@
                 saveScroll();
                 const promptVisible = (view.style.display === 'flex'), wasEditing = box.classList.contains('editing');
                 groups = data;
-                if (!isGroupDragging && !agentDragStarted && !isAnimating && !isResizingGroup) {
-                    renderMenu(search.value);
+                if (!isGroupDragging && !agentDragStarted) {
+                    renderMenu(search.value, true);
                     // Copy times are outside the render fingerprint, so reconcile
                     // them onto the surviving cards (own copies, other-window
                     // copies, resets, edit purges) without rebuilding the board.
@@ -4538,7 +4615,13 @@
             if (!fixed) return null;
             const keys = Object.keys(fixed).map(Number);
             const priority = Array.isArray(order) ? order.filter(i => keys.indexOf(i) !== -1) : [];
-            const rest = keys.filter(i => priority.indexOf(i) === -1).sort((a, b) => a - b);
+            const rest = keys.filter(i => priority.indexOf(i) === -1).sort((a, b) => {
+                const dy = (fixed[a].top || 0) - (fixed[b].top || 0);
+                if (Math.abs(dy) > 1) return dy;
+                const dx = (fixed[a].left || 0) - (fixed[b].left || 0);
+                if (Math.abs(dx) > 1) return dx;
+                return a - b;
+            });
             const settled = [];
             const out = {};
 
@@ -4698,23 +4781,53 @@
 
         const PLACEMENT_MAX_BUCKETS = 8;    // window sizes worth remembering
 
+        function getGroupCoreKey(folderName) {
+            if (!folderName) return '';
+            return folderName
+                .replace(/^Group\d+\s*-\s*/i, '')
+                .replace(/^\[|\]$/g, '')
+                .trim()
+                .toUpperCase();
+        }
+
         function readPlacements(boardWidth) {
             try {
                 const raw = localStorage.getItem(placementKey(boardWidth));
                 if (!raw) return {};
                 const parsed = JSON.parse(raw);
                 if (!parsed || typeof parsed !== 'object') return {};
-                // Drop positions for groups that no longer exist. Without this
-                // a deleted group's coordinates stayed in storage for ever.
-                const known = Object.keys(groups || {});
-                if (!known.length) return parsed;
+                // Drop positions for groups that no longer exist, but preserve
+                // positions across renames/renumbering via core group title.
+                const knownFolders = Object.keys(groups || {});
+                if (!knownFolders.length) return parsed;
                 const clean = {};
-                let dropped = 0;
-                for (const folder of Object.keys(parsed)) {
-                    if (known.indexOf(folder) !== -1) clean[folder] = parsed[folder];
-                    else dropped++;
+                let modified = false;
+
+                const coreToFolder = new Map();
+                for (const f of knownFolders) {
+                    const ck = getGroupCoreKey(f);
+                    if (ck) coreToFolder.set(ck, f);
                 }
-                if (dropped) writePlacements(boardWidth, clean);
+
+                for (const key of Object.keys(parsed)) {
+                    const pos = parsed[key];
+                    if (!pos || typeof pos.left !== 'number' || typeof pos.top !== 'number') {
+                        modified = true;
+                        continue;
+                    }
+                    if (knownFolders.indexOf(key) !== -1) {
+                        clean[key] = { left: Math.round(pos.left), top: Math.round(pos.top) };
+                    } else {
+                        const matchedFolder = coreToFolder.get(getGroupCoreKey(key));
+                        if (matchedFolder) {
+                            clean[matchedFolder] = { left: Math.round(pos.left), top: Math.round(pos.top) };
+                            modified = true;
+                        } else {
+                            modified = true;
+                        }
+                    }
+                }
+                if (modified) writePlacements(boardWidth, clean);
                 return clean;
             } catch (e) { return {}; }
         }
@@ -4987,15 +5100,8 @@
            measurement avoids that entirely. All of this runs inside one
            synchronous block, so the browser never paints the intermediate state
            and there is no flicker. */
-        /* A drag re-packs every animation frame, but only ONE rectangle moves and
-           no sizes change. Measuring the whole board each time meant two forced
-           layout reflows per frame for nothing. The sizes are taken once when the
-           drag starts and reused; only the element under the cursor is measured
-           live, because a resize really does change its width. */
-        let dragSizeCache = null;
-
-        function beginDragSizeCache() { dragSizeCache = null; }
-        function endDragSizeCache() { dragSizeCache = null; }
+        function beginDragSizeCache() {}
+        function endDragSizeCache() {}
 
         function applyBoardLayout(instant = false, anchor = null) {
             if (!menu) return;
@@ -5007,55 +5113,29 @@
                 return;
             }
 
-            const cached = dragSizeCache && dragSizeCache.count === items.length ? dragSizeCache : null;
-            let widths, heights, cs, gap, rowGap, padLeft, padTop, W;
-
-            if (cached) {
-                // Reuse everything except the anchor, whose width can be changing
-                // under the cursor right now.
-                ({ gap, rowGap, padLeft, padTop, W } = cached);
-                widths = cached.widths.slice();
-                heights = cached.heights.slice();
-                if (anchor) {
-                    const ai = items.indexOf(anchor.el);
-                    if (ai !== -1) {
-                        const r = anchor.el.getBoundingClientRect();
-                        widths[ai] = Math.round(r.width);
-                        heights[ai] = Math.round(r.height);
-                    }
+            // --- measure in rows layout ---
+            menu.classList.remove('snug-mode');
+            menu.classList.add('measuring');
+            items.forEach(el => {
+                if (anchor && el === anchor.el) return;
+                if (el.dataset.snugPin) { el.style.width = ''; delete el.dataset.snugPin; }
+                const folder = el.dataset.folder;
+                const cw = folder && groups[folder] && groups[folder].custom_width;
+                if (Number.isFinite(cw)) {
+                    el.style.width = `${cw}px`;
+                } else {
+                    el.style.width = '';
                 }
-            } else {
-                // --- measure in rows layout ---
-                menu.classList.remove('snug-mode');
-                // Force every card to its real size for the measurement below:
-                // content-visibility:auto reports only the intrinsic estimate
-                // for never-painted off-screen cards, and packing on estimates
-                // is what made each rebuild land slightly differently.
-                menu.classList.add('measuring');
-                items.forEach(el => {
-                    // NEVER touch the width of the group currently being dragged.
-                    // custom_width still holds its OLD value until the drag ends, so
-                    // restoring from it here would undo the resize on every frame.
-                    if (anchor && el === anchor.el) return;
-                    if (el.dataset.snugPin) { el.style.width = ''; delete el.dataset.snugPin; }
-                    const folder = el.dataset.folder;
-                    const cw = folder && groups[folder] && groups[folder].custom_width;
-                    if (Number.isFinite(cw)) el.style.width = `${cw}px`;
-                });
-                cs = getComputedStyle(menu);
-                gap = parseFloat(cs.columnGap) || parseFloat(cs.gap) || 14;
-                rowGap = parseFloat(cs.rowGap) || gap;
-                padLeft = parseFloat(cs.paddingLeft) || 0;
-                padTop = parseFloat(cs.paddingTop) || 0;
-                W = Math.max(0, menu.clientWidth - padLeft - (parseFloat(cs.paddingRight) || 0));
-                widths = items.map(el => Math.round(el.getBoundingClientRect().width));
-                heights = items.map(el => Math.round(el.getBoundingClientRect().height));
-                menu.classList.remove('measuring');
-                if (dragSizeCache === null && isGroupDragging) {
-                    dragSizeCache = { count: items.length, widths: widths.slice(),
-                                      heights: heights.slice(), gap, rowGap, padLeft, padTop, W };
-                }
-            }
+            });
+            const cs = getComputedStyle(menu);
+            const gap = parseFloat(cs.columnGap) || parseFloat(cs.gap) || 14;
+            const rowGap = parseFloat(cs.rowGap) || gap;
+            const padLeft = parseFloat(cs.paddingLeft) || 0;
+            const padTop = parseFloat(cs.paddingTop) || 0;
+            const W = Math.max(0, menu.clientWidth - padLeft - (parseFloat(cs.paddingRight) || 0));
+            const widths = items.map(el => Math.round(el.getBoundingClientRect().width));
+            const heights = items.map(el => Math.round(el.getBoundingClientRect().height));
+            menu.classList.remove('measuring');
 
             /* Pinned groups are parked at the position plain row-wrapping would
                give them - a fixed line that does not drift as neighbours grow or
@@ -5430,7 +5510,11 @@
                     // would no longer restore a state the user recognises.
                     clearTidySnapshot();
                     groupData.custom_width = finalWidth;
+                    if (groups[folderName]) groups[folderName].custom_width = finalWidth;
+                    container.style.width = `${finalWidth}px`;
+                    lastRenderSignature = null;
                     api('save-group-width', 'POST', { group: folderName, width: finalWidth })
+                        .then(() => syncFromBridge())
                         .catch(console.error);
                 }
 
@@ -5483,6 +5567,8 @@
                 clearTidySnapshot();
                 container.style.width = '';
                 delete groupData.custom_width;
+                if (groups[folderName]) delete groups[folderName].custom_width;
+                lastRenderSignature = null;
                 container.classList.remove('snug-pulse');
                 void container.offsetWidth;
                 container.classList.add('snug-pulse');
@@ -5492,6 +5578,7 @@
                 a11yAnnounce('Group width reset to automatic');
                 const res = await api('save-group-width', 'POST', { group: folderName, width: null });
                 if (!res || res.status === 'error') showApiError(res, 'COULD NOT RESET WIDTH');
+                else await syncFromBridge();
             });
         }
 
@@ -5762,9 +5849,9 @@
             return h;
         }
 
-        function renderMenu(filter = '') {
+        function renderMenu(filter = '', force = false) {
             const renderSig = buildRenderSignature(filter);
-            if (renderSig === lastRenderSignature && menu.childElementCount > 0) return;
+            if (!force && renderSig === lastRenderSignature && menu.childElementCount > 0) return;
             lastRenderSignature = renderSig;
             menu.innerHTML = '';
             const searchState = buildDashboardSearchState(filter);
@@ -6039,9 +6126,22 @@
         }
 
         async function moveToRecycleBin(folder) {
+            // Optimistic immediate UI removal
+            const el = Array.from(document.querySelectorAll('.group-container')).find(c => c.dataset.folder === folder);
+            if (el) el.remove();
+            if (groups[folder]) delete groups[folder];
+            clearGroupPlacement(folder);
+            lastRenderSignature = null;
+            applyBoardLayout(false);
+
             const res = await api('recycle-delete-group', 'POST', { folder });
-            if (res && res.status === 'success') { showToast('GROUP MOVED TO RECYCLE BIN', 'success'); await syncFromBridge(); }
-            else { showApiError(res, 'DELETE FAILED'); syncFromBridge(); }
+            if (res && res.status === 'success') {
+                showToast('GROUP MOVED TO RECYCLE BIN', 'success');
+                await syncFromBridge();
+            } else {
+                showApiError(res, 'DELETE FAILED');
+                await syncFromBridge();
+            }
         }
 
         async function confirmDeleteGroup(folder) {
@@ -8344,6 +8444,21 @@
                 : (gSel.length > 0 ? `Move ${gSel.length} groups to Recycle Bin?` : `Move ${sel.length} agents to Recycle Bin?`);
 
             if (await showConfirm(msg, "Confirm Delete")) {
+                // Optimistically remove deleted groups and agents immediately
+                gSel.forEach(folder => {
+                    const el = Array.from(document.querySelectorAll('.group-container')).find(c => c.dataset.folder === folder);
+                    if (el) el.remove();
+                    if (groups[folder]) delete groups[folder];
+                    clearGroupPlacement(folder);
+                });
+                sel.forEach(item => {
+                    if (groups[item.group] && groups[item.group].agents) {
+                        delete groups[item.group].agents[item.name];
+                    }
+                });
+                lastRenderSignature = null;
+                applyBoardLayout(false);
+
                 const promises = [];
                 if (sel.length > 0) promises.push(api('recycle-delete-agents', 'POST', { agents: sel }));
                 gSel.forEach(folder => promises.push(api('recycle-delete-group', 'POST', { folder })));

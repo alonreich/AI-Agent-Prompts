@@ -640,6 +640,13 @@ def event_stream():
             try: clients.remove(q)
             except ValueError: pass
 
+def broadcast_sync():
+    """Notify all connected EventSource clients that data has changed."""
+    with clients_lock:
+        for client in clients:
+            try: client.put_nowait('sync')
+            except Exception: pass
+
 @app.route('/events')
 def sse_events(): return Response(event_stream(), mimetype='text/event-stream')
 
@@ -791,7 +798,9 @@ def move_agent():
                 if os.path.exists(dest_dir): robust_rmtree(dest_dir)
                 shutil.move(src_dir, dest_dir)
                 time.sleep(0.1)
-                migrate_folders_locked(); return jsonify({'status': 'success'})
+                migrate_folders_locked()
+                broadcast_sync()
+                return jsonify({'status': 'success'})
 
             src_file = safe_path(DATA_DIR, from_group, "prompt.txt")
             if src_file and os.path.exists(src_file):
@@ -800,7 +809,9 @@ def move_agent():
                     os.makedirs(dest_dir, exist_ok=True)
                     shutil.move(src_file, os.path.join(dest_dir, "prompt.txt"))
                     time.sleep(0.1)
-                    migrate_folders_locked(); return jsonify({'status': 'success'})
+                    migrate_folders_locked()
+                    broadcast_sync()
+                    return jsonify({'status': 'success'})
 
             return jsonify({'status': 'error', 'message': 'Source not found'}), 404
         except Exception as e:
@@ -831,6 +842,7 @@ def bulk_move():
                     shutil.move(src_dir, dest_dir)
             time.sleep(0.1)
             migrate_folders_locked()
+            broadcast_sync()
             return jsonify({'status': 'success'})
         except Exception as e:
             logger.error(f"bulk_move error: {e}")
@@ -917,6 +929,7 @@ def save_order():
                     raise OSError(f"Destination already exists: {os.path.basename(final_p)}")
                 robust_rename(tmp_p, final_p)
 
+            broadcast_sync()
             return jsonify({'status': 'success', 'moved': len(moves)})
 
         except (OSError, PermissionError) as e:
@@ -993,10 +1006,7 @@ def save_group_width():
                 
             import time
             time.sleep(0.05)
-            with clients_lock:
-                for client in clients:
-                    try: client.put_nowait('sync')
-                    except Exception: pass
+            broadcast_sync()
             return jsonify({'status': 'success'})
         except Exception as e:
             logger.error(f"save_group_width error: {e}")
@@ -1068,10 +1078,7 @@ def save_group_widths():
                     skipped.append(group_folder)
 
             time.sleep(0.05)
-            with clients_lock:
-                for client in clients:
-                    try: client.put_nowait('sync')
-                    except Exception: pass
+            broadcast_sync()
 
             return jsonify({'status': 'success', 'updated': updated, 'skipped': skipped})
         except Exception as e:
@@ -1181,7 +1188,9 @@ def save_agent():
                     try: os.remove(ct)
                     except Exception: pass
             time.sleep(0.1)
-            migrate_folders_locked(); return jsonify({'status': 'success'})
+            migrate_folders_locked()
+            broadcast_sync()
+            return jsonify({'status': 'success'})
         except Exception as e:
             logger.error(f"save_agent error: {e}")
             return jsonify({'status': 'error', 'message': str(e)}), 500
@@ -1284,7 +1293,9 @@ def delete_agents():
                             except (OSError, PermissionError) as e:
                                 logger.warning(f"Could not delete prompt.txt: {e}")
             time.sleep(0.1)
-            migrate_folders_locked(); return jsonify({'status': 'success'})
+            migrate_folders_locked()
+            broadcast_sync()
+            return jsonify({'status': 'success'})
         except Exception as e:
             logger.error(f"delete_agents error: {e}")
             return jsonify({'status': 'error', 'message': str(e)}), 500
@@ -1309,6 +1320,7 @@ def delete_group():
             if robust_rmtree(path):
                 time.sleep(0.1)
                 migrate_folders_locked()
+                broadcast_sync()
                 return jsonify({'status': 'success'})
             else:
                 return jsonify({'status': 'error', 'message': 'Folder locked'}), 500
@@ -1366,6 +1378,7 @@ def rename_group():
             meta['display_name'] = raw_new
             atomic_write_text(meta_path, json.dumps(meta, indent=2))
 
+            broadcast_sync()
             return jsonify({'status': 'success'})
         except Exception as e:
             logger.error(f"rename_group error: {e}")
@@ -1399,6 +1412,7 @@ def create_group():
 
             meta_path = os.path.join(path, "group_meta.json")
             atomic_write_text(meta_path, json.dumps({'display_name': raw_title}, indent=2))
+            broadcast_sync()
             return jsonify({'status': 'success'})
         except Exception as e:
             logger.error(f"create_group error: {e}")
@@ -1476,6 +1490,7 @@ def recycle_delete_group():
             move_to_recycle_bin(path, group_title, 'group', group_title)
             time.sleep(0.1)
             migrate_folders_locked()
+            broadcast_sync()
             return jsonify({'status': 'success'})
         except Exception as e:
             logger.error(f"recycle-delete-group error: {e}")
@@ -1509,6 +1524,7 @@ def recycle_delete_agents():
                         move_to_recycle_bin(tmp_dir, name, 'agent', group_title)
             time.sleep(0.1)
             migrate_folders_locked()
+            broadcast_sync()
             return jsonify({'status': 'success'})
         except Exception as e:
             logger.error(f"recycle-delete-agents error: {e}")
@@ -1601,6 +1617,7 @@ def recycle_restore():
 
             time.sleep(0.1)
             migrate_folders_locked()
+            broadcast_sync()
             return jsonify({'status': 'success'})
         except Exception as e:
             logger.error(f"recycle-restore error: {e}")
@@ -1621,6 +1638,7 @@ def recycle_purge():
             if not os.path.exists(full_path):
                 return jsonify({'status': 'error', 'message': 'Item not found'}), 404
             if robust_rmtree(full_path):
+                broadcast_sync()
                 return jsonify({'status': 'success'})
             return jsonify({'status': 'error', 'message': 'Failed to delete'}), 500
         except Exception as e:
@@ -1641,6 +1659,7 @@ def recycle_purge_all():
                 if os.path.isdir(entry_path):
                     if robust_rmtree(entry_path):
                         count += 1
+            broadcast_sync()
             return jsonify({'status': 'success', 'purged': count})
         except Exception as e:
             logger.error(f"recycle-purge-all error: {e}")
